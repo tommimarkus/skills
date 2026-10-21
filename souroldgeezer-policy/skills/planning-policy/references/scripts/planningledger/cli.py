@@ -6,7 +6,7 @@ import argparse
 
 from .core import Error, UsageError, out
 from .returns import amend, record, validate_return
-from .dispatch import dispatch, handoff, transition2
+from .dispatch import dispatch, handoff, transition_step
 from .verify import (
     check_changeset,
     record_changeset,
@@ -15,7 +15,7 @@ from .verify import (
     verify_handoff,
 )
 from .retention import gc, list_runs, purge
-from .closeout import close2, init5, land, reopen2, show, validate
+from .closeout import close_run, init5, land, reopen_run, show, validate
 from .tracing import trace_close, trace_init, trace_record, trace_show
 
 __all__ = [
@@ -158,7 +158,7 @@ def main(argv=None):
         if args.command == "init-v5":
             value = init5(args)
         elif args.command == "transition":
-            value = transition2(args)
+            value = transition_step(args)
         elif args.command == "dispatch":
             value = dispatch(args)
         elif args.command == "land":
@@ -189,9 +189,9 @@ def main(argv=None):
         elif args.command == "list":
             value = list_runs(args)
         elif args.command == "close":
-            value = close2(args)
+            value = close_run(args)
         elif args.command == "reopen":
-            value = reopen2(args)
+            value = reopen_run(args)
         elif args.command == "trace-init":
             value = trace_init(args)
         elif args.command == "trace-record":

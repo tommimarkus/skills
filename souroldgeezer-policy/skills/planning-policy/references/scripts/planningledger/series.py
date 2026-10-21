@@ -8,7 +8,7 @@ from pathlib import Path
 from .vocabulary import MAX_SERIES_HANDOFF, SERIES_HANDOFF_LIST_FIELDS, SERIES_HANDOFF_SCHEMA
 from .core import Error, ident, read_json, uuid4
 from .store import safe_run_contents
-from .checkpoint import valid_series_handoff, validate_events2, validate_run
+from .checkpoint import valid_series_handoff, validate_events, validate_run
 
 __all__ = [
     "load_predecessor_run",
@@ -31,7 +31,7 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "unresolvable predecessor checkpoint")
     plan, _ = validate_run(directory, checkpoint, plan_id, run_id)
-    validate_events2(directory, checkpoint)
+    validate_events(directory, checkpoint)
     return checkpoint, plan
 
 
@@ -95,7 +95,7 @@ def composed_series_handoff(path, data, series):
 
 
 def series_close_handoff(args, data, plan):
-    """Resolve the series close matrix before `close2` mutates anything.
+    """Resolve the series close matrix before `close_run` mutates anything.
 
     Returns the composed artifact, or None when this close stamps no handoff.
     Every rejection raises here, ahead of the first lifecycle mutation, so a

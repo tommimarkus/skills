@@ -20,7 +20,7 @@ from .core import Error, canon, ident, read_json, uuid4
 __all__ = [
     "root",
     "plan_dir",
-    "v2_dir",
+    "run_dir",
     "write",
     "event",
     "initial_event",
@@ -51,7 +51,7 @@ def plan_dir(args):
     return root(args) / ident(args.plan_id, "plan id")
 
 
-def v2_dir(args):
+def run_dir(args):
     return plan_dir(args) / uuid4(args.run_id)
 
 
@@ -123,12 +123,12 @@ def safe_run_contents(directory):
         raise Error("symlink in run directory")
     names = {child.name for child in children}
     if not {"checkpoint.json", "events.jsonl", "plan.json"}.issubset(names):
-        raise Error("missing required v2 contents")
+        raise Error("missing required run contents")
     if names - allowed:
-        raise Error("unexpected v2 contents")
+        raise Error("unexpected run contents")
     for name in ("checkpoint.json", "events.jsonl", "plan.json"):
         if not (directory / name).is_file():
-            raise Error("unexpected v2 contents")
+            raise Error("unexpected run contents")
     handoff = directory / "series-handoff.json"
     if handoff.exists() and (handoff.is_symlink() or not handoff.is_file()):
         raise Error("unexpected series-handoff.json contents")

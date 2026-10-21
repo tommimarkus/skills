@@ -8,7 +8,7 @@ from . import contract, core
 from .vocabulary import MAX_USAGE, MAX_USAGE_TOKENS
 from .core import Error, digest, parent, proxy_tokens, read_json
 from .store import valid_usage_summary, write
-from .checkpoint import active_run, load2
+from .checkpoint import active_run, load_run
 
 __all__ = [
     "usage_path",
@@ -27,7 +27,7 @@ def usage_path(directory):
 
 def trace_run(args, require_usage=True, require_open=False):
     parent(args.actor)
-    directory, data, plan, leafs = load2(args)
+    directory, data, plan, leafs = load_run(args)
     usage = usage_path(directory)
     if require_usage and not usage.exists():
         raise Error("trace-init is required")

@@ -30,7 +30,7 @@ from .vocabulary import (
     SERIES_HANDOFF_LIST_FIELDS,
     SERIES_HANDOFF_SCHEMA,
     SHA,
-    V2_STATES,
+    STEP_STATES,
     VERIFY_POLICIES,
 )
 from .core import (
@@ -48,7 +48,7 @@ from .core import (
     timestamp,
     uuid4,
 )
-from .store import plan_dir, safe_run_contents, v2_dir
+from .store import plan_dir, safe_run_contents, run_dir
 from .contract import (
     checkpoint_binding,
     effective_leaves,
@@ -64,12 +64,12 @@ __all__ = [
     "scope_rejection_state",
     "lifecycle",
     "active_run",
-    "validate_steps2",
-    "validate_events2",
+    "validate_steps",
+    "validate_events",
     "retired_contract",
     "refuse_retired",
     "validate_run",
-    "load2",
+    "load_run",
     "mutating_run",
     "valid_remediation",
     "valid_series_handoff",
@@ -119,7 +119,7 @@ def lifecycle(data):
     if not present:
         data.update(run_status="active", outcome=None, closed_at=None, purge_after=None)
     elif present != LIFECYCLE_FIELDS:
-        raise Error("invalid v2 lifecycle fields")
+        raise Error("invalid run lifecycle fields")
     status = data["run_status"]
     if status == "active":
         if any(data[key] is not None for key in ("outcome", "closed_at", "purge_after")):
@@ -145,11 +145,11 @@ def active_run(data):
         raise Error("run is closed")
 
 
-def validate_steps2(data, leafs):
+def validate_steps(data, leafs):
     if data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}:
-        raise Error("invalid v2 retry policy")
+        raise Error("invalid run retry policy")
     if data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}:
-        raise Error("invalid v2 return codes")
+        raise Error("invalid run return codes")
     steps = data.get("steps")
     if not isinstance(steps, dict) or set(steps) != set(leafs):
         raise Error("blocked:plan_tampered")
@@ -157,7 +157,7 @@ def validate_steps2(data, leafs):
         if (
             not isinstance(step, dict)
             or step.get("id") != sid
-            or step.get("status") not in V2_STATES
+            or step.get("status") not in STEP_STATES
             or step.get("dependencies") != leafs[sid]["dependencies"]
             or step.get("max_attempts") != leafs[sid]["max_attempts"]
             or not isinstance(step.get("attempt_count"), int)
@@ -236,7 +236,7 @@ def validate_steps2(data, leafs):
     dependency_order(steps)
 
 
-def validate_events2(directory, data):
+def validate_events(directory, data):
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
     # "restack" is accepted only in the history of a retained provisional_v1 run.
@@ -247,12 +247,12 @@ def validate_events2(directory, data):
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
-        raise Error("invalid v2 events") from exc
+        raise Error("invalid run events") from exc
     for line in lines:
         try:
             value = json.loads(line)
         except json.JSONDecodeError as exc:
-            raise Error("invalid v2 event") from exc
+            raise Error("invalid run event") from exc
         if (
             not isinstance(value, dict)
             or value.get("sequence") != previous + 1
@@ -262,10 +262,10 @@ def validate_events2(directory, data):
             or value.get("action") not in actions
             or not isinstance(value.get("at"), str)
         ):
-            raise Error("invalid v2 event")
+            raise Error("invalid run event")
         previous += 1
     if previous != data.get("event_sequence"):
-        raise Error("v2 event sequence mismatch")
+        raise Error("run event sequence mismatch")
 
 
 def retired_contract(directory, plan_level=False):
@@ -295,7 +295,7 @@ def refuse_retired(args):
     plan = plan_dir(args)
     retired, version = retired_contract(plan, plan_level=True)
     if not retired and args.run_id:
-        retired, version = retired_contract(v2_dir(args))
+        retired, version = retired_contract(run_dir(args))
     if retired:
         raise Error(
             f"blocked:contract_migration_required: this run uses retired contract version "
@@ -304,7 +304,7 @@ def refuse_retired(args):
 
 
 def validate_run(directory, data, plan_id, run_id):
-    """The single run validator for load2, classify_v2 and load_predecessor_run.
+    """The single run validator for load_run, classify_run and load_predecessor_run.
 
     Everything but the event log: callers read their checkpoint, map errors to
     their own codes, and validate events once on their own path. Steps are
@@ -325,7 +325,7 @@ def validate_run(directory, data, plan_id, run_id):
     ):
         raise Error("invalid run checkpoint")
     if len(canon(data) + b"\n") > MAX_CHECKPOINT:
-        raise Error("v2 checkpoint exceeds bounded limit")
+        raise Error("run checkpoint exceeds bounded limit")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
@@ -339,7 +339,7 @@ def validate_run(directory, data, plan_id, run_id):
     for step in data["steps"].values():
         for field, default in CLOSEOUT_FIELDS.items():
             step.setdefault(field, default)
-    validate_steps2(data, leafs)
+    validate_steps(data, leafs)
     validate_retry_artifacts(directory, data)
     validate_series_handoff(directory, data, plan)
     for name in ("returns", "retry-remediations"):
@@ -350,17 +350,17 @@ def validate_run(directory, data, plan_id, run_id):
     return plan, leafs
 
 
-def load2(args):
+def load_run(args):
     refuse_retired(args)
     parent_directory = plan_dir(args)
     if parent_directory.is_symlink() or not parent_directory.is_dir():
         raise Error("unknown run id")
-    directory = v2_dir(args)
+    directory = run_dir(args)
     if directory.is_symlink() or not directory.is_dir():
         raise Error("unknown run id")
     safe_run_contents(directory)
     path = required_file(directory, "checkpoint.json", "unknown run id")
-    data = read_json(path, "invalid v2 checkpoint")
+    data = read_json(path, "invalid run checkpoint")
     try:
         plan, leafs = validate_run(directory, data, args.plan_id, args.run_id)
     except Error as exc:
@@ -372,8 +372,8 @@ def load2(args):
 
 def mutating_run(args):
     parent(args.actor)
-    loaded = load2(args)
-    validate_events2(loaded[0], loaded[1])
+    loaded = load_run(args)
+    validate_events(loaded[0], loaded[1])
     active_run(loaded[1])
     require_no_retained_pipeline(loaded[1])
     return loaded
@@ -452,7 +452,7 @@ def read_series_handoff(path):
 def validate_series_handoff(directory, data, plan):
     """Sibling of validate_retry_artifacts: re-verify a stamped handoff artifact.
 
-    `load2` calls this but not `validate_events2`, so a plain event-fact record
+    `load_run` calls this but not `validate_events`, so a plain event-fact record
     of the stamp alone would skip tamper detection; the file's own bytes are
     hashed and re-checked against the checkpoint stamp every load.
     """

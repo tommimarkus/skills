@@ -241,9 +241,9 @@ class NextBlockScopeParityTest(unittest.TestCase):
         "init5": "init-v5",
         "record": "record-return",
         "record_verify": "record-verify",
-        "transition2": "transition",
-        "close2": "close",
-        "reopen2": "reopen",
+        "transition_step": "transition",
+        "close_run": "close",
+        "reopen_run": "reopen",
         "validate": "validate --closeout",
     }
 

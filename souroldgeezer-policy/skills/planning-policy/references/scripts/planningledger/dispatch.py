@@ -30,7 +30,7 @@ from .contract import (
     valid_stored_binding,
     validator_module,
 )
-from .checkpoint import active_run, load2, mutating_run, valid_remediation, validate_events2
+from .checkpoint import active_run, load_run, mutating_run, valid_remediation, validate_events
 from .schedule import (
     bounded_action_next,
     checkpoint_next,
@@ -47,7 +47,7 @@ from .schedule import (
 from .returns import (
     advance,
     bounded_return_schema,
-    result2,
+    step_result,
     worker_handoff_context,
     worker_handoff_digest,
 )
@@ -57,7 +57,7 @@ __all__ = [
     "unwind",
     "require_verified",
     "apply_worktree_result",
-    "transition2",
+    "transition_step",
     "batch_source_commits",
     "worktree_result",
     "worker_prompt",
@@ -179,7 +179,7 @@ def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summar
         )
 
 
-def transition2(args):
+def transition_step(args):
     directory, data, plan, leafs = mutating_run(args)
     batches = step_batches(plan)
     sid, step = selected_step(data, args.step_id)
@@ -198,7 +198,7 @@ def transition2(args):
             args.worktree_result, directory, sid, step, leafs[sid], new, batches, args.summary
         )
     else:
-        raise Error("v2 transition permits pending, ready, in_progress, integrated, or cleaned")
+        raise Error("transition permits pending, ready, in_progress, integrated, or cleaned")
     event(
         directory,
         data,
@@ -208,7 +208,7 @@ def transition2(args):
         to_status=step["status"],
         attempt_id=step["attempt_id"],
     )
-    result = result2("transition", args, sid, step, attempt_id=step["attempt_id"])
+    result = step_result("transition", args, sid, step, attempt_id=step["attempt_id"])
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
@@ -441,8 +441,8 @@ def step_handoff(directory, data, plan, step):
 
 
 def handoff(args):
-    directory, data, plan, _leafs = load2(args)
-    validate_events2(directory, data)
+    directory, data, plan, _leafs = load_run(args)
+    validate_events(directory, data)
     active_run(data)
     sid, step = selected_step(data, args.step_id)
     return {

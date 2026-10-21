@@ -80,7 +80,7 @@ from .schedule import (
 __all__ = [
     "stop_step",
     "reject_return",
-    "result2",
+    "step_result",
     "advance",
     "needs_higher_tier",
     "valid_return",
@@ -112,7 +112,7 @@ def reject_return(directory, data, step, sid, reason, code, summary):
     event(directory, data, "record-return", step_id=sid, status="oversized")
 
 
-def result2(action, args, sid, step, **extra):
+def step_result(action, args, sid, step, **extra):
     return {
         "ok": True,
         "action": action,
@@ -604,7 +604,7 @@ def amend(args):
         )
     else:
         following = checkpoint_next(directory, data, step_batches(plan), plan)
-    return result2(
+    return step_result(
         "amend-v5", args, sid, step,
         amendment_count=len(amendments), amendment_sha256=digest(amendment), next=following,
     )
@@ -747,7 +747,7 @@ def record(args):
         attempt_id=step["attempt_id"],
         fingerprint=fingerprint,
     )
-    result = result2("record-return", args, sid, step, progress_fingerprint=fingerprint)
+    result = step_result("record-return", args, sid, step, progress_fingerprint=fingerprint)
     if "scope_notes_count" in step:
         result["scope_notes_count"] = step["scope_notes_count"]
     # Only the escalating policy owns retries, so only it can state eligibility.

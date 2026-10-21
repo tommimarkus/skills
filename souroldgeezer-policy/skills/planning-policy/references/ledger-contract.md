@@ -418,8 +418,8 @@ for a rare edge case.
 ### State machine and legal transitions
 
 Successful steps move `completed` → `integrated` → `cleaned`. There is no
-transition table: `transition2()` validates each move through dedicated
-hardcoded per-status checks (via `advance()`), over the `V2_STATES` set, which
+transition table: `transition_step()` validates each move through dedicated
+hardcoded per-status checks (via `advance()`), over the `STEP_STATES` set, which
 includes `cleaned` and `oversized`. See "Driving transitions and validate
 --closeout" above for the mechanics.
 

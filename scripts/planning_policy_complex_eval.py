@@ -78,8 +78,8 @@ def grade(trial, plan_id, run_id, observed=None):
         ledger = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ledger)
         args = SimpleNamespace(repo_root=str(trial), ledger_root=None, plan_id=plan_id, run_id=run_id)
-        directory, data, plan, _ = ledger.load2(args)
-        ledger.validate_events2(directory, data)
+        directory, data, plan, _ = ledger.load_run(args)
+        ledger.validate_events(directory, data)
         result['plan_sha256'] = data['plan_hash']
         result['dependency_fork_join'] = dependency_shape(plan['leaves'])
         result['worker_leaves'] = len(data['steps'])

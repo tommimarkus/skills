@@ -49,11 +49,11 @@ from .contract import (
 )
 from .checkpoint import (
     active_run,
-    load2,
+    load_run,
     mutating_run,
     require_no_retained_pipeline,
     retired_contract,
-    validate_events2,
+    validate_events,
 )
 from .schedule import (
     batch_settled,
@@ -80,8 +80,8 @@ __all__ = [
     "refuse_unowned_pins",
     "init5",
     "land",
-    "close2",
-    "reopen2",
+    "close_run",
+    "reopen_run",
     "summary",
     "bounded_step_summary",
     "show",
@@ -317,10 +317,10 @@ def land(args):
     return result
 
 
-def close2(args):
+def close_run(args):
     parent(args.actor)
-    directory, data, plan, leafs = load2(args)
-    validate_events2(directory, data)
+    directory, data, plan, leafs = load_run(args)
+    validate_events(directory, data)
     active_run(data)
     require_no_retained_pipeline(data)
     # Resolved before every mutation below, so a refused series close leaves the
@@ -387,10 +387,10 @@ def close2(args):
     }
 
 
-def reopen2(args):
+def reopen_run(args):
     parent(args.actor)
-    directory, data, plan, leafs = load2(args)
-    validate_events2(directory, data)
+    directory, data, plan, leafs = load_run(args)
+    validate_events(directory, data)
     if data["run_status"] != "closed" or data["outcome"] != "blocked":
         raise Error("only a retained blocked run may reopen")
     require_no_retained_pipeline(data)
@@ -530,11 +530,11 @@ def bounded_step_summary(result):
 def show(args):
     if args.next_only and args.step_id:
         raise Error("show --next-only does not accept --step-id")
-    directory, data, plan, leafs = load2(args)
+    directory, data, plan, leafs = load_run(args)
     if args.next_only:
         if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
             raise Error(f"show --next-only requires retry_policy {ESCALATING_RETRY_POLICY}")
-        validate_events2(directory, data)
+        validate_events(directory, data)
         result = {
             "ok": True,
             "action": "show-next",
@@ -612,7 +612,7 @@ def show(args):
 
 
 def validate(args):
-    directory, data, plan, leafs = load2(args)
+    directory, data, plan, leafs = load_run(args)
     if args.closeout:
         unfinished = [
             step["id"]
@@ -621,7 +621,7 @@ def validate(args):
         ]
         if unfinished:
             raise Error("closeout requires every successful step to be cleaned")
-    validate_events2(directory, data)
+    validate_events(directory, data)
     result = {
         "ok": True,
         "plan_id": data["plan_id"],

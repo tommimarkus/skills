@@ -13,7 +13,7 @@ Module map:
 - gitops: every git and worktree-helper subprocess call.
 - contract: plan validator seam over plancontract, leaves, amendments, effective leaves, capability
   binding and the host tier map.
-- checkpoint: run integrity, the single run validator, retired-contract refusal, load2,
+- checkpoint: run integrity, the single run validator, retired-contract refusal, load_run,
   mutating_run.
 - schedule: readiness, batches, retry selection, the live next block, primary_next.
 - series: series handoff artifacts and the predecessor cross-check.

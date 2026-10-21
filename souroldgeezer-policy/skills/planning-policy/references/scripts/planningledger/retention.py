@@ -18,12 +18,12 @@ from .core import (
     uuid4,
 )
 from .store import root, safe_run_contents
-from .checkpoint import refuse_retired, retired_contract, validate_events2, validate_run
+from .checkpoint import refuse_retired, retired_contract, validate_events, validate_run
 
 __all__ = [
     "invalid_entry",
     "unsupported_entry",
-    "classify_v2",
+    "classify_run",
     "scan_ledgers",
     "public_entry",
     "bounded_report",
@@ -59,11 +59,11 @@ def unsupported_entry(plan_id, run_id, version, directory):
     }
 
 
-def classify_v2(plan_id, directory, current):
+def classify_run(plan_id, directory, current):
     safe_run_contents(directory)
-    checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
+    checkpoint = read_json(directory / "checkpoint.json", "malformed run checkpoint")
     plan, _ = validate_run(directory, checkpoint, plan_id, directory.name)
-    validate_events2(directory, checkpoint)
+    validate_events(directory, checkpoint)
     entry = {
         "plan_id": plan_id,
         "run_id": directory.name,
@@ -138,7 +138,7 @@ def scan_ledgers(base, plan_filter, current):
             continue
         if not children or any(not child.is_dir() for child in children):
             invalid.append(
-                invalid_entry(base, plan, "unexpected_contents", "v2 plan has unexpected contents")
+                invalid_entry(base, plan, "unexpected_contents", "plan has unexpected contents")
             )
             continue
         for run in sorted(children, key=lambda path: path.name):
@@ -148,7 +148,7 @@ def scan_ledgers(base, plan_filter, current):
                 entries.append(
                     unsupported_entry(plan.name, run.name, version, run)
                     if retired
-                    else classify_v2(plan.name, run, current)
+                    else classify_run(plan.name, run, current)
                 )
             except (Error, OSError, json.JSONDecodeError, TypeError) as exc:
                 message = str(exc)

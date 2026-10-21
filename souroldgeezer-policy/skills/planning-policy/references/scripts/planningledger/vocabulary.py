@@ -33,7 +33,7 @@ __all__ = [
     "MAX_BLOCKER_SUMMARY",
     "MAX_REMAINDER_ITEM",
     "MAX_PATH",
-    "V2_STATES",
+    "STEP_STATES",
     "WORKTREE_RESULT_FIELDS",
     "WORKTREE_RESULT_OPTIONAL",
     "BATCH_DEPENDENCY_STATES",
@@ -184,7 +184,7 @@ MAX_REMAINDER_ITEM = 240
 MAX_PATH = 240
 
 
-V2_STATES = {
+STEP_STATES = {
     "pending",
     "ready",
     "in_progress",

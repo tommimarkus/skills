@@ -27,7 +27,7 @@ from .core import Error, UsageError, canon, digest, ident, read_json, selected_s
 from .store import event, write
 from .gitops import dirty_paths, git_head, git_output, numstat_rows, repository_top
 from .contract import standard_precision, validator_module
-from .checkpoint import load2, mutating_run, validate_events2
+from .checkpoint import load_run, mutating_run, validate_events
 from .schedule import (
     bounded_next,
     checkpoint_next,
@@ -40,7 +40,7 @@ from .schedule import (
 from .returns import (
     next_after_return,
     read_bounded_input,
-    result2,
+    step_result,
     return_fingerprint,
     settle_return,
     stop_step,
@@ -150,8 +150,8 @@ def check_changeset(args):
         worktree, leaf = args.worktree, packet["leaf"]
         commit = git_output(worktree, "rev-parse", "HEAD").strip()
     elif args.run_id and args.step_id:
-        directory, data, plan, leafs = load2(args)
-        validate_events2(directory, data)
+        directory, data, plan, leafs = load_run(args)
+        validate_events(directory, data)
         sid, _step = selected_step(data, args.step_id)
         return returned_changeset(data, plan, leafs, sid)[0]
     else:
@@ -358,7 +358,7 @@ def record_changeset(args):
         stop_step(step, "oversized", SCOPE_REJECTION_REASON, "scope_expanded",
                   "changed path outside write_set")
         event(directory, data, "record-changeset", step_id=sid)
-        return result2("record-changeset", args, sid, step, changeset=verdict)
+        return step_result("record-changeset", args, sid, step, changeset=verdict)
     if verdict["verdict"] != "oversized:changeset":
         raise Error(f"the measured changeset verdict for {sid} is {verdict['verdict']}; nothing to record")
     summary = (
@@ -367,7 +367,7 @@ def record_changeset(args):
     )
     stop_step(step, "oversized", "oversized:changeset", "oversized:changeset", summary)
     event(directory, data, "record-changeset", step_id=sid)
-    return result2("record-changeset", args, sid, step, changeset=verdict)
+    return step_result("record-changeset", args, sid, step, changeset=verdict)
 
 
 def validate_verify_return(args):
@@ -478,7 +478,7 @@ def record_verify(args):
         failure = verify_rejection_return(directory, step, value)
         disposition = reject_verified_step(directory, data, step, failure)
     event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
-    result = result2("record-verify", args, sid, step, verdict=value["verdict"])
+    result = step_result("record-verify", args, sid, step, verdict=value["verdict"])
     if disposition:
         result["next"] = next_after_return(
             args, directory, data, batches, sid, step, failure, disposition, plan
