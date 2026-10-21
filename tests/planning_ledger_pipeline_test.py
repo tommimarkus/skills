@@ -237,13 +237,19 @@ class UpstreamHarness(PipelineHarness):
         self.assertEqual(before, self.head("beta"))
 
     def assert_conflict_blocked(self, before):
-        """A conflicting restack aborts: eligible for repair, worktree clean at `before`."""
+        """A conflicting restack aborts: eligible for repair, worktree clean at `before`.
+
+        The recorded base is the one the worktree sits on: the pending anchor, else the original base."""
+        beta = self.step("beta")
+        base = beta.get("pending_acceptance", {}).get("new") or beta["provisional_base"]["commit"]
         code, result = self.restack()
         self.assertEqual(0, code, result)
         self.assertEqual("retry_eligible", result["outcome"])
         self.assertEqual(before, self.head("beta"))
         self.assertEqual("", git(self.repo / ".worktrees/beta", "status", "--porcelain").stdout)
-        self.assertEqual("blocked:upstream_changed", self.step("beta")["blockers"][0]["code"])
+        beta = self.step("beta")
+        self.assertEqual("blocked:upstream_changed", beta["blockers"][0]["code"])
+        self.assertEqual((base, base), (beta["base_commit"], beta["provisional_base"]["commit"]))
 
     def head(self, step_id):
         return git(self.repo / ".worktrees" / step_id, "rev-parse", "HEAD").stdout.strip()

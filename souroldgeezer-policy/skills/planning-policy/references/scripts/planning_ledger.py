@@ -4135,6 +4135,7 @@ def restack(args):
         ["git", "-C", str(worktree), "merge-base", "--is-ancestor", new, "HEAD"], capture_output=True
     ).returncode == 0
     blocked = ""
+    anchor = ""
     if not contained:
         # A recorded pending restack moves the target again from its rebased base, not the returned commit.
         anchor = (step.get("pending_acceptance") or {}).get("new", "")
@@ -4157,6 +4158,9 @@ def restack(args):
         if rebased.returncode:
             subprocess.run(["git", "-C", str(worktree), "rebase", "--abort"], capture_output=True)
             blocked = "rebase conflict"
+            if anchor:
+                # The aborted worktree still sits on the earlier rebase, so record that base.
+                step["base_commit"] = step["provisional_base"]["commit"] = anchor
     if not blocked:
         head = git_output(worktree, "rev-parse", "HEAD").strip()
         if git_output(worktree, "rev-parse", f"{head}^{{tree}}") != git_output(

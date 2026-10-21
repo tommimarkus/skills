@@ -138,9 +138,9 @@ needs verification again. A tree-changing restack without
 scoped-acceptance re-run, and the repeat call with the code completes or blocks
 the step (a code supplied to the call that rebases is refused before the
 rebase; if the target moves before the repeat call, restack rebases again from
-the recorded `pending_acceptance` base and stays pending); `restack` refuses a batch member, which remediates through retry. A
-non-zero code, or a rebase conflict (aborted, worktree left clean), moves the
-step to `blocked` with `blocked:upstream_changed`. That code is registered in the
+the recorded `pending_acceptance` base and stays pending); `restack` refuses a
+batch member, which remediates through retry. A non-zero code, or a rebase
+conflict (aborted, worktree left clean), moves the step to `blocked` with `blocked:upstream_changed`. That code is registered in the
 blocked family, never returned by a worker (excluded from the worker return
 schema like `failed:verification`), and repairable: a same-tier retry that does
 not spend the same-tier retry, with remediation citing the prerequisite's old
