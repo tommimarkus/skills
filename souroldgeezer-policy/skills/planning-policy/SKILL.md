@@ -35,7 +35,8 @@ choice invokes its owning design skill before approval.
   plan with two or more
   delegated steps, the parent alone uses `init-v5`, `dispatch`, `transition`, `record-return`, `amend`, `show`,
   `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py). Assigned workers use the generated packet and read-only return preflight
+  [`planning_ledger.py`](references/scripts/planning_ledger.py), a stable shim
+  over [`planningledger/`](references/scripts/planningledger/). Assigned workers use the generated packet and read-only return preflight
   in [worker handoff](references/worker-handoff.md). Normal v5
   execution follows live `next` results through the lifecycle; after a long
   pause or context compaction, use `show --run-id <uuid4> --next-only` once to
