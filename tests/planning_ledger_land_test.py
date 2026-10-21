@@ -132,6 +132,60 @@ class LandCommandTest(base.DispatchHarness):
         self.assertEqual(1, len({item["cleanup_result_sha256"] for item in steps.values()}))
         self.assertTrue((self.repo / "src/first").exists() and (self.repo / "src/second").exists())
 
+    def test_an_environment_stop_lets_the_next_member_return_but_blocks_the_landing(self):
+        members = [
+            leaf("first", "batch-owner", batch="group"),
+            leaf("second", "batch-owner", ["first"], batch="group"),
+        ]
+        units = [
+            {
+                "id": "unit",
+                "original_size": "medium",
+                "cohesive_outcome": "One batch outcome",
+                "decomposition": {
+                    "basis": "failure_isolation",
+                    "rationale": "Separate failure surfaces",
+                    "shape": "checkpointed",
+                },
+            }
+        ]
+        self.init(members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"})
+        code, started = self.dispatch("first", "--create-from", "main")
+        self.assertEqual(0, code, started)
+        first, second = started["handoffs"]
+        commit = self.work(first, "src/first")
+        stop = self.scratch / "first-return.json"
+        stop.write_text(
+            json.dumps(
+                {
+                    "schema": "bounded-step-return-v1",
+                    "step_id": "first",
+                    "attempt_id": first["attempt_id"],
+                    "agent_id": first["agent_id"],
+                    "status": "blocked",
+                    "changed_paths": ["src/first"],
+                    "acceptance": {"command": "uv run test", "exit_code": 1, "summary": "sandbox"},
+                    "blockers": [{"code": "blocked:environment", "summary": "sandbox denied a test"}],
+                    "notes": [],
+                    "unstarted_remainder": [],
+                    "commit_hash": commit,
+                }
+            )
+        )
+        code, result = self.call(
+            "record-return", "--actor", "parent", "--run-id", self.run_id,
+            "--return-file", str(stop),
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual("in_progress", self.steps()["second"]["status"])
+        self.finish(second, "src/second")
+        steps = self.steps()
+        self.assertEqual("blocked", steps["first"]["status"])
+        self.assertEqual("completed", steps["second"]["status"])
+        code, refused = self.land("second")
+        self.assertEqual(3, code)
+        self.assertIn("not settled", refused["error"])
+
     def test_an_integrate_failure_exits_nonzero_and_leaves_state_unchanged(self):
         self.init([leaf("alpha", "leaf-alpha")])
         _code, started = self.dispatch("alpha", "--create-from", "main")

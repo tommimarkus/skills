@@ -19,20 +19,16 @@ additional authority, and the parent remains responsible for current-attempt
 validation and integration.
 
 Before any inspection or tool use, establish the assigned contract version.
-New assignments use v5; accept a v1–v4 handoff only when the ledger explicitly
-resumes its compatible legacy plan or run. For v4–v5, require the exact resolved
+Assignments use v5. Require the exact resolved
 `planning-capability-binding-v1` with the plan digest, this `step_id`, assigned
 executor, and `capability_requirements`, alongside the assigned plan/step/attempt
 identity. If it is missing or does not exactly match, return
 `blocked:capability_unavailable`; do not probe for, substitute, drop, or defer a
-replacement capability. A v1–v3 resume does not acquire a binding or capability
-requirements retroactively.
+replacement capability.
 
 Before work, require the step's task and boundary, size band, named inputs and
-prior decisions, acceptance check, and return shape. For v5, also require the
-assigned work unit's `cohesive_outcome` and `decomposition` context; v1–v4
-resumes use their own versioned work unit shape. If a field required by that
-version is missing, stop and return `blocked:missing_input` with the missing
+prior decisions, acceptance check, and return shape. Also require the
+assigned work unit's `cohesive_outcome` and `decomposition` context. If a required field is missing, stop and return `blocked:missing_input` with the missing
 fields; do not guess.
 
 If this is a retry, accept only the ledger-supplied bounded

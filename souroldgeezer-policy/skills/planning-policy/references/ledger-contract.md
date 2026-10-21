@@ -154,6 +154,12 @@ hardcoded logic in the script, so a `transition` call's
 own error or success result is the authoritative statement of whether a given
 move is legal right now.
 
+A batch member's `blocked:environment` return does not halt the batch: the worker
+continues, later members record their returns in member order, and the stopped
+member is repaired as above (parent re-run recorded as `completed` with a
+`verification_limit`, `failed:acceptance`, or the repairable return). The batch
+lands only once every member is `completed` or terminal.
+
 A completed batch member becomes eligible to integrate only once no sibling
 member can still commit to their shared worktree — none is still active, and
 no `blocked`/`failed` sibling retains a retry — because a batch integrates its

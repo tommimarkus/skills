@@ -27,7 +27,7 @@ comparable capability on another host; see
 New plans also validate task boundaries across the dependency graph. Generated
 worker packets include shared decisions and a return schema, with local return
 validation before parent ingestion; composite `dispatch` and `land` commands
-start and close out a leaf or batch; existing runs remain resumable. See the
+start and close out a leaf or batch; retained pre-v5 runs follow [ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md). See the
 [worker handoff procedure](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
 New runs also check each delegated leaf before it lands: a deterministic
 changeset budget the builder preflights, then a fresh read-only verifier that

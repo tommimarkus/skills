@@ -55,7 +55,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("show --next-only", ledger)
         self.assertIn("120 proxy tokens", contract)
         self.assertIn("live `next` results", entry)
-        self.assertIn("errors, legacy resumption, diagnosis, retention operations", entry)
+        self.assertIn("errors, diagnosis, retention operations", entry)
         self.assertIn("240 proxy tokens", contract)
         self.assertIn("deterministic highest-priority", contract)
         self.assertIn("exception-only", ledger)
@@ -200,7 +200,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 for pointer in (
                     "planning-policy/SKILL.md", "references/plan-contract.md",
                     "references/ledger-contract.md", "templates/plan-v5.json",
-                    "planning_policy_forward_eval.py", "resume-compatible only",
+                    "planning_policy_forward_eval.py", "versions 1–4 are retired",
                 ):
                     self.assertIn(pointer, section)
 
@@ -319,15 +319,15 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
     def test_v5_handoffs_carry_cohesive_outcome_and_decomposition_evidence(self) -> None:
         for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
-                self.assertIn("resume-compatible only", self.text(relative))
+                self.assertIn("versions 1–4 are retired", self.text(relative))
                 self.assertNotIn("intermediate_states", self.text(relative))
         for adapter in ("claude-code", "codex"):
             text = self.text(
                 f"souroldgeezer-policy/skills/planning-policy/extensions/{adapter}.md"
             )
             with self.subTest(adapter=adapter):
-                self.assertIn("existing v4 records remain", " ".join(text.split()))
-                self.assertIn("init-v4", text)
+                self.assertIn("Versions 1–4 are retired", " ".join(text.split()))
+                self.assertNotIn("init-v4", text)
         contract = self.text(
             "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
         )

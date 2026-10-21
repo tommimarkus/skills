@@ -52,10 +52,9 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-retry-same-tier-remediation",
             "planning-policy-behavior-retry-immediate-escalation",
             "planning-policy-behavior-retry-terminal-precedence",
-            "planning-policy-behavior-retry-legacy-compatibility",
             "planning-policy-behavior-v5-cost-advisory",
             "planning-policy-behavior-v5-trace-opt-in",
-            "planning-policy-behavior-v5-v4-resume-only",
+            "planning-policy-behavior-v5-pre-v5-retired",
             "planning-policy-behavior-v5-canonical-scaffold",
             "planning-policy-behavior-v5-claude-mechanical-skill-block",
             "planning-policy-behavior-v5-live-next-rehydration",
@@ -124,7 +123,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertFalse(self.contract.validate(v5_plan(vague, work_units=[{"id": "risk", "original_size": "medium"}]))["valid"])
         self.assertTrue(self.contract.validate(v5_plan(bounded, work_units=[{"id": "audit", "original_size": "medium"}]))["valid"])
 
-    def test_retry_behavior_cases_bind_remediation_and_preserve_compatibility(self):
+    def test_retry_behavior_cases_bind_remediation(self):
         same_tier = self.behavior["planning-policy-behavior-retry-same-tier-remediation"]
         self.assertIn("failed:acceptance", " ".join(same_tier["required_checks"]))
         self.assertIn("one same-tier", " ".join(same_tier["required_checks"]))
@@ -135,9 +134,6 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         terminal = self.behavior["planning-policy-behavior-retry-terminal-precedence"]
         self.assertIn("exhaustion", " ".join(terminal["required_checks"]))
         self.assertIn("ceiling", " ".join(terminal["required_checks"]))
-        legacy = self.behavior["planning-policy-behavior-retry-legacy-compatibility"]
-        self.assertIn("legacy_unbounded", " ".join(legacy["required_checks"]))
-        self.assertIn("policy-less", " ".join(legacy["required_checks"]))
 
     def test_v5_outcome_first_cases_cover_rejections_and_permitted_controls(self):
         rejected = self.behavior["planning-policy-behavior-v5-reject-microleaf-shapes"]

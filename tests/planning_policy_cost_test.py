@@ -100,7 +100,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # section (+196 measured claude; slack 5 kept).
         # verify-loop contract docs: verifier procedure, Verify footer/option and
         # adapter dispatch (+314 measured claude; slack 5 kept).
-        self.assertLessEqual(claude["load_total"], 8760)
+        # Batch environment-stop rule (+71 measured, 8,831), rounded up to 10.
+        self.assertLessEqual(claude["load_total"], 8840)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -139,7 +140,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_worker_and_verifier_routes_charge_their_agent_and_handoff(self):
         for name, agent, handoff, budget in (
-            ("worker", "step", "worker", 2400), ("verifier", "verify", "verify", 1100),
+            ("worker", "step", "worker", 2500), ("verifier", "verify", "verify", 1100),
         ):
             result = self.measure(f"planning-policy-{name}")
             files = [row["file"] for row in result["rows"]]

@@ -434,7 +434,8 @@ routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/refere
 [ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
 New executable plans use `contract_version: 5`, started from
 [plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
-versions 1–4 are resume-compatible only.
+versions 1–4 are retired; retained pre-v5 runs are handled per
+[ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
 
 Claude host adapter ([claude-code.md](souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md)):
 portable aliases only — `haiku`/`low`, `sonnet`/`medium`, `opus`/`high`,

@@ -214,5 +214,5 @@ legal category and first command; its `next` block is at most
 remains the at-most-1,200-token diagnostic fallback. `reopen` is blocked-run
 only; `list`, `gc --dry-run`, and exact-target `purge` manage retention.
 Mutations require `--actor parent`. Read
-the [ledger contract](ledger-contract.md) only for errors, legacy resumption,
+the [ledger contract](ledger-contract.md) only for errors,
 diagnosis, retention operations, or ledger authoring/audit.

@@ -26,9 +26,8 @@ assigned return is available; it does not busy-poll, start an autonomous loop,
 or enable telemetry. After a 24-hour pause or context compaction, call
 `show --run-id <uuid4> --next-only` once and continue from that bounded result.
 
-Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
-is refused as `blocked:contract_migration_required`; existing v4 records remain
-resumable and mutable.
+Versions 1–4 are retired; retained pre-v5 runs are handled per
+[ledger compatibility](../references/ledger-compatibility.md).
 
 ## Capability resolution
 
@@ -71,10 +70,19 @@ A declared `batch` dispatches once: call `Agent` a single time with the
 ordered member handoffs, not once per member. `dispatch` on the first member
 starts every member in listed order and returns one packet per member; the
 worker commits each member, runs its own acceptance command, and returns one
-`bounded-step-return-v1` per member, stopping the batch at a member's stop. The parent unwinds un-run followers with
+`bounded-step-return-v1` per member. A member whose acceptance fails only for an environmental reason
+(for example a sandbox blocks a test) commits its work, returns `blocked` /
+`blocked:environment`, and the worker continues to the next member; any other
+stop halts the batch. The parent unwinds un-run followers with
 `transition --to pending`, remediates a stopped member in its same worktree,
-redispatches followers as singles, and lands the batch once no member can
-still progress.
+redispatches followers as singles, and lands the batch once every member is
+completed or terminal. For an environment stop the parent re-runs that member's
+identical acceptance command at its returned commit where the environment
+allows (for example outside the sandbox, in a detached checkout under the
+primary checkout's `.worktrees/`): exit 0 records `completed` with the parent's
+acceptance evidence and a `verification_limit` disclosing the stop; a
+non-environmental failure records `failed:acceptance`; if the parent cannot run
+it either, it records the `blocked:environment` return for a same-tier retry.
 
 Per-leaf verification dispatches `souroldgeezer-policy:plan-verify-standard`
 (`sonnet`/`medium`) for mechanical and standard builds, or

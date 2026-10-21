@@ -18,13 +18,12 @@ assigned return is available; it does not busy-poll, start an autonomous loop,
 or enable telemetry. After a 24-hour pause or context compaction, call
 `show --run-id <uuid4> --next-only` once and continue from that bounded result.
 
-Version 1–4 plans and ledger state are resume-compatible only. New `init-v4`
-is refused as `blocked:contract_migration_required`; existing v4 records remain
-resumable and mutable.
+Versions 1–4 are retired; retained pre-v5 runs are handled per
+[ledger compatibility](../references/ledger-compatibility.md).
 
 ## Capability resolution
 
-For v4–v5, before **every** initial or retry dispatch, resolve every leaf's
+Before **every** initial or retry dispatch, resolve every leaf's
 `capability_requirements` against the active Codex host and selected executor.
 The baseline `plan-step-base-v1` and every additional `tool`, `skill`,
 `service`, `permission`, and `runtime` requirement need current host evidence.
@@ -35,9 +34,6 @@ reuse a binding for a different executor or attempt assignment.
 If the baseline or any additional requirement cannot be evidenced, stop before
 dispatch with `blocked:capability_unavailable`; do not silently substitute,
 drop, defer, or probe for a replacement capability.
-For a ledger-confirmed v1–v3 resume, preserve that version's dispatch contract:
-do not require or synthesize capability requirements or a binding. New work
-still starts from v5.
 
 ## Dispatch and model mapping
 
@@ -67,10 +63,20 @@ only. Launch the steps a `next` block lists in `concurrent` together
 A `batch` dispatches once: one `spawn_agent` call with ordered member handoffs.
 `dispatch` on the first member starts every member in listed order and returns
 one packet per member. The worker commits
-each, runs its acceptance command, and returns one `bounded-step-return-v1` per member, stopping at the
+each, runs its acceptance command, and returns one `bounded-step-return-v1` per member. A member
+whose acceptance fails only for an environmental reason (for example a sandbox
+blocks a test) commits its work, returns `blocked` / `blocked:environment`, and
+the worker continues to the next member; any other stop halts the batch at the
 first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
-and lands the batch once every member is completed or terminal.
+and lands the batch once every member is completed or terminal. For an
+environment stop the parent re-runs that member's identical acceptance command
+at its returned commit where the environment allows (for example outside the
+sandbox, in a detached checkout under the primary checkout's `.worktrees/`):
+exit 0 records `completed` with the parent's acceptance evidence and a
+`verification_limit` disclosing the stop; a non-environmental failure records
+`failed:acceptance`; if the parent cannot run it either, it records the
+`blocked:environment` return for a same-tier retry.
 
 Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
 `verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
@@ -105,12 +111,12 @@ Call the host mechanism with a prompt containing all of the following:
 
 - stable step ID and dependency IDs;
 - run ID, step ID, agent ID, and attempt ID;
-- v4–v5: exact resolved binding `planning-capability-binding-v1` (plan digest,
-  step requirements, selected executor); v1–v3 resume: no binding;
+- v5: exact resolved binding `planning-capability-binding-v1` (plan digest,
+  step requirements, selected executor);
 - task and boundary;
 - for v5, the assigned work unit's cohesive outcome and `decomposition` context:
   `shape: single` only, or the required `basis` and `rationale` for
-  `parallel`/`checkpointed`; a v1–v4 resume uses its versioned work unit shape;
+  `parallel`/`checkpointed`;
 - named reads and writes;
 - settled decisions and constraints;
 - `size: <small|medium|large>` and portable tier;
@@ -123,10 +129,8 @@ Call the host mechanism with a prompt containing all of the following:
   unavailable mapped model, unavailable required capability, or a required
   decision outside the handoff.
 
-Pair v4–v5 bindings with plan/step/attempt identity; reject a missing or
-mismatched binding as `blocked:capability_unavailable` without probing. The
-parent labels v1–v4 assignments as ledger-confirmed resumes; workers never
-reinterpret them as new v5 work.
+Pair bindings with plan/step/attempt identity; reject a missing or
+mismatched binding as `blocked:capability_unavailable` without probing.
 
 For a missing load-bearing input, return `blocked:missing_input`; do not search
 for or invent it. If the work exceeds its stated size, stop and return the

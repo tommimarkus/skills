@@ -80,20 +80,20 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn("`cohesive_outcome`", content)
             self.assertIn("`decomposition` context", content)
             self.assertIn("assigned work unit", content)
-            self.assertIn("v1–v4 handoff", content)
+            self.assertNotIn("v1–v", content)
 
     def test_standard_agent_does_not_allow_load_bearing_assumptions(self):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")
 
         self.assertNotIn("ask for it or state the assumption", standard)
 
-    def test_claude_adapter_uses_v5_for_new_work_and_keeps_legacy_resume_only(self):
+    def test_claude_adapter_uses_v5_for_new_work_and_points_retired_versions_to_compatibility(self):
         adapter = ADAPTER.read_text(encoding="utf-8")
         self.assertIn("init-v5", adapter)
-        self.assertIn("init-v4", adapter)
-        self.assertIn("blocked:contract_migration_required", adapter)
-        self.assertIn("existing v4 records remain\nresumable and mutable", adapter)
-        self.assertIn("Version 1–4 plans and ledger state are resume-compatible only", adapter)
+        self.assertNotIn("init-v4", adapter)
+        self.assertIn("Versions 1–4 are retired; retained pre-v5 runs are handled per", adapter)
+        self.assertIn("ledger-compatibility.md", adapter)
+        self.assertNotIn("resume-compatible", adapter)
         self.assertIn("`cohesive_outcome`", adapter)
         self.assertIn("assigned work unit's `cohesive_outcome`", adapter)
 

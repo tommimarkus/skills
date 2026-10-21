@@ -114,7 +114,7 @@ type: local review; bundling: idea-only. No new model-quality claim is made.
 The forward evaluator's four-field host output was older than the ledger's
 `bounded-step-return-v1` validator. Its synthetic handoffs also lacked v5
 work-unit and capability-binding data, while the worker wrappers applied those
-new checks to legacy resumes. The repair derives host output bounds from the
+new checks to retired pre-v5 resumes. The repair derives host output bounds from the
 repository's ledger constants, validates each complete return with that ledger
 before retaining comparison facts, and constructs dispatch-ready synthetic v5
 plans with exact attempt identities and bindings. One negative fixture removes
@@ -123,8 +123,8 @@ The evaluator makes no host call without `--execute`, and its fixture repositori
 are local Git baselines so a worker can return an attributable commit hash.
 
 The wrapper and adapter version gates follow this repository's own
-`ledger-compatibility.md`: v4–v5 require binding, v5 adds cohesive outcome and
-decomposition, and ledger-confirmed v1–v3 resumes retain their earlier shape.
+`ledger-compatibility.md`: v5 requires binding, cohesive outcome, and
+decomposition; versions 1–4 are retired.
 The docstring typo behavior case now follows the existing trivial-edit exception.
 All added cases and fake-host responses are repository-authored synthetic
 evidence; no provider transcript or third-party workflow text supplied them.
@@ -329,8 +329,8 @@ the adapter produces the exact binding. The binding follows assignment changes,
 so a v4 retry or reassignment must re-bind before ready. The synthetic Claude
 mechanical-worker case records the non-negotiable edge: its wrapper lacks
 `Skill`, so it cannot dispatch a leaf whose additional requirement is a skill.
-Existing v1–v3 ledger behavior remains readable/mutable under compatibility;
-only new v4 ledgers own capability binding.
+Versions 1–4 are retired; retained pre-v5 runs are handled per
+`ledger-compatibility.md`.
 
 ## 2026-08-13 canonical v3 authoring scaffold
 

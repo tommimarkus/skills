@@ -52,7 +52,7 @@ choice invokes its owning design skill before approval.
 - **Compatibility or audit route only:** read
   [ledger compatibility](references/ledger-compatibility.md) only for a
   retained pre-v5 run. Read the [ledger contract](references/ledger-contract.md) only for
-  errors, legacy resumption, diagnosis, retention operations, or ledger
+  errors, diagnosis, retention operations, or ledger
   authoring/audit. Read [selective audit](references/selective-audit.md) only
   when targeted inspection leaves its bounded audit question unresolved.
 - **Usage tracing (explicit opt-in only):** only after the user explicitly asks

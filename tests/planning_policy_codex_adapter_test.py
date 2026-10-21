@@ -67,10 +67,7 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             "`blocked:model_unavailable`",
             "do not silently downgrade",
             "init-v5",
-            "Version 1–4 plans and ledger state are resume-compatible only",
-            "init-v4",
-            "blocked:contract_migration_required",
-            "existing v4 records remain\nresumable and mutable",
+            "Versions 1–4 are retired; retained pre-v5 runs are handled per",
             "`shape: single` only",
         ):
             self.assertIn(marker, self.text)
