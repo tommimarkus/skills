@@ -435,9 +435,9 @@ contracts are repository-authored from the same durable-ledger need; they do
 not derive from an external orchestration framework.
 
 Runtime-escalating remediation follows the same boundary: the ledger, not a
-leaf or host adapter, owns retries. A new version-4 run stamps
-`escalating_remediation_v1`, while policy-less existing version-2 checkpoints
-and version-1 ledgers retain prior behavior. It allows one same-tier retry only
+leaf or host adapter, owns retries. Every run stamps
+`escalating_remediation_v1` (the policy-less version-1 and version-2 behavior
+retired with contract versions 1–4). It allows one same-tier retry only
 after exact `failed:acceptance`; `blocked:needs_higher_tier` immediately moves
 to a higher mapped tier, and later eligible retries may skip upward but never
 past `deep` or `max_attempts`. The persisted `retry-remediation-v1` ties the
