@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import tempfile
 from pathlib import Path
 
-from . import core
+from . import core, gitops
 from .vocabulary import (
     MAX_CHECKPOINT,
     MAX_USAGE,
@@ -37,13 +36,9 @@ def root(args):
             raise Error("--ledger-root must be absolute")
         return path.resolve() / "planning-policy" / "ledgers"
     repo = Path(args.repo_root or Path.cwd()).resolve()
-    result = subprocess.run(
-        ["git", "-C", str(repo), "rev-parse", "--git-common-dir"], text=True, capture_output=True
-    )
-    if result.returncode:
+    common = gitops.git_common_dir(repo)
+    if common is None:
         raise Error("not a Git worktree; pass --ledger-root")
-    common = Path(result.stdout.strip())
-    common = (repo / common).resolve() if not common.is_absolute() else common.resolve()
     return common / "planning-policy" / "ledgers"
 
 

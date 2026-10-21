@@ -22,7 +22,7 @@ SPEC = importlib.util.spec_from_file_location("planning_policy_worker_handoff_le
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(ledger)
-from planningledger import contract  # noqa: E402
+from planningledger import contract, gitops  # noqa: E402
 
 
 def canonical_sha256(value: object) -> str:
@@ -148,6 +148,42 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
         self.assertEqual({"ok", "action", "plan_id", "run_id", "step_id", "agent_id",
                           "attempt_id", "status", "handoff_sha256", "return_sha256"}, set(result))
         self.assertEqual("completed", result["status"])
+
+    def test_commands_with_a_bound_ledger_root_or_explicit_files_never_spawn_git(self) -> None:
+        with patch.object(gitops, "git", side_effect=AssertionError("git spawned")):
+            run_id = self.started_run()
+            packet = self.handoff(run_id)
+            handoff_file = self.root / "handoff.json"
+            return_file = self.root / "return.json"
+            handoff_file.write_text(json.dumps(packet), encoding="utf-8")
+            return_file.write_text(json.dumps(self.completed_return(packet)), encoding="utf-8")
+            commands = (
+                ("validate-return", "--handoff-file", str(handoff_file), "--return-file", str(return_file)),
+                ("show", "--run-id", run_id),
+                ("show", "--run-id", run_id, "--next-only"),
+                ("validate", "--run-id", run_id),
+                ("list",),
+                ("gc", "--dry-run"),
+            )
+            for command in commands:
+                with self.subTest(command=command[0]):
+                    code, result = self.call(*self.common, *command)
+                    self.assertEqual(0, code, result)
+
+    def test_locating_the_ledger_without_a_root_spawns_exactly_one_git_common_dir_probe(self) -> None:
+        run_id = self.started_run()
+        real = gitops.git
+        calls = []
+
+        def counted(*arguments, **kwargs):
+            calls.append(arguments)
+            return real(*arguments, **kwargs)
+
+        with patch.object(gitops, "git", side_effect=counted):
+            code, result = self.call("--repo-root", str(self.root), "--plan-id", "handoff-plan",
+                                     "show", "--run-id", run_id)
+        self.assertNotEqual(0, code, result)
+        self.assertEqual([("rev-parse", "--git-common-dir")], calls)
 
     def test_changeset_budget_rides_the_packet_and_is_shape_checked(self) -> None:
         packet = self.handoff(self.started_run())

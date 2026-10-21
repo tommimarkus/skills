@@ -89,13 +89,13 @@ __all__ = [
 ]
 
 
-def refuse_unowned_pins(args, plan, top):
+def refuse_unowned_pins(args, plan):
     """A strict plan must prove no unowned pinning test exists before the run starts."""
     if plan.get("precision") != "strict":
         return
     if not args.pin_roots:
         raise UsageError("a strict plan requires --pin-roots")
-    scan = contract.plan_validator()(plan, pin_roots=args.pin_roots, repo_root=top)
+    scan = contract.plan_validator()(plan, pin_roots=args.pin_roots, repo_root=repository_top(args))
     pins = [item for item in scan.get("errors", []) if item.startswith("PLANSCOPE-UNOWNED-PIN")]
     if pins:
         raise Error("; ".join(pins[:MAX_CHECK_OUTSIDE])[:480])
@@ -104,8 +104,7 @@ def refuse_unowned_pins(args, plan, top):
 def init5(args):
     approved_parent(args)
     plan = read_plan(args.plan_file)
-    top = repository_top(args)
-    refuse_unowned_pins(args, plan, top)
+    refuse_unowned_pins(args, plan)
     supplied = (args.assignments_file, args.capability_binding_file)
     if args.host and any(supplied):
         raise UsageError("--host derives the assignments and binding; pass neither file")
@@ -118,7 +117,11 @@ def init5(args):
         assigned = assignments(args.assignments_file, plan)
     # Resolve a relative worktree once, so every later command and every
     # artifact comparison sees one absolute path whatever its cwd.
-    anchor = primary_checkout(top) if args.host else top
+    # Git is asked for the checkout only when a worktree is relative.
+    anchor = Path()
+    if not all(Path(item["worktree"]).is_absolute() for item in assigned.values()):
+        top = repository_top(args)
+        anchor = primary_checkout(top) if args.host else top
     assigned = {
         sid: {**item, "worktree": os.path.normpath(anchor / item["worktree"])}
         for sid, item in assigned.items()

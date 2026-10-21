@@ -10,6 +10,7 @@ from pathlib import Path
 from .core import Error, WORKTREE_HELPER
 
 __all__ = [
+    "git_common_dir",
     "repository_top",
     "primary_checkout",
     "helper_error",
@@ -22,25 +23,34 @@ __all__ = [
 ]
 
 
+def git(*arguments, cwd=None):
+    """Run git, in `cwd` when given; return the completed process. The only git invocation."""
+    command = ["git", *(["-C", str(cwd)] if cwd is not None else []), *arguments]
+    return subprocess.run(command, text=True, capture_output=True)
+
+
 def repository_top(args):
     """The checkout relative assignment worktrees resolve against."""
     if args.repo_root:
         return Path(args.repo_root).resolve()
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], text=True, capture_output=True
-    )
+    result = git("rev-parse", "--show-toplevel")
     return Path(result.stdout.strip() if result.returncode == 0 else Path.cwd()).resolve()
+
+
+def git_common_dir(repo):
+    """The absolute Git common directory of `repo`, or None when it is not in a repository."""
+    result = git("rev-parse", "--git-common-dir", cwd=repo)
+    if result.returncode:
+        return None
+    common = Path(result.stdout.strip())
+    return (repo / common).resolve() if not common.is_absolute() else common.resolve()
 
 
 def primary_checkout(top):
     """The checkout holding the Git common directory, so a derived worktree is never nested."""
-    result = subprocess.run(
-        ["git", "-C", str(top), "rev-parse", "--git-common-dir"], text=True, capture_output=True
-    )
-    if result.returncode:
+    common = git_common_dir(top)
+    if common is None:
         return top
-    common = Path(result.stdout.strip())
-    common = (top / common).resolve() if not common.is_absolute() else common.resolve()
     return common.parent if common.name == ".git" else top
 
 
@@ -66,11 +76,7 @@ def helper_error(value):
 
 def registered_worktrees(repo):
     """Map each registered worktree path of the repository to its branch name."""
-    result = subprocess.run(
-        ["git", "-C", str(repo), "worktree", "list", "--porcelain"],
-        text=True,
-        capture_output=True,
-    )
+    result = git("worktree", "list", "--porcelain", cwd=repo)
     if result.returncode:
         raise Error("cannot list git worktrees")
     entries, path = {}, None
@@ -90,11 +96,7 @@ def verify_worktree_identity(repo, step, leaf, create_from):
         path = repo / path
     owner = leaf["worktree_owner"]
     if not path.exists() and not path.is_symlink() and create_from:
-        created = subprocess.run(
-            ["git", "-C", str(repo), "worktree", "add", "-b", owner, str(path), create_from],
-            text=True,
-            capture_output=True,
-        )
+        created = git("worktree", "add", "-b", owner, str(path), create_from, cwd=repo)
         if created.returncode:
             raise Error(f"cannot create worktree {path}: {created.stderr.strip()[:200]}")
     registry = registered_worktrees(repo)
@@ -113,20 +115,14 @@ def verify_worktree_identity(repo, step, leaf, create_from):
 
 def git_head(worktree, repo):
     path = Path(worktree)
-    result = subprocess.run(
-        ["git", "-C", str(path if path.is_absolute() else repo / path), "rev-parse", "HEAD"],
-        text=True,
-        capture_output=True,
-    )
+    result = git("rev-parse", "HEAD", cwd=path if path.is_absolute() else repo / path)
     if result.returncode:
         raise Error("cannot read worktree HEAD")
     return result.stdout.strip()
 
 
 def git_output(worktree, *arguments):
-    result = subprocess.run(
-        ["git", "-C", str(worktree), *arguments], text=True, capture_output=True
-    )
+    result = git(*arguments, cwd=worktree)
     if result.returncode:
         raise Error(f"git {arguments[0]} failed in the worktree")
     return result.stdout

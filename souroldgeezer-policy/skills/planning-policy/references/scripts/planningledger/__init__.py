@@ -9,8 +9,8 @@ Module map:
 - vocabulary: constants, schema ids, return-code families, limits and policies.
 - core: Error, UsageError, canonical encoding and digest, identifiers, time, read_json,
   and the script path anchors derived from SCRIPTS_DIR.
+- gitops: the single git helper every git call goes through, plus the worktree-helper subprocess call.
 - store: ledger root, run layout, atomic write, event append, safe_run_contents.
-- gitops: every git and worktree-helper subprocess call.
 - contract: plan validator seam over plancontract, leaves, amendments, effective leaves, capability
   binding and the host tier map.
 - checkpoint: run integrity, the single run validator, retired-contract refusal, load_run,
@@ -29,10 +29,10 @@ Import order, lowest first. A module imports only an earlier group, or a same-gr
 module without a cycle; nothing imports cli; a helper several modules use lives in the
 lowest module all of them may import (this is why run validation helpers sit in
 checkpoint and the init command in closeout):
-plancontract < vocabulary < core < store < {gitops, contract} < checkpoint < {schedule, series}
+plancontract < vocabulary < core < gitops < {store, contract} < checkpoint < {schedule, series}
 < {returns, dispatch, verify, retention, closeout, tracing} < cli.
 
-Substitution seams (now in core, run_worktree_helper in gitops, plan_validator and
+Substitution seams (now in core, git and run_worktree_helper in gitops, plan_validator and
 changed_path_allowed in contract) are called as owner.name() outside their owner and are
 left out of ``__all__``; tests patch the owner module.
 """

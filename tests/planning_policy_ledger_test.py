@@ -392,6 +392,17 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertNotEqual(0, code, result)
         self.assertEqual("invalid run checkpoint", result["error"])
 
+    def test_host_tiers_parses_once_per_path_and_hands_out_copies(self):
+        first = contract.host_tiers()
+        first["hosts"].clear()
+        self.assertTrue(contract.host_tiers()["hosts"])
+        other = self.root / "tiers.json"
+        other.write_text(json.dumps({"hosts": {"only": {}}}))
+        with patch.object(contract, "HOST_TIERS_FILE", other):
+            self.assertEqual({"only": {}}, contract.host_tiers()["hosts"])
+        with patch.object(contract, "read_json", side_effect=AssertionError("re-read")):
+            self.assertTrue(contract.host_tiers()["hosts"])
+
     def test_new_run_stamps_registered_return_codes(self):
         run = self.init2()
         self.assertEqual("registered_v1", self.checkpoint(run)["return_codes"])

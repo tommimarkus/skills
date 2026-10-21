@@ -2,9 +2,12 @@
 
 import json
 import unittest
+from unittest.mock import patch
 
 from tests.planning_ledger_changeset_test import ChangesetHarness
 from tests.planning_ledger_dispatch_test import batch_leaves, git, leaf, ledger
+
+from planningledger import gitops
 
 
 class VerifyHarness(ChangesetHarness):
@@ -182,6 +185,13 @@ class VerifyReturnTest(VerifyHarness):
             packet, self.verify_return(packet, "reject", [self.finding(line=None)]))
         self.assertEqual(0, code, result)
         self.assertEqual(before, self.checkpoint_path().read_bytes())
+
+    def test_validate_verify_return_spawns_no_git(self):
+        packet = self.packet()
+        path = self.verify_return(packet)
+        with patch.object(gitops, "git", side_effect=AssertionError("git spawned")):
+            code, result = self.validate_verify(packet, path)
+        self.assertEqual(0, code, result)
 
     def test_malformed_returns_are_refused(self):
         packet = self.packet()

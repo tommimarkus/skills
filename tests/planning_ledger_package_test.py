@@ -17,8 +17,8 @@ IMPORT_ORDER = (
     ("plancontract",),
     ("vocabulary",),
     ("core",),
-    ("store",),
-    ("gitops", "contract"),
+    ("gitops",),
+    ("store", "contract"),
     ("checkpoint",),
     ("schedule", "series"),
     ("returns", "dispatch", "verify", "retention", "closeout", "tracing"),
@@ -33,6 +33,7 @@ NOT_LEDGER_REEXPORTED = {"plancontract"}
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {
     "now": "core",
+    "git": "gitops",
     "run_worktree_helper": "gitops",
     "plan_validator": "contract",
     "changed_path_allowed": "contract",
@@ -132,7 +133,7 @@ class PlanningLedgerPackageTest(unittest.TestCase):
         self.assertEqual([], [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))])
         for name in sorted(EXTRACTED):
             self.assertIn(f"- {name}:", doc)
-        self.assertIn("vocabulary < core < store", doc)
+        self.assertIn("vocabulary < core < gitops < {store, contract}", doc)
 
     def test_help_runs_through_the_shim(self):
         result = subprocess.run(

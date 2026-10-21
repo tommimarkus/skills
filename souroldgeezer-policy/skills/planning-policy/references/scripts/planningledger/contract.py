@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import copy
+import functools
 import json
+from pathlib import Path
 
 from . import plancontract
 
@@ -36,6 +39,7 @@ __all__ = [
     "checkpoint_binding",
     "validator_module",
     "read_plan",
+    "parse_host_tiers",
     "host_tiers",
     "host_entry",
     "host_step_binding",
@@ -207,9 +211,18 @@ def read_plan(path):
     return data
 
 
+@functools.cache
+def parse_host_tiers(path):
+    """The tier map file parsed once per path; callers go through host_tiers, which copies it."""
+    return read_json(Path(path), "cannot read host tier map")
+
+
 def host_tiers():
-    """The single host tier map: per host, the tier models, skill support, and verifiers."""
-    return read_json(HOST_TIERS_FILE, "cannot read host tier map")
+    """The single host tier map: per host, the tier models, skill support, and verifiers.
+
+    Every caller gets its own copy, so none can alter the cached parse.
+    """
+    return copy.deepcopy(parse_host_tiers(str(HOST_TIERS_FILE)))
 
 
 def host_entry(host):
