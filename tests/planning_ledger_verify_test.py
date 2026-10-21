@@ -303,7 +303,6 @@ class LandGateTest(VerifyHarness):
     def test_reject_keeps_the_gate_closed(self):
         verify, code, result = self.verified("reject", [self.finding()])
         self.assertEqual(0, code, result)
-        self.assertNotIn("next", result)
         code, landed = self.land()
         self.assertEqual(3, code, landed)
 
@@ -340,6 +339,185 @@ class LandGateTest(VerifyHarness):
         code, landed = self.land("second")
         self.assertEqual(0, code, landed)
         self.assertEqual(["first", "second"], landed["integrated"])
+
+
+class RejectRoutingTest(VerifyHarness):
+    """A reject becomes failed:verification and rides the one retry predicate."""
+
+    def rejected(self, finding=None, **extra):
+        self.completed(**extra)
+        code, issued = self.verify_handoff()
+        (verify,) = issued["handoffs"]
+        code, result = self.record_verify(
+            self.verify_return(verify, "reject", [finding or self.finding()]))
+        self.assertEqual(0, code, result)
+        return verify, result
+
+    def retry_flow(self, diagnosis=None, tier="standard"):
+        step = self.checkpoint()["steps"]["alpha"]
+        value = {
+            "schema": "retry-remediation-v1", "step_id": "alpha",
+            "prior_attempt_id": step["attempt_id"], "prior_return_sha256": step["return_sha256"],
+            "diagnosis": diagnosis or "the verifier rejected the build",
+            "remediation_action": "address each finding", "executor_mode": "reuse",
+            "next_agent_id": "worker", "next_harness": "claude-code", "target_portable_tier": tier,
+        }
+        path = self.scratch / "remediation.json"
+        path.write_text(json.dumps(value))
+        return self.dispatch("alpha", "--retry", "--retry-remediation-file", str(path))
+
+    def cited_diagnosis(self):
+        step = self.checkpoint()["steps"]["alpha"]
+        return f"verify {step['verify']['sha256'][:12]} rejected {step['verify']['commit'][:12]}"
+
+    def retried_and_returned(self, finding):
+        """Retry the rejected step, rebuild, and reject the new commit with `finding`."""
+        code, retry = self.retry_flow(self.cited_diagnosis(), "standard")
+        self.assertEqual(0, code, retry)
+        self.commit_file("src/alpha/a.txt", "two\n")
+        self.returned(retry["handoffs"][0])
+        code, issued = self.verify_handoff()
+        self.assertEqual(0, code, issued)
+        (verify,) = issued["handoffs"]
+        return verify, self.record_verify(self.verify_return(verify, "reject", [finding]))
+
+    def test_reject_fails_the_step_with_the_verify_evidence_and_names_the_retry(self):
+        _, result = self.rejected(leaves=[dict(leaf("alpha", "leaf-alpha"), max_attempts=3)])
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual("failed", step["status"])
+        self.assertTrue(step["retry_allowed"])
+        (blocker,) = step["blockers"]
+        self.assertEqual("failed:verification", blocker["code"])
+        self.assertIn("verify:coverage", blocker["summary"])
+        self.assertEqual((step["verify"]["path"], step["verify"]["sha256"]),
+                         (blocker["evidence_path"], blocker["sha256"]))
+        stored = json.loads((self.checkpoint_path().parent / step["return_path"]).read_text())
+        self.assertEqual("failed", stored["status"])
+        self.assertEqual(step["return_sha256"], ledger.digest(stored))
+        block = result["next"]
+        self.assertEqual(("reasoning", "failed:verification", "standard"),
+                         (block["retry_class"], block["outcome"], block["next_tier"]))
+        self.assertIn("--retry-remediation-file", block["command"])
+        self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
+        self.assertEqual(3, self.land()[0])
+
+    def test_workers_cannot_return_the_verifier_only_code(self):
+        packet = self.started()
+        blocker = {"code": "failed:verification", "summary": "forged"}
+        path = self.scratch / "forged.json"
+        for command in ("record-return", "validate-return"):
+            with self.subTest(command):
+                value = {
+                    "schema": "bounded-step-return-v1", "step_id": "alpha",
+                    "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
+                    "status": "failed", "changed_paths": [], "unstarted_remainder": [],
+                    "acceptance": {"command": "uv run test", "exit_code": 1, "summary": "no"},
+                    "blockers": [blocker], "notes": [], "commit_hash": "",
+                }
+                path.write_text(json.dumps(value))
+                if command == "record-return":
+                    args = ("record-return", "--actor", "parent", "--run-id", self.run_id,
+                            "--return-file", str(path))
+                else:
+                    handoff = self.scratch / "worker-handoff.json"
+                    handoff.write_text(json.dumps(packet))
+                    args = ("validate-return", "--handoff-file", str(handoff),
+                            "--return-file", str(path))
+                code, result = self.call(*args)
+                self.assertEqual(3, code, result)
+                self.assertIn("failed:verification", result["error"])
+
+    def test_the_retry_predicate_treats_both_failed_codes_alike(self):
+        data = {"schema": ledger.FORWARD_SCHEMA}
+        step = {"status": "failed", "same_tier_retry_used": False, "attempt_count": 1}
+        for used in (False, True):
+            step["same_tier_retry_used"] = used
+            results = []
+            for code in ("failed:acceptance", "failed:verification"):
+                value = {"status": "failed", "blockers": [{"code": code, "summary": "x"}]}
+                kind, outcome = ledger.retry_class(data, step, value)
+                results.append((kind, ledger.needs_higher_tier(step, kind, outcome)))
+            self.assertEqual(results[0], results[1])
+            self.assertEqual(("reasoning", used), results[1])
+
+    def test_a_second_reject_escalates_and_a_repeat_stops_without_progress(self):
+        three = [dict(leaf("alpha", "leaf-alpha"), max_attempts=3)]
+        self.rejected(leaves=three)
+        _, (code, result) = self.retried_and_returned(self.finding(code="verify:decision"))
+        self.assertEqual(0, code, result)
+        self.assertEqual("analytical", result["next"]["next_tier"])
+        self.assertEqual("failed", self.checkpoint()["steps"]["alpha"]["status"])
+
+    def test_an_identical_repeat_reject_is_no_progress(self):
+        self.rejected(leaves=[dict(leaf("alpha", "leaf-alpha"), max_attempts=3)])
+        _, (code, result) = self.retried_and_returned(self.finding())
+        self.assertEqual(0, code, result)
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual(("blocked", "blocked:no_progress"), (step["status"], step["reason"]))
+        self.assertFalse(result["next"]["retry_eligible"])
+
+    def test_the_last_attempt_reject_is_retry_exhausted(self):
+        self.rejected()
+        _, (code, result) = self.retried_and_returned(self.finding(code="verify:decision"))
+        self.assertEqual(0, code, result)
+        self.assertEqual("blocked:retry_exhausted", self.checkpoint()["steps"]["alpha"]["reason"])
+
+    def test_remediation_must_cite_the_verify_digest_and_rejected_commit(self):
+        self.rejected()
+        step = self.checkpoint()["steps"]["alpha"]
+        diagnoses = {
+            "neither": "the verifier rejected the build",
+            "digest only": f"digest {step['verify']['sha256'][:12]}",
+            "commit only": f"commit {step['verify']['commit'][:12]}",
+        }
+        for name, diagnosis in diagnoses.items():
+            with self.subTest(name):
+                code, result = self.retry_flow(diagnosis)
+                self.assertEqual(3, code, result)
+                self.assertIn("verify", result["error"])
+        code, result = self.retry_flow(self.cited_diagnosis())
+        self.assertEqual(0, code, result)
+
+    def test_the_next_verify_packet_carries_the_prior_rejection(self):
+        first, _ = self.rejected(leaves=[dict(leaf("alpha", "leaf-alpha"), max_attempts=3)])
+        self.assertIsNone(first["prior_verify"])
+        rejected_commit = self.checkpoint()["steps"]["alpha"]["returned_commit"]
+        code, retry = self.retry_flow(self.cited_diagnosis())
+        self.assertEqual(0, code, retry)
+        self.commit_file("src/alpha/a.txt", "two\n")
+        self.returned(retry["handoffs"][0])
+        code, issued = self.verify_handoff()
+        self.assertEqual(0, code, issued)
+        (second,) = issued["handoffs"]
+        self.assertEqual(
+            {"verify_id": first["verify_id"], "rejected_commit": rejected_commit,
+             "findings": [self.finding()]},
+            second["prior_verify"],
+        )
+        self.assertEqual(0, self.validate_verify(second, self.verify_return(second))[0])
+
+    def test_record_changeset_moves_a_measured_overrun_to_oversized(self):
+        packet = self.started()
+        self.commit_file("src/alpha/a.txt", "x\n" * 151)
+        self.returned(packet)
+        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha")
+        self.assertEqual(0, code, result)
+        self.assertEqual("oversized", result["status"])
+        self.assertEqual(151, result["changeset"]["lines"])
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual(("oversized", False), (step["status"], step["retry_allowed"]))
+        self.assertEqual("oversized:changeset", step["blockers"][0]["code"])
+        self.assertEqual("oversized", self.call("show", "--run-id", self.run_id,
+                                                "--step-id", "alpha")[1]["step"]["status"])
+
+    def test_record_changeset_refuses_a_changeset_within_budget(self):
+        self.completed()
+        before = self.checkpoint_path().read_bytes()
+        code, result = self.call("record-changeset", "--actor", "parent", "--run-id", self.run_id,
+                                 "--step-id", "alpha")
+        self.assertEqual(3, code, result)
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
 
 
 if __name__ == "__main__":

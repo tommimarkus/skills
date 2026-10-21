@@ -53,6 +53,7 @@ It also stamps `return_codes: registered_v1`, which closes the blocker-code
 vocabulary for that run: `blocked:missing_input`, `blocked:needs_higher_tier`,
 `blocked:model_unavailable`, `blocked:capability_unavailable`,
 `blocked:environment`, `failed:acceptance`, `failed:execution`,
+`failed:verification` (verifier-only, never in a worker return),
 `oversized:scope`, and `oversized:changeset` (a builder's self-reported
 over-budget stop, never retried). `record-return` and `validate-return` then
 reject any other blocker code, and a blocked, failed, or oversized return must
@@ -437,6 +438,25 @@ that live `next` block as authoritative over this narrative summary. In a
 `leaf_verify_v1` run a `completed` block names `check-changeset` then
 `verify-handoff` instead of `land`, and `record-verify` with a pass or
 inconclusive verdict names `land`. No other command emits this.
+
+A `record-verify` reject moves the completed step to `failed` with the
+verifier-only blocker `failed:verification`, which `validate-return` and
+`record-return` refuse from a worker. Its summary lists the finding codes and
+its evidence is the stored verify return and digest; the synthesized failed
+return replaces the builder's completed one at the attempt's return path. The
+one retry predicate treats it exactly like `failed:acceptance`: at most one
+same-tier retry, then higher mapped tiers, bounded by `max_attempts`,
+`blocked:no_progress` (a repeated reject compares finding codes only), and the
+existing terminal precedence. Its `retry-remediation-v1` diagnosis must cite
+the first 12 hex characters of the verify return digest and of the rejected
+commit, and the step's next verify packet carries `prior_verify`
+(`verify_id`, `rejected_commit`, `findings`; null when none). The reject's own
+`next` is the retry command. A measured over-budget changeset is recorded by
+the parent with `record-changeset --actor parent --run-id R --step-id S`: it
+re-measures the returned commit, moves a completed step to `oversized` with
+`oversized:changeset`, never retries it, and refuses any other verdict.
+`show --next-only` keeps `verify_pending` immediately before
+`integrate_completed` (land), which already precedes the failure retry.
 
 ### Tracing
 

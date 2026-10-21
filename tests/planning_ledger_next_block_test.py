@@ -17,6 +17,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.planning_ledger_dispatch_test import leaf as git_leaf
+from tests.planning_ledger_verify_test import VerifyHarness
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts"
 
@@ -989,6 +992,51 @@ class SeriesOverlayNextBlockTest(LedgerHarness):
         self.assertNotIn("series_end", block)
         self.assertNotIn("--series-handoff-file", block["command"])
         self.assertBounded(block)
+
+
+class VerifyNextBlockTest(VerifyHarness):
+    """verify_pending sits before land and after the failure-retry route."""
+
+    def two_steps(self):
+        self.init([git_leaf("alpha", "leaf-alpha"), git_leaf("beta", "leaf-beta")])
+        packets = {}
+        for sid in ("alpha", "beta"):
+            code, result = self.dispatch(sid, "--create-from", "main")
+            self.assertEqual(0, code, result)
+            packets[sid] = result["handoffs"][0]
+        self.worktree = self.repo / ".worktrees/beta"
+        failure = {"code": "failed:acceptance", "summary": "acceptance exited 1"}
+        self.returned(packets["beta"], "failed", [failure])
+        self.worktree = self.repo / ".worktrees/alpha"
+        self.commit_file("src/alpha/a.txt", "one\n")
+        self.returned(packets["alpha"])
+
+    def category(self):
+        code, result = self.call("show", "--run-id", self.run_id, "--next-only")
+        self.assertEqual(0, code, result)
+        self.assertLessEqual(ledger.proxy_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
+        self.assertLessEqual(ledger.proxy_tokens(result["next"]), ledger.MAX_NEXT_TOKENS)
+        return result["next"]["category"]
+
+    def test_verify_pending_precedes_land_and_land_precedes_retry(self):
+        self.two_steps()
+        self.assertEqual("verify_pending", self.category())
+        code, issued = self.verify_handoff()
+        (verify,) = issued["handoffs"]
+        self.assertEqual(0, self.record_verify(self.verify_return(verify))[0])
+        self.assertEqual("integrate_completed", self.category())
+        self.assertEqual(0, self.land()[0])
+        self.assertEqual("remediate_failure", self.category())
+
+    def test_a_rejected_step_routes_to_the_retry_not_to_land(self):
+        self.two_steps()
+        code, issued = self.verify_handoff()
+        (verify,) = issued["handoffs"]
+        verdict = self.verify_return(verify, "reject", [self.finding()])
+        self.assertEqual(0, self.record_verify(verdict)[0])
+        code, result = self.call("show", "--run-id", self.run_id, "--next-only")
+        self.assertEqual("remediate_failure", result["next"]["category"])
+        self.assertEqual(["alpha", "beta"], result["next"]["retryable_step_ids"])
 
 
 if __name__ == "__main__":

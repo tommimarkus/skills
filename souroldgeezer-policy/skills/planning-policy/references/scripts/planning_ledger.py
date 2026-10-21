@@ -161,8 +161,16 @@ RETURN_CODES = {
             "environment",
         )
     ),
-    "failed": ("failed:acceptance", "failed:execution"),
+    "failed": ("failed:acceptance", "failed:execution", "failed:verification"),
     "oversized": ("oversized:scope", "oversized:changeset"),
+}
+# Recorded by record-verify alone: a worker return can never carry it.
+VERIFIER_ONLY_CODES = {"failed:verification"}
+# The stops that need reasoning rather than repair, by (status, code).
+REASONING_STOPS = {
+    ("failed", "failed:acceptance"),
+    ("failed", "failed:verification"),
+    ("blocked", "blocked:needs_higher_tier"),
 }
 VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
 CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
@@ -180,7 +188,7 @@ VERIFY_HANDOFF_FIELDS = {
     "schema", "packet_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "attempt_id",
     "agent_id", "verify_id", "verifier_tier", "task", "boundary", "settled_decisions",
     "write_set", "acceptance_command", "cohesive_outcome", "acceptance_exit_code",
-    "base_commit", "returned_commit", "budget", "changeset", "return_schema",
+    "base_commit", "returned_commit", "budget", "changeset", "prior_verify", "return_schema",
 }
 # The verifier is read-only: mechanical and standard builds get the standard
 # verifier, analytical and deep builds the analytical one.
@@ -943,7 +951,7 @@ def validate_events2(directory, data):
         f"reopen-v{schema}",
     }
     if schema == FORWARD_SCHEMA:
-        actions.update({"amend-v5", "verify-handoff", "record-verify"})
+        actions.update({"amend-v5", "verify-handoff", "record-verify", "record-changeset"})
     try:
         lines = path.read_text().splitlines()
     except OSError as exc:
@@ -1598,7 +1606,8 @@ def primary_code(value):
 def retry_class(data, step, value):
     """The one retry-eligibility predicate: (kind, outcome), or ("", "").
 
-    Reasoning stops (`failed:acceptance`, `blocked:needs_higher_tier`) keep the
+    Reasoning stops (`failed:acceptance`, `failed:verification`,
+    `blocked:needs_higher_tier`) keep the
     same-tier-then-escalate rules. Repairable stops (`blocked:environment`, or
     any other blocked/failed stop amended after its return) retry at the same
     tier. Retained runs below schema 5 keep the exactly-one-blocker rule.
@@ -1613,7 +1622,7 @@ def retry_class(data, step, value):
             return "reasoning", code
         return "", ""
     code = primary_code(value)
-    if (status, code) in {("failed", "failed:acceptance"), ("blocked", "blocked:needs_higher_tier")}:
+    if (status, code) in REASONING_STOPS:
         return "reasoning", code
     if status in {"blocked", "failed"} and (code == "blocked:environment" or repair_reopened(step)):
         return "repairable", code or status
@@ -1624,7 +1633,7 @@ def needs_higher_tier(step, kind, outcome):
     return kind == "reasoning" and (
         outcome == "blocked:needs_higher_tier"
         or (
-            outcome == "failed:acceptance"
+            outcome in {"failed:acceptance", "failed:verification"}
             and (step["same_tier_retry_used"] or step["attempt_count"] > 1)
         )
     )
@@ -1645,6 +1654,13 @@ def store_remediation(args, data, directory, step):
     kind, outcome = retry_class(data, step, prior)
     if not kind:
         raise Error("prior outcome is not retry eligible")
+    if outcome == "failed:verification":
+        cited = (step["verify"]["sha256"][:12], step["verify"]["commit"][:12])
+        if not all(part in value["diagnosis"] for part in cited):
+            raise Error(
+                "failed:verification remediation must cite the verify return digest "
+                f"({cited[0]}) and the rejected commit ({cited[1]})"
+            )
     if value["executor_mode"] == "reuse":
         if value["next_agent_id"] != step["agent_id"]:
             raise Error("reuse remediation must keep the current agent identity")
@@ -2704,7 +2720,9 @@ def valid_return(value, data, step, leaf, registered=None):
     if value["status"] in RETURN_STATUSES - {"completed"} and not blockers:
         raise Error("non-completed returns require blockers")
     if registered:
-        allowed = set().union(*RETURN_CODES.values())
+        if any(blocker["code"] in VERIFIER_ONLY_CODES for blocker in blockers):
+            raise Error("failed:verification is recorded only by record-verify, never returned by a worker")
+        allowed = set().union(*RETURN_CODES.values()) - VERIFIER_ONLY_CODES
         if any(blocker["code"] not in allowed for blocker in blockers):
             raise Error("blocker code is not registered: use " + ", ".join(sorted(allowed)))
         family = RETURN_CODES.get(value["status"], ())
@@ -3378,7 +3396,28 @@ def valid_verify_handoff(value):
         raise Error("verify handoff digest mismatch")
     ident(value["step_id"], "step id")
     uuid4(value["verify_id"], "verify id")
+    prior = value["prior_verify"]
+    if prior is not None and (
+        not isinstance(prior, dict)
+        or set(prior) != {"verify_id", "rejected_commit", "findings"}
+        or not isinstance(prior["findings"], list)
+        or len(prior["findings"]) > 8
+    ):
+        raise Error("invalid prior_verify")
     return value
+
+
+def prior_verify(directory, step):
+    """The step's earlier rejection, so re-verification checks the delta and each finding."""
+    stored = step.get("verify")
+    if not isinstance(stored, dict) or stored.get("verdict") != "reject":
+        return None
+    findings = read_json(directory / stored["path"], "missing stored verify return")["findings"]
+    return {
+        "verify_id": stored["verify_id"],
+        "rejected_commit": stored["commit"],
+        "findings": findings,
+    }
 
 
 def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
@@ -3411,6 +3450,7 @@ def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
         "returned_commit": commit,
         "budget": budget,
         "changeset": verdict,
+        "prior_verify": prior_verify(directory, step),
         "return_schema": bounded_verify_return_schema(),
     }
     value["packet_sha256"] = verify_handoff_digest(value)
@@ -3450,6 +3490,24 @@ def verify_handoff(args):
     }
 
 
+def record_changeset(args):
+    """Record a measured over-budget changeset: the step stops oversized, never retried."""
+    directory, data, plan, leafs = mutating_run(args)
+    sid, step = selected_step(data, args.step_id)
+    if step["status"] != "completed":
+        raise Error("only a completed step can have its changeset recorded")
+    verdict = returned_changeset(data, plan, leafs, sid)[0]
+    if verdict["verdict"] != "oversized:changeset":
+        raise Error(f"the measured changeset verdict for {sid} is {verdict['verdict']}; nothing to record")
+    summary = (
+        f"{verdict['lines']} changed lines in {verdict['files']} files exceed "
+        f"{verdict['limits']['max_changed_lines']} lines / {verdict['limits']['max_files']} files"
+    )
+    stop_step(step, "oversized", "oversized:changeset", "oversized:changeset", summary)
+    event(directory, data, "record-changeset", step_id=sid)
+    return result2("record-changeset", args, sid, step, changeset=verdict)
+
+
 def validate_verify_return(args):
     try:
         packet = json.loads(read_bounded_input(args.handoff_file, MAX_VERIFY_HANDOFF + 1024, "verify handoff"))
@@ -3469,6 +3527,55 @@ def validate_verify_return(args):
         "packet_sha256": packet["packet_sha256"],
         "return_sha256": digest(value),
     }
+
+
+def verify_rejection_return(directory, step, verify):
+    """Synthesize the failed:verification return a reject stands for.
+
+    The builder's changed paths, acceptance, and commit carry over; the blocker
+    cites the stored verify return and its digest as evidence. The builder's own
+    completed return is superseded; the note carries no digest so a repeated
+    reject keeps the same progress fingerprint.
+    """
+    original = current_return(directory, step)
+    stored = step["verify"]
+    codes = ", ".join(dict.fromkeys(finding["code"] for finding in verify["findings"]))
+    return {
+        "schema": "bounded-step-return-v1",
+        "step_id": step["id"],
+        "attempt_id": step["attempt_id"],
+        "agent_id": step["agent_id"],
+        "status": "failed",
+        "changed_paths": original["changed_paths"],
+        "acceptance": original["acceptance"],
+        "blockers": [{
+            "code": "failed:verification",
+            "summary": f"verifier rejected the build: {codes}"[:MAX_BLOCKER_SUMMARY],
+            "evidence_path": stored["path"],
+            "sha256": stored["sha256"],
+        }],
+        "notes": [{
+            "type": "finding",
+            "message": "the builder's completed return was superseded by a verifier reject",
+        }],
+        "unstarted_remainder": [],
+        "commit_hash": step["returned_commit"],
+    }
+
+
+def reject_verified_step(directory, data, step, failure):
+    """Move a rejected completed step to failed through the one retry predicate."""
+    copy = directory / step["return_path"]
+    write(copy, failure, MAX_RETURN)
+    step["return_sha256"] = digest(failure)
+    step["reason"] = failure["blockers"][0]["summary"]
+    step["retry_allowed"] = True
+    # The superseded completed return left its fingerprint last; drop it so a
+    # repeated reject compares with the previous reject, not with that success.
+    step["fingerprints"].pop()
+    # Each verify return has its own digest, so fingerprint the codes alone.
+    bare = dict(failure, blockers=[{key: failure["blockers"][0][key] for key in ("code", "summary")}])
+    return settle_return(data, step, failure, return_fingerprint(bare))
 
 
 def record_verify(args):
@@ -3504,9 +3611,17 @@ def record_verify(args):
         "sha256": digest(value),
     }
     step["verify_id"] = ""
+    disposition = ""
+    if value["verdict"] == "reject":
+        failure = verify_rejection_return(directory, step, value)
+        disposition = reject_verified_step(directory, data, step, failure)
     event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
     result = result2("record-verify", args, sid, step, verdict=value["verdict"])
-    if value["verdict"] in VERIFY_PASSING:
+    if disposition:
+        result["next"] = next_after_return(
+            args, directory, data, batches, sid, step, failure, disposition, plan
+        )
+    elif value["verdict"] in VERIFY_PASSING:
         if group_landable(data, batches, sid) and not unverified_members(data, batches, sid):
             result["next"] = bounded_next({"command": land_command(data, sid)})
         else:
@@ -3640,44 +3755,8 @@ def amend(args):
     )
 
 
-def record(args):
-    directory, data, plan, leafs = mutating_run(args)
-    raw = Path(args.return_file).read_bytes()
-    try:
-        value = json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error("invalid step return JSON") from exc
-    sid = value.get("step_id") if isinstance(value, dict) else ""
-    step = data["steps"].get(sid)
-    repairable_scope_rejection = step is not None and scope_rejection_state(step)
-    if step is None or (step["status"] != "in_progress" and not repairable_scope_rejection):
-        raise Error("return is not for current in_progress step")
-    if len(raw) > MAX_RETURN:
-        reject_return(
-            directory,
-            data,
-            step,
-            sid,
-            "bounded-step-return-v1 exceeds 8 KiB",
-            "oversized_return",
-            "return exceeds 8 KiB",
-        )
-        raise Error("bounded-step-return-v1 exceeds 8 KiB")
-    try:
-        value = valid_return(value, data, step, leafs[sid])
-    except Error as exc:
-        if str(exc) == "changed path outside write_set":
-            reject_return(
-                directory,
-                data,
-                step,
-                sid,
-                SCOPE_REJECTION_REASON,
-                "scope_expanded",
-                "changed path outside write_set",
-            )
-        raise
-    fingerprint = digest(
+def return_fingerprint(value):
+    return digest(
         {
             key: value[key]
             for key in (
@@ -3690,15 +3769,10 @@ def record(args):
             )
         }
     )
-    copy = directory / "returns" / sid / f"{step['attempt_id']}.json"
-    write(copy, value, MAX_RETURN)
-    step["return_path"] = str(copy.relative_to(directory))
-    step["return_sha256"] = digest(value)
-    step["returned_commit"] = value["commit_hash"]
-    step["reason"] = (
-        value["acceptance"]["summary"]
-        or (value["blockers"][0]["summary"] if value["blockers"] else value["status"])
-    )[:480]
+
+
+def settle_return(data, step, value, fingerprint):
+    """Apply the retry policy to a stored return and name the branch that fired."""
     previous = step["fingerprints"][-1] if step["fingerprints"] else ""
     retry = retry_class(data, step, value)
     step["fingerprints"].append(fingerprint)
@@ -3751,6 +3825,57 @@ def record(args):
         "blocked:retry_ceiling_reached",
     }:
         step["blockers"] = value["blockers"]
+    return disposition
+
+
+def record(args):
+    directory, data, plan, leafs = mutating_run(args)
+    raw = Path(args.return_file).read_bytes()
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error("invalid step return JSON") from exc
+    sid = value.get("step_id") if isinstance(value, dict) else ""
+    step = data["steps"].get(sid)
+    repairable_scope_rejection = step is not None and scope_rejection_state(step)
+    if step is None or (step["status"] != "in_progress" and not repairable_scope_rejection):
+        raise Error("return is not for current in_progress step")
+    if len(raw) > MAX_RETURN:
+        reject_return(
+            directory,
+            data,
+            step,
+            sid,
+            "bounded-step-return-v1 exceeds 8 KiB",
+            "oversized_return",
+            "return exceeds 8 KiB",
+        )
+        raise Error("bounded-step-return-v1 exceeds 8 KiB")
+    try:
+        value = valid_return(value, data, step, leafs[sid])
+    except Error as exc:
+        if str(exc) == "changed path outside write_set":
+            reject_return(
+                directory,
+                data,
+                step,
+                sid,
+                SCOPE_REJECTION_REASON,
+                "scope_expanded",
+                "changed path outside write_set",
+            )
+        raise
+    fingerprint = return_fingerprint(value)
+    copy = directory / "returns" / sid / f"{step['attempt_id']}.json"
+    write(copy, value, MAX_RETURN)
+    step["return_path"] = str(copy.relative_to(directory))
+    step["return_sha256"] = digest(value)
+    step["returned_commit"] = value["commit_hash"]
+    step["reason"] = (
+        value["acceptance"]["summary"]
+        or (value["blockers"][0]["summary"] if value["blockers"] else value["status"])
+    )[:480]
+    disposition = settle_return(data, step, value, fingerprint)
     event(
         directory,
         data,
@@ -4723,6 +4848,10 @@ def parse():
     record_verify_parser.add_argument("--actor", required=True)
     record_verify_parser.add_argument("--run-id", required=True)
     record_verify_parser.add_argument("--return-file", required=True)
+    record_changeset_parser = commands.add_parser("record-changeset")
+    record_changeset_parser.add_argument("--actor", required=True)
+    record_changeset_parser.add_argument("--run-id", required=True)
+    record_changeset_parser.add_argument("--step-id", required=True)
     commands.add_parser("list")
     close = commands.add_parser("close")
     close.add_argument("--actor", required=True)
@@ -4796,6 +4925,8 @@ def main(argv=None):
             value = validate_verify_return(args)
         elif args.command == "record-verify":
             value = record_verify(args)
+        elif args.command == "record-changeset":
+            value = record_changeset(args)
         elif args.command == "check-changeset":
             value = check_changeset(args)
             return out(value, 0 if value["ok"] else 1)
