@@ -223,6 +223,8 @@ class DispatchCommandTest(DispatchHarness):
         self.assertLessEqual(len(prompt), 1200)
         for fact in (str(path), entry["worktree"], "validate-return", "--return-file -", "exactly"):
             self.assertIn(fact, prompt)
+        self.assertTrue(prompt.endswith(
+            "Your final message is exactly the bounded-step-return-v1 JSON object and nothing else."))
         # The stored layout is admitted by later commands, and the entry still validates as a packet.
         self.assertEqual(0, self.call("show", "--run-id", self.run_id)[0])
         self.assertEqual(entry["handoff_sha256"], ledger.valid_worker_handoff(entry)["handoff_sha256"])
@@ -292,6 +294,16 @@ class DispatchCommandTest(DispatchHarness):
         self.assertEqual(2, len({item["attempt_id"] for item in result["handoffs"]}))
         steps = json.loads(self.checkpoint_path().read_text())["steps"]
         self.assertEqual({"in_progress"}, {item["status"] for item in steps.values()})
+
+    def test_batch_prompts_name_their_position_and_ask_for_one_json_array(self):
+        self.init(*batch_leaves())
+        one, two = (item["prompt"] for item in self.dispatch("first", "--create-from", "main")[1]["handoffs"])
+        self.assertIn("member 1 of 2 of batch group", one)
+        self.assertIn("member 2 of 2 of batch group", two)
+        for prompt in (one, two):
+            self.assertIn("one JSON array", prompt)
+            self.assertLessEqual(len(prompt), 1200)
+            self.assertNotIn("exactly the bounded-step-return-v1 JSON object", prompt)
 
     def test_next_only_names_dispatch_for_a_pending_step(self):
         self.init([leaf("alpha", "leaf-alpha")])

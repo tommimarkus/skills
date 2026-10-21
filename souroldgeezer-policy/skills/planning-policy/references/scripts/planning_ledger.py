@@ -3131,8 +3131,11 @@ def worker_handoff_digest(value):
     })
 
 
-def worker_prompt(packet, packet_path):
-    """Host-neutral worker prompt built only from packet facts."""
+def worker_prompt(packet, packet_path, member=None):
+    """Host-neutral worker prompt built only from packet facts.
+
+    member is (position, count, batch) for a batch group, else None.
+    """
     script = Path(__file__).resolve()
     text = (
         f"You are the {packet['portable_tier']} builder for step {packet['step_id']} "
@@ -3141,18 +3144,24 @@ def worker_prompt(packet, packet_path):
         f"Work only in the worktree: {packet['worktree']}\n"
         f"Before returning, validate your return read-only by piping it to: "
         f"python3 -B {script} validate-return --handoff-file {packet_path} --return-file -\n"
-        "Your final message is exactly the bounded-step-return-v1 JSON object and nothing else."
+        + (
+            "Your final message is exactly the bounded-step-return-v1 JSON object and nothing else."
+            if member is None
+            else f"This step is member {member[0]} of {member[1]} of batch {member[2]}, dispatched "
+            "together in listed order; your final message is one JSON array holding one "
+            "bounded-step-return-v1 object per member you ran, in that order, and nothing else."
+        )
     )
     if len(text) > MAX_WORKER_PROMPT:
         raise Error("worker prompt exceeds 1200 characters")
     return text
 
 
-def store_dispatch_packet(directory, packet):
+def store_dispatch_packet(directory, packet, member=None):
     """Persist one issued packet under the run and return its dispatch entry."""
     path = (directory / "handoffs" / packet["step_id"] / f"{packet['attempt_id']}.json").resolve()
     write(path, packet, MAX_WORKER_HANDOFF)
-    return {**packet, "packet_path": str(path), "prompt": worker_prompt(packet, path)}
+    return {**packet, "packet_path": str(path), "prompt": worker_prompt(packet, path, member)}
 
 
 def worker_handoff_context(plan):
@@ -3500,7 +3509,13 @@ def dispatch(args):
         for member in group[1:]:
             data["steps"][member].setdefault("base_commit", "")
     packets = [step_handoff(directory, data, plan, data["steps"][member]) for member in group]
-    entries = [store_dispatch_packet(directory, packet) for packet in packets]
+    batch = leafs[group[0]].get("batch") if len(group) > 1 else None
+    entries = [
+        store_dispatch_packet(
+            directory, packet, (index, len(group), batch) if batch else None
+        )
+        for index, packet in enumerate(packets, 1)
+    ]
     for member, old, attempt_id in moves:
         for before, after in ((old, "ready"), ("ready", "in_progress")):
             event(

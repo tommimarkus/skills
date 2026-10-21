@@ -105,7 +105,8 @@ and must match exactly.
 absolute `packet_path` and `prompt`: host-neutral text of at most 1,200
 characters naming the packet path, worktree, the `validate-return` command with
 `--return-file -`, and the rule that the final message is exactly the bounded
-return JSON. The parent passes it unchanged; adapters may append host facts only.
+return JSON (for a batch member: one JSON array, one return per member run, in
+listed order). The parent passes it unchanged; adapters may append host facts only.
 `validate-return` accepts `-` (stdin) under the same 8 KiB bound.
 
 In a `leaf_verify_v1` run `init-v5` also stamps `pipeline_policy:
