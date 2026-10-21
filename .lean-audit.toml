@@ -34,7 +34,7 @@ a = "**/agents/*.md"
 b = "**/agents/*.md"
 except = ["souroldgeezer-policy/agents/plan-*.md"]
 
-[[carve_out]]                                   # Claude Code has no inline effort override, so each tier is its own definition on one gradient; the shared obligations live once in worker-handoff.md, and the tier prose that remains (intro, escalation, size band, batch, acceptance) stays parallel, so edit the four together
+[[carve_out]]                                   # Claude Code has no inline effort override, so each tier is its own definition; the shared worker obligations stay inline in each because a subagent's own prompt is the only context guaranteed to reach it, so edit the four together
 a = "souroldgeezer-policy/agents/plan-step-*.md"
 b = "souroldgeezer-policy/agents/plan-step-*.md"
 

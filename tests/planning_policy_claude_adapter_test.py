@@ -22,7 +22,6 @@ RETURN_PROFILE = (
     "`commit_hash`",
     "`unstarted_remainder`",
     "`completed`, `blocked`, `failed`, or `oversized`",
-    "32 safe repository-relative",
     "`finding`",
     "`decision_needed`",
     "`residual_risk`",
@@ -67,30 +66,20 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
 
             self.assertRegex(content, rf"(?m)^model: {model}$")
             self.assertRegex(content, rf"(?m)^effort: {effort}$")
+            self.assertIn("`blocked:missing_input`", content)
             self.assertIn("ask the parent to re-cut", content)
-            self.assertIn("worker-handoff.md#worker-obligations", content)
+            self.assertIn("Return exactly one UTF-8 JSON object", content)
+            self.assertRegex(
+                content,
+                re.compile(r"parent owns\s+integration and final verification", re.I),
+            )
+            self.assertIn("`retry-remediation-v1`", content)
+            self.assertIn("`blocked:needs_higher_tier`", content)
+            self.assertIn("ledger", content)
+            self.assertIn("`cohesive_outcome`", content)
+            self.assertIn("`decomposition` context", content)
+            self.assertIn("assigned work unit", content)
             self.assertNotIn("v1–v", content)
-
-    def test_worker_obligations_carry_the_gap_stops_and_ownership_rules(self):
-        handoff = re.sub(
-            r"\s+",
-            " ",
-            (REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md").read_text(
-                encoding="utf-8"
-            ),
-        )
-        for marker in (
-            "`blocked:missing_input`",
-            "Return exactly one UTF-8 JSON object",
-            "`retry-remediation-v1`",
-            "`blocked:needs_higher_tier`",
-            "ledger",
-            "`cohesive_outcome`",
-            "`decomposition` context",
-            "assigned work unit",
-        ):
-            self.assertIn(marker, handoff)
-        self.assertIn("the parent remains responsible for current-attempt validation and integration", handoff)
 
     def test_standard_agent_does_not_allow_load_bearing_assumptions(self):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")
@@ -124,12 +113,9 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn(fact, normalized)
         self.assertNotIn("2.1.284", adapter)
 
-    def test_adapter_keeps_the_bounded_step_return_profile_and_builders_defer_to_the_packet(self):
+    def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
         documents = [ADAPTER.read_text(encoding="utf-8")]
-        for tier in EXPECTED_TIERS:
-            builder = (AGENTS / f"{tier}.md").read_text(encoding="utf-8")
-            self.assertNotIn("8 KiB", builder)
-            self.assertNotIn("<=480", builder)
+        documents.extend((AGENTS / f"{tier}.md").read_text(encoding="utf-8") for tier in EXPECTED_TIERS)
 
         for content in documents:
             normalized = re.sub(r"\s+", " ", content)
@@ -139,14 +125,19 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn("raw logs", content)
             self.assertIn("Use `completed` only", content)
             self.assertNotIn("`commit_hash` is `null`", content)
-            self.assertTrue("return <=8 KiB" in content or "at most 8 KiB" in content)
             self.assertTrue("oversized also needs remainder" in content or "oversized` also requires an unstarted remainder" in content)
-            self.assertTrue("<=480-character" in content or "at most 480 characters" in content)
-            self.assertTrue("<=240-character summary" in content or "at most 240 characters" in content)
-            self.assertTrue('"exit_code": integer|null' in content or "integer/null exit code" in content)
-            self.assertTrue("eight blockers" in content or "at most eight" in content)
             self.assertTrue("empty string or 40/64-hex hash" in content or "empty\nstring or a 40- or 64-hex hash" in content)
             self.assertTrue("completed changed work needs a commit hash" in content or "completed\nwork with changed paths needs a commit hash" in content)
+
+        # Only the adapter restates the caps; the builders leave them to the packet's
+        # return_schema and validate-return (tests/planning_return_contract_parity_test.py).
+        adapter = documents[0]
+        self.assertIn("32 safe repository-relative", re.sub(r"\s+", " ", adapter))
+        self.assertTrue("return <=8 KiB" in adapter or "at most 8 KiB" in adapter)
+        self.assertTrue("<=480-character" in adapter or "at most 480 characters" in adapter)
+        self.assertTrue("<=240-character summary" in adapter or "at most 240 characters" in adapter)
+        self.assertTrue('"exit_code": integer|null' in adapter or "integer/null exit code" in adapter)
+        self.assertTrue("eight blockers" in adapter or "at most eight" in adapter)
 
         self.assertIn("return itself does not carry `run_id`", documents[0])
         self.assertIn("helper-generated assignment value", documents[0])

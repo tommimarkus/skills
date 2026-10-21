@@ -27,17 +27,21 @@ assert SPEC.loader
 SPEC.loader.exec_module(ledger)
 
 # The four execution-tier agents are unpaired, so check-runtime-metadata-parity.py
-# never derives or checks their bodies. They no longer restate the return profile:
-# each links the worker-handoff.md Worker obligations section, which states the
-# semantic return rules once; the packet's return_schema owns every cap. The two
-# adapters and the ledger contract still restate the full schema with its caps.
+# never derives or checks their bodies; the two adapters are the only worker-facing
+# contract on their host. All seven restate the same schema. The builders keep
+# their semantic return rules inline, because a subagent's own prompt is the only
+# context guaranteed to reach it, but state no numeric cap: the packet's
+# return_schema and validate-return own those. The two adapters and the ledger
+# contract still restate the caps.
 AGENTS = tuple(sorted((POLICY / "agents").glob("plan-step-*.md")))
 EXTENSIONS = (SKILL / "extensions/claude-code.md", SKILL / "extensions/codex.md")
 REFERENCE = SKILL / "references/ledger-contract.md"
-HANDOFF = SKILL / "references/worker-handoff.md"
 CAP_DOCUMENTS = EXTENSIONS + (REFERENCE,)
-RESTATEMENTS = CAP_DOCUMENTS + (HANDOFF,)
-OBLIGATIONS_LINK = "worker-handoff.md#worker-obligations"
+RESTATEMENTS = AGENTS + CAP_DOCUMENTS
+LIMIT_OWNER = (
+    "The packet's `return_schema` and `validate-return` own every count, length, "
+    "and size limit."
+)
 
 WORD_FORMS = {8: ("8", "eight"), 32: ("32", "thirty-two"), 240: ("240",), 480: ("480",)}
 
@@ -70,17 +74,14 @@ class ReturnStatusParityTest(unittest.TestCase):
                 for status in ledger.RETURN_STATUSES:
                     self.assertIn(status, text, f"{path.name} omits status {status!r}")
 
-    def test_worker_obligations_gate_binding_and_work_unit_context_on_v5_only(self):
-        text = normalized(HANDOFF)
-        self.assertIn("## Worker obligations", text)
-        self.assertIn("Assignments use v5", text)
-        self.assertIn("`cohesive_outcome` and `decomposition` context", text)
-        self.assertNotIn("v1–v", text)
-        self.assertNotIn("v4–v5", text)
+    def test_wrappers_gate_binding_and_work_unit_context_on_v5_only(self):
         for path in AGENTS:
+            text = normalized(path)
             with self.subTest(document=path.name):
-                self.assertNotIn("v1–v", normalized(path))
-                self.assertNotIn("report its raw output", normalized(path))
+                self.assertIn("Assignments use v5", text)
+                self.assertNotIn("v1–v", text)
+                self.assertNotIn("v4–v5", text)
+                self.assertNotIn("report its raw output", text)
 
     def test_codex_handoff_gates_binding_and_decomposition_on_v5_only(self):
         text = normalized(SKILL / "extensions/codex.md")
@@ -234,46 +235,58 @@ class BoundedCapParityTest(unittest.TestCase):
                 )
 
 
-class BuilderThinningTest(unittest.TestCase):
-    """Builders load the shared Worker obligations and restate no cap of their own."""
+class BuilderReturnRulesTest(unittest.TestCase):
+    """Builders state the return rules inline and leave every cap to the packet.
 
-    def test_each_builder_links_the_worker_obligations_section(self):
+    A fresh worker could not reliably read a plugin reference file, so moving
+    these rules out of the builder prompt made the cheapest tier stop or fence
+    its JSON. The rules stay in each builder; the numeric limits do not, since
+    the packet's generated return_schema and validate-return enforce them.
+    """
+
+    RULES = (
+        "Return exactly one UTF-8 JSON object",
+        '`"schema": "bounded-step-return-v1"`',
+        "no Markdown, prose outside the object, or raw logs",
+        "Echo assigned `step_id`, `agent_id`, and helper-generated `attempt_id`",
+        "so do not return it",
+        "Status is exactly `completed`, `blocked`, `failed`, or `oversized`",
+        "`commit_hash` is an empty string or 40/64-hex hash",
+        "Use `completed` only when acceptance exits `0`",
+        "completed changed work needs a commit hash, as does any other status",
+        "Blocked, failed, and oversized returns require a blocker; oversized also needs remainder",
+        "Prefer stopping before you change anything",
+        "never leave edits uncommitted",
+        "Do not invent a decision",
+        "for read-only return validation before submitting",
+        "`blocked:needs_higher_tier`",
+        "`blocked:capability_unavailable`",
+        "`blocked:missing_input`",
+        "`oversized:changeset`",
+        "`retry-remediation-v1`",
+    )
+
+    def test_each_builder_states_the_semantic_return_rules(self):
+        for path in AGENTS:
+            text = normalized(path)
+            for rule in self.RULES:
+                with self.subTest(document=path.name, rule=rule):
+                    self.assertIn(rule, text)
+
+    def test_each_builder_defers_limits_to_the_packet(self):
+        for path in AGENTS:
+            with self.subTest(document=path.name):
+                self.assertIn(LIMIT_OWNER, normalized(path))
+
+    def test_builders_state_no_numeric_cap(self):
         for path in AGENTS:
             text = normalized(path)
             with self.subTest(document=path.name):
-                self.assertIn(OBLIGATIONS_LINK, text)
-                self.assertIn("`return_schema`", text)
-                self.assertIn("`validate-return`", text)
-
-    def test_builders_and_obligations_restate_no_numeric_cap(self):
-        section = normalized(HANDOFF).split("## Worker obligations", 1)[1]
-        for path, text in [(p, normalized(p)) for p in AGENTS] + [(HANDOFF, section)]:
-            with self.subTest(document=path.name):
-                self.assertNotRegex(text, r"\bKiB\b|<=\s*\d|\bat most\b|\b(?:32|240|480)\b")
-                for word in ("eight",):
-                    self.assertNotRegex(text, rf"\b{word}\b")
-
-    def test_obligations_state_the_semantic_return_rules(self):
-        section = normalized(HANDOFF).split("## Worker obligations", 1)[1]
-        for rule in (
-            "exactly one UTF-8 JSON object",
-            "Use `completed` only when the acceptance command exits `0`",
-            "needs a commit hash",
-            "Prefer stopping before you change anything",
-            "never leave edits uncommitted",
-            "Do not invent a decision",
-            "`blocked:needs_higher_tier`",
-            "`blocked:capability_unavailable`",
-            "`blocked:missing_input`",
-            "`oversized:changeset`",
-            "`retry-remediation-v1`",
-        ):
-            with self.subTest(rule=rule):
-                self.assertIn(rule, section)
-        for status in ledger.RETURN_STATUSES:
-            self.assertIn(status, section)
-        for note_type in ledger.NOTE_TYPES:
-            self.assertIn(note_type, section)
+                self.assertNotRegex(
+                    text,
+                    r"\bKiB\b|<=\s*\d|\bat most\b|\b(?:32|240|480)\b|\b(?:eight|thirty-two)\b",
+                    f"{path.name} restates a cap the packet owns",
+                )
 
 
 class NextBlockScopeParityTest(unittest.TestCase):
