@@ -312,6 +312,15 @@ idiomatic (parallel structure, subagent mirrors, thin wrappers), the fix is
 engine-level carve-outs that recognize the idiom, not per-instance registry
 exemptions or shipping a noisy enforcement layer.
 
+A carve-out or exemption keyed on a directory glob must discriminate by file
+class whenever that directory holds more than one class (for example a router
+adapter beside tier or verifier agents), and its rationale must be true for every
+file it covers; otherwise split the glob or give the extra classes their own entry.
+
+When a runtime mirror tree or a second runtime guidance file lands, sweep every
+deterministic engine's built-in path constants and the lean registry for that
+family in the same change, and give each such constant a test.
+
 Dogfood a deterministic engine on the real corpus before calling the task done —
 especially one that concatenates or relates multiple files (a clone detector, a
 cross-reference resolver, a repo-wide cost model). The synthetic fixtures in a

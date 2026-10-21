@@ -1,11 +1,11 @@
 ---
 name: lesson-capture
-description: Use when the lesson-capture Stop hook fires — distill one generalizable, durable rule from a skill-authoring session (a user correction, question, or steering, or a self-correction) and file it as a lesson-candidate GitHub™ issue. Repo-internal; not a published plugin skill.
+description: Use when the lesson-capture Stop hook fires — distill one generalizable, durable rule from a skill-authoring session or a read-only audit session (a user correction, question, or steering, or a self-correction) and file it as a lesson-candidate GitHub™ issue. Repo-internal; not a published plugin skill.
 ---
 
 # Lesson Capture
 
-A skill-authoring change happened this session. Your job: judge whether anything that
+A skill-authoring change happened this session, or an audit skill / skill-architecture report ran read-only. Your job: judge whether anything that
 happened holds a reusable lesson, then file **at most one** generalizable candidate as a
 `lesson-candidate` GitHub issue, or record nothing. The signal may be a correction, pointed
 question, or steering **from the user**, or a wrong path you took and **corrected yourself** —

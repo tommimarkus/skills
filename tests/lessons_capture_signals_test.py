@@ -60,5 +60,43 @@ class DetectorTest(unittest.TestCase):
         self.assertEqual(sig.detect_corrections(Path("/nonexistent/x.jsonl")), [])
 
 
+class AuditRunTest(unittest.TestCase):
+    def _detect(self, entry: dict) -> list[str]:
+        sig = load_signals()
+        with tempfile.TemporaryDirectory() as tmp:
+            return sig.detect_audit_runs(_transcript(Path(tmp), entry))
+
+    def test_claude_skill_tool_use_is_detected(self):
+        entry = {"type": "assistant", "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "name": "Skill", "input": {"skill": "souroldgeezer-audit:ip-hygiene"}}]}}
+        self.assertEqual(self._detect(entry), ["ip-hygiene"])
+
+    def test_codex_report_function_call_is_detected(self):
+        entry = {"type": "response_item", "payload": {"type": "function_call", "name": "shell",
+                 "arguments": json.dumps({"command": ["scripts/skill-architecture-report.sh"]})}}
+        self.assertEqual(self._detect(entry), ["skill-architecture-report"])
+
+    def test_codex_audit_skill_read_is_detected(self):
+        entry = {"type": "response_item", "payload": {"type": "function_call", "name": "shell",
+                 "arguments": json.dumps({"command": ["cat", "skills/lean-audit/SKILL.md"]})}}
+        self.assertEqual(self._detect(entry), ["lean-audit"])
+
+    def test_mention_in_user_text_is_not_a_run(self):
+        self.assertEqual(self._detect(_user("please run lean-audit and the skill-architecture-report")), [])
+
+    def test_other_skill_is_not_an_audit_run(self):
+        entry = {"type": "assistant", "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "name": "Skill", "input": {"skill": "software-design"}}]}}
+        self.assertEqual(self._detect(entry), [])
+
+    def test_malformed_and_missing_transcripts_fail_open(self):
+        sig = load_signals()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.jsonl"
+            path.write_text("not json\n[1]\n", encoding="utf-8")
+            self.assertEqual(sig.detect_audit_runs(path), [])
+        self.assertEqual(sig.detect_audit_runs(Path("/nonexistent/x.jsonl")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

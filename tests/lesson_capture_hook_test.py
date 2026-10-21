@@ -34,6 +34,22 @@ def _transcript(tmp: Path, text: str) -> Path:
     return path
 
 
+def _tool_transcript(tmp: Path, entry: dict) -> Path:
+    path = tmp / "t.jsonl"
+    path.write_text(json.dumps(entry) + "\n", encoding="utf-8")
+    return path
+
+
+CLAUDE_AUDIT_RUN = {"type": "assistant", "message": {"role": "assistant", "content": [
+    {"type": "tool_use", "name": "Skill",
+     "input": {"skill": "souroldgeezer-audit:lean-audit"}}]}}
+CODEX_AUDIT_RUN = {"type": "response_item", "payload": {
+    "type": "function_call", "name": "shell",
+    "arguments": json.dumps({"command": ["bash", "scripts/skill-architecture-report.sh", "."]})}}
+CLAUDE_UNRELATED_RUN = {"type": "assistant", "message": {"role": "assistant", "content": [
+    {"type": "tool_use", "name": "Bash", "input": {"command": "ls"}}]}}
+
+
 def _run(tmp: Path, transcript: Path | None):
     payload = {"session_id": "s1", "cwd": str(tmp), "stop_hook_active": False}
     if transcript is not None:
@@ -75,6 +91,25 @@ class HookTest(unittest.TestCase):
             out = _run(tmp, _transcript(tmp, "revert that, not what I asked"))
             self.assertEqual(out.returncode, 0, out.stderr)
             self.assertEqual(out.stdout.strip(), "")
+
+    def _run_without_changes(self, entry: dict):
+        with tempfile.TemporaryDirectory() as t:
+            tmp = Path(t)
+            _repo(tmp)
+            return _run(tmp, _tool_transcript(tmp, entry))
+
+    def test_fires_on_claude_audit_run_without_changes(self):
+        out = self._run_without_changes(CLAUDE_AUDIT_RUN)
+        self._assert_hook_blocks(out)
+        self.assertIn("read-only audit session", out.stdout)
+
+    def test_fires_on_codex_report_run_without_changes(self):
+        self._assert_hook_blocks(self._run_without_changes(CODEX_AUDIT_RUN))
+
+    def test_silent_without_changes_or_audit_run(self):
+        out = self._run_without_changes(CLAUDE_UNRELATED_RUN)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(out.stdout.strip(), "")
 
 
 class WiringTest(unittest.TestCase):
