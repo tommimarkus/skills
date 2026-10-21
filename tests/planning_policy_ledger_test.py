@@ -1273,7 +1273,7 @@ class PlanningLedgerTest(unittest.TestCase):
         self.assertEqual(3, self.record(two, self.returned(step))[0])
 
     def test_uuid_collision_refuses_second_init_v2(self):
-        fixed = ledger.uuid.UUID("12345678-1234-4234-8234-123456789abc")
+        fixed = uuid.UUID("12345678-1234-4234-8234-123456789abc")
         with patch.object(uuid, "uuid4", return_value=fixed):
             self.init2()
             selected_plan = self.plan()

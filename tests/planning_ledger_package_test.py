@@ -24,11 +24,8 @@ IMPORT_ORDER = (
     ("cli",),
 )
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}
-# Extracted so far; each splitting step adds its modules here.
-EXTRACTED = {
-    "vocabulary", "core", "store", "gitops", "contract",
-    "checkpoint", "legacy", "schedule", "series", "returns",
-}
+# Every module of the package, per the module map in planningledger/__init__.py.
+EXTRACTED = set(GROUP)
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {
     "now": "core",
@@ -124,6 +121,14 @@ class PlanningLedgerPackageTest(unittest.TestCase):
 
         for name in edges:
             visit(name)
+
+    def test_the_package_docstring_names_every_module_and_imports_nothing(self):
+        tree = ast.parse((PACKAGE / "__init__.py").read_text(encoding="utf-8"))
+        doc = ast.get_docstring(tree)
+        self.assertEqual([], [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))])
+        for name in sorted(EXTRACTED):
+            self.assertIn(f"- {name}:", doc)
+        self.assertIn("vocabulary < core < store", doc)
 
     def test_help_runs_through_the_shim(self):
         result = subprocess.run(
