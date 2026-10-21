@@ -22,8 +22,8 @@ class PersistenceError(ValueError):
     """A storage failure that may use the documented inline fallback."""
 
 
-def error(code: str, message: str) -> dict[str, Any]:
-    return {"valid": False, "errors": [f"{code}: {message}"], "blocked": code}
+def emit(result: dict[str, Any]) -> None:
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
 
 
 def checked_root(value: str) -> Path:
@@ -213,47 +213,31 @@ def main(argv: list[str] | None = None) -> int:
         plan = contract._read_json_source(args.plan, RAW_PLAN_MAX)
         contract._approval_validation(plan)
     except contract.HandoffError as exc:
-        print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
+        emit(contract.error_result(exc.code, str(exc)))
         return 1
     except (OSError, ValueError, RecursionError):
-        print(
-            json.dumps(
-                error("blocked:missing_input", "unreadable or invalid plan input"),
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-        )
+        emit(contract.error_result("blocked:missing_input", "unreadable or invalid plan input"))
         return 1
     try:
         root = checked_root(args.plan_root)
         publish(root, plan)
     except contract.HandoffError as exc:
-        print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
+        emit(contract.error_result(exc.code, str(exc)))
         return 1
     except (PersistenceError, OSError, ValueError, RecursionError) as exc:
-        print(
-            json.dumps(
-                error("blocked:persistence_unavailable", str(exc)),
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-        )
+        emit(contract.error_result("blocked:persistence_unavailable", str(exc)))
         return 2
     try:
         handoff = verified_reference(root, plan)
     except contract.HandoffError as exc:
-        print(json.dumps(error(exc.code, str(exc)), sort_keys=True, separators=(",", ":")))
+        emit(contract.error_result(exc.code, str(exc)))
         return 1
     except (OSError, ValueError, RecursionError):
-        print(
-            json.dumps(
-                error("blocked:missing_input", "published reference cannot be verified"),
-                sort_keys=True,
-                separators=(",", ":"),
-            )
+        emit(
+            contract.error_result("blocked:missing_input", "published reference cannot be verified")
         )
         return 1
-    print(json.dumps(handoff, sort_keys=True, separators=(",", ":")))
+    emit(handoff)
     return 0
 
 

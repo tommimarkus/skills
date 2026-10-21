@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from .checkpoint import valid_series_handoff, validate_events, validate_run
-from .core import Error, JsonObject, JsonValue, ident, read_json, uuid4
+from .core import Error, JsonObject, JsonValue, ident, read_bounded_json, read_json, uuid4
 from .store import safe_run_contents
 from .vocabulary import MAX_SERIES_HANDOFF, SERIES_HANDOFF_LIST_FIELDS, SERIES_HANDOFF_SCHEMA
 
@@ -72,13 +72,12 @@ def read_series_handoff_content(path: str) -> JsonObject:
     never caller-supplied, so a previous slice's artifact cannot be pasted into
     this close; `composed_series_handoff` binds it from the closing run.
     """
-    try:
-        raw = Path(path).read_bytes()
-        value = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error("invalid series handoff content file") from exc
-    if len(raw) > MAX_SERIES_HANDOFF:
-        raise Error("series handoff content file exceeds 8 KiB")
+    value = read_bounded_json(
+        path,
+        MAX_SERIES_HANDOFF,
+        "invalid series handoff content file",
+        "series handoff content file exceeds 8 KiB",
+    )
     if not isinstance(value, dict) or set(value) != set(SERIES_HANDOFF_LIST_FIELDS):
         raise Error("series handoff content file must carry exactly the four content fields")
     return value

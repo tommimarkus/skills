@@ -25,6 +25,7 @@ from .core import (
     digest,
     ident,
     parent,
+    read_bounded_json,
     read_json,
     rel,
     require_sha256,
@@ -468,13 +469,12 @@ def valid_series_handoff(value: JsonValue) -> JsonObject:
 
 
 def read_series_handoff(path: str | Path) -> JsonObject:
-    try:
-        raw = Path(path).read_bytes()
-        value = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error("invalid planning-series-handoff-v1") from exc
-    if len(raw) > MAX_SERIES_HANDOFF:
-        raise Error("planning-series-handoff-v1 exceeds 8 KiB")
+    value = read_bounded_json(
+        path,
+        MAX_SERIES_HANDOFF,
+        "invalid planning-series-handoff-v1",
+        "planning-series-handoff-v1 exceeds 8 KiB",
+    )
     return valid_series_handoff(value)
 
 

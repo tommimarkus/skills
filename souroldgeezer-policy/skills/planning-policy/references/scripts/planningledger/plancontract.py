@@ -942,7 +942,7 @@ def _read_json_source(source: str, limit: int | None = None) -> Any:
     return json.loads(raw)
 
 
-def _error_result(code: str, message: str) -> dict[str, Any]:
+def error_result(code: str, message: str) -> dict[str, Any]:
     return {"valid": False, "errors": [f"{code}: {message}"], "blocked": code}
 
 
@@ -1826,12 +1826,12 @@ def main(argv: list[str] | None = None) -> int:
                     return 0
     except HandoffError as error:
         print(
-            json.dumps(_error_result(error.code, str(error)), sort_keys=True, separators=(",", ":"))
+            json.dumps(error_result(error.code, str(error)), sort_keys=True, separators=(",", ":"))
         )
         return 1
     except (OSError, ValueError, RecursionError) as error:
         result = (
-            _error_result("blocked:missing_input", "unreadable or invalid JSON input")
+            error_result("blocked:missing_input", "unreadable or invalid JSON input")
             if handoff_mode
             else contract_result(None, False, [], [str(error)])
         )

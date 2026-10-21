@@ -29,6 +29,7 @@ __all__ = [
     "approved_parent",
     "selected_step",
     "dependency_order",
+    "read_bounded_json",
     "read_json",
     "required_file",
     "require_sha256",
@@ -176,6 +177,18 @@ def read_json(path: str | Path, message: str) -> JsonValue:
         return json.loads(Path(path).read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise Error(message) from exc
+
+
+def read_bounded_json(path: str | Path, limit: int, invalid: str, oversize: str) -> JsonValue:
+    """Parse a JSON file, then cap its size: an unparsable file reports `invalid`."""
+    try:
+        raw = Path(path).read_bytes()
+        value: JsonValue = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error(invalid) from exc
+    if len(raw) > limit:
+        raise Error(oversize)
+    return value
 
 
 def required_file(directory: Path, name: str, message: str) -> Path:

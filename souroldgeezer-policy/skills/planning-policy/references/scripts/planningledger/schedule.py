@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import uuid
 from pathlib import Path
 from typing import TypeAlias
@@ -16,7 +15,16 @@ from .contract import (
     host_step_binding,
     tier_alias,
 )
-from .core import Error, JsonObject, JsonValue, digest, proxy_tokens, read_json, rel
+from .core import (
+    Error,
+    JsonObject,
+    JsonValue,
+    digest,
+    proxy_tokens,
+    read_bounded_json,
+    read_json,
+    rel,
+)
 from .store import write
 from .vocabulary import (
     BATCH_ACTIVE_STATES,
@@ -35,6 +43,7 @@ from .vocabulary import (
 )
 
 __all__ = [
+    "trim_collection",
     "bounded_next",
     "bounded_action_next",
     "ordered_steps",
@@ -78,6 +87,13 @@ __all__ = [
 Batches: TypeAlias = dict[str, list[str]]
 
 
+def trim_collection(value: JsonObject, trimmable: str) -> None:
+    """Pop the trimmable collection's tail while the block is over budget, keeping one item."""
+    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
+        value[trimmable].pop()
+        value["truncated"] = True
+
+
 def bounded_next(
     value: JsonObject, droppable: tuple[str, ...] = (), trimmable: str = ""
 ) -> JsonObject:
@@ -90,17 +106,13 @@ def bounded_next(
         if proxy_tokens(value) <= MAX_NEXT_TOKENS:
             return value
         value.pop(key, None)
-    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
-        value[trimmable].pop()
-        value["truncated"] = True
+    trim_collection(value, trimmable)
     return value
 
 
 def bounded_action_next(value: JsonObject, trimmable: str = "") -> JsonObject:
     """Keep the first legal command while trimming a convenience collection."""
-    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
-        value[trimmable].pop()
-        value["truncated"] = True
+    trim_collection(value, trimmable)
     if proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable:
         value.pop(trimmable, None)
         value["truncated"] = True
@@ -220,13 +232,9 @@ def batch_settled(data: JsonObject, batches: Batches, step_id: str) -> bool:
 
 
 def read_remediation(path: str) -> JsonObject:
-    try:
-        raw = Path(path).read_bytes()
-        value = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error("invalid retry-remediation-v1") from exc
-    if len(raw) > MAX_REMEDIATION:
-        raise Error("retry-remediation-v1 exceeds 4 KiB")
+    value = read_bounded_json(
+        path, MAX_REMEDIATION, "invalid retry-remediation-v1", "retry-remediation-v1 exceeds 4 KiB"
+    )
     return valid_remediation(value)
 
 

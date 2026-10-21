@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from .checkpoint import active_run, load_run, mutating_run, valid_remediation, validate_events
@@ -22,6 +21,7 @@ from .core import (
     canon,
     digest,
     ident,
+    read_bounded_json,
     read_json,
     rel,
     selected_step,
@@ -274,15 +274,11 @@ def worktree_result(
     if not path:
         raise Error(f"{target} transition requires --worktree-result")
     source = Path(path)
-    try:
-        raw = source.read_bytes()
-        value = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error("invalid planning-worktree-result-v1") from exc
+    message = "invalid planning-worktree-result-v1"
+    value = read_bounded_json(source, 4096, message, message)
     optional = WORKTREE_RESULT_OPTIONAL | ({"parent_commit"} if target == "cleaned" else set())
     if (
-        len(raw) > 4096
-        or not isinstance(value, dict)
+        not isinstance(value, dict)
         or set(value) - optional != WORKTREE_RESULT_FIELDS
         or value.get("schema") != "planning-worktree-result-v1"
         or value.get("ok") is not True
