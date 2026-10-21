@@ -69,14 +69,9 @@ blocks a test) commits its work, returns `blocked` / `blocked:environment`, and
 the worker continues to the next member; any other stop halts the batch at the
 first stop. The parent marks unrun followers `transition --to pending`,
 remediates the stopped member in the same worktree, dispatches followers singly,
-and lands the batch once every member is completed or terminal. For an
-environment stop the parent re-runs that member's identical acceptance command
-at its returned commit where the environment allows (for example outside the
-sandbox, in a detached checkout under the primary checkout's `.worktrees/`):
-exit 0 records `completed` with the parent's acceptance evidence and a
-`verification_limit` disclosing the stop; a non-environmental failure records
-`failed:acceptance`; if the parent cannot run it either, it records the
-`blocked:environment` return for a same-tier retry.
+and lands the batch once every member is completed or terminal. An
+environment-stopped member is repaired per the
+[ledger contract](../references/ledger-contract.md) batch rule.
 
 Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
 `verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
