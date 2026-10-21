@@ -64,8 +64,8 @@ returns `Agent type '<tier>' not found`.
 Initialize with `init-v5 --host claude-code --evidence ...` to derive
 assignments and the binding from the shared tier map; this table stays pinned to
 it. Pass the generated `prompt` from `dispatch` to the Agent unchanged, appending
-host facts only. Launch a provisionally ready dependent and its prerequisite's
-verifier in the same turn (several `Agent` calls in one message).
+host facts only. Launch the steps a `next` block lists in `concurrent` in the
+same turn (several `Agent` calls in one message).
 
 A declared `batch` dispatches once: call `Agent` a single time with the
 ordered member handoffs, not once per member. `dispatch` on the first member

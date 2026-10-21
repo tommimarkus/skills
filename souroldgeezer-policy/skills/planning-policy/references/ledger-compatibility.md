@@ -15,6 +15,14 @@ A resumed v4 record remains binding-dispatchable; new v5 runs require
 evidence. Existing v1–v3 ledgers do not gain a binding merely by inspection or
 resume.
 
+A retained v5 run stamped `pipeline_policy: provisional_v1` (the removed
+provisional-start pipeline) still loads; with no stacked step it resumes under
+integrated-or-cleaned readiness, while a step carrying `provisional_base`,
+`upstream_stale`, `upstream_change`, `pending_acceptance`, or
+`blocked:upstream_changed` makes every mutating command stop
+`blocked:contract_migration_required` (and `show --next-only` names
+`contract_migration_required`); `show`, `list`, and `gc` keep working.
+
 Unversioned version-1 plans are inspection-only (`contract_version: 1`,
 `dispatch_ready: false`). Existing ledgers remain mutable under
 `retry_policy: legacy_unbounded`; its terminal `integrated` state is unchanged

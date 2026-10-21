@@ -159,16 +159,15 @@ RETURN_CODES = {
             "model_unavailable",
             "capability_unavailable",
             "environment",
-            "upstream_changed",
         )
     ),
     "failed": ("failed:acceptance", "failed:execution", "failed:verification"),
     "oversized": ("oversized:scope", "oversized:changeset"),
 }
-# Recorded by the ledger alone (record-verify, restack): a worker return can never carry them.
-VERIFIER_ONLY_CODES = {"failed:verification", "blocked:upstream_changed"}
+# Recorded by the ledger alone (record-verify): a worker return can never carry it.
+VERIFIER_ONLY_CODES = {"failed:verification"}
 # Repairable stops retry at the same tier without spending the same-tier retry.
-REPAIRABLE_CODES = {"blocked:environment", "blocked:upstream_changed"}
+REPAIRABLE_CODES = {"blocked:environment"}
 # The stops that need reasoning rather than repair, by (status, code).
 REASONING_STOPS = {
     ("failed", "failed:acceptance"),
@@ -176,10 +175,15 @@ REASONING_STOPS = {
     ("blocked", "blocked:needs_higher_tier"),
 }
 VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
-# Stamped only on leaf_verify_v1 runs: a dependent may start on a completed prerequisite whose verify is issued.
-PIPELINE_POLICY = "provisional_v1"
+# Retained-run stamp of the removed provisional-start pipeline. Load accepts it;
+# a run whose steps still carry stacked state refuses every mutation.
+RETAINED_PIPELINE_POLICY = "provisional_v1"
+RETAINED_PIPELINE_FIELDS = ("provisional_base", "upstream_stale", "upstream_change", "pending_acceptance")
+RETAINED_PIPELINE_CODE = "blocked:upstream_changed"
 MAX_CONCURRENT = 4
-NON_ACTION_CATEGORIES = {"terminal_closed", "terminal_blocked", "validate_closeout"}
+NON_ACTION_CATEGORIES = {
+    "terminal_closed", "terminal_blocked", "validate_closeout", "contract_migration_required",
+}
 # The stamp maps to the plan's precision word; a run without it keeps the hard scope rejection.
 PRECISION_POLICIES = {"standard_v1": "standard", "strict_v1": "strict"}
 CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
@@ -658,47 +662,28 @@ def dependencies_clean(data, step, batches):
     )
 
 
-def provisional_prerequisite(data, step, batches):
-    """The one unlanded prerequisite a pending step may build on, or "".
-
-    Every other dependency must be integrated or cleaned; the unlanded one must
-    be completed with a verify packet issued, or a passing verdict, for its
-    returned commit. A batch is stacked once, through its first member.
-    """
-    if data.get("pipeline_policy") != PIPELINE_POLICY or step["status"] != "pending":
-        return ""
-    members = batches.get(step["id"], ())
-    if members and members[0] != step["id"]:
-        return ""
-    unlanded = [
-        dep for dep in step["dependencies"]
-        if data["steps"][dep]["status"] not in EXTERNAL_DEPENDENCY_STATES
+def retained_pipeline_steps(data):
+    """Steps still carrying state from the removed provisional-start pipeline."""
+    return [
+        sid for sid, step in sorted(data["steps"].items())
+        if any(step.get(field) is not None for field in RETAINED_PIPELINE_FIELDS)
+        or any(
+            isinstance(blocker, dict) and blocker.get("code") == RETAINED_PIPELINE_CODE
+            for blocker in step.get("blockers") or ()
+        )
     ]
-    if len(unlanded) != 1:
-        return ""
-    prerequisite = data["steps"][unlanded[0]]
-    commit = prerequisite.get("returned_commit", "")
-    issued = prerequisite.get("verify_id") and prerequisite.get("verify_commit") == commit
-    if (
-        prerequisite["status"] != "completed"
-        or not commit
-        or prerequisite.get("upstream_stale")
-        or not (issued or commit_verified(prerequisite))
-    ):
-        return ""
-    return unlanded[0]
 
 
-def dependencies_ready(data, step, batches, allow_provisional=True):
-    """Dependencies are satisfied, or the step may start provisionally (or resume as such)."""
-    if dependencies_clean(data, step, batches):
-        return True
-    if not allow_provisional:
-        return False
-    if provisional_prerequisite(data, step, batches):
-        return True
-    base = step.get("provisional_base")
-    return bool(base) and data["steps"][base["step_id"]]["status"] == "completed"
+def require_no_retained_pipeline(data):
+    """Refuse to mutate a retained provisional_v1 run whose steps carry stacked state."""
+    stacked = retained_pipeline_steps(data)
+    if stacked:
+        raise Error(
+            "blocked:contract_migration_required: steps "
+            + ", ".join(stacked[:8])
+            + " carry state from the removed provisional-start pipeline; "
+            "show, list and gc still work"
+        )
 
 
 def attempt_available(step):
@@ -734,7 +719,7 @@ def ready_status_legal(step):
 def ready_candidate(data, step, batches):
     return (
         ready_status_legal(step)
-        and dependencies_ready(data, step, batches)
+        and dependencies_clean(data, step, batches)
         and attempt_available(step)
     )
 
@@ -1000,6 +985,7 @@ def validate_steps2(data, leafs):
                     step["retry_remediation_sha256"],
                     "blocked:plan_tampered",
                 )
+    # Retained provisional_v1 state stays well-formed so read-only commands can load it.
     for sid, step in steps.items():
         for field, keys in (
             ("upstream_stale", {"step_id", "commit"}),
@@ -1039,6 +1025,7 @@ def validate_events2(directory, data):
         f"reopen-v{schema}",
     }
     if schema == FORWARD_SCHEMA:
+        # "restack" is accepted only in the history of a retained provisional_v1 run.
         actions.update({"amend-v5", "verify-handoff", "record-verify", "record-changeset", "restack"})
     try:
         lines = path.read_text().splitlines()
@@ -1628,7 +1615,6 @@ def init5(args):
         "return_codes": REGISTERED_RETURN_CODES,
         "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
         "precision_policy": "strict_v1" if plan.get("precision") == "strict" else "standard_v1",
-        **({} if plan.get("verification") == "closeout-only" else {"pipeline_policy": PIPELINE_POLICY}),
         **({"host": args.host} if args.host else {}),
         "steps": steps,
     }
@@ -1685,7 +1671,7 @@ def load2(args):
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
         or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
         or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
-        or data.get("pipeline_policy") not in {None, PIPELINE_POLICY}
+        or data.get("pipeline_policy") not in {None, RETAINED_PIPELINE_POLICY}
         or (data.get("host") is not None and data["host"] not in host_tiers().get("hosts", {}))
     ):
         raise Error("invalid run checkpoint")
@@ -1716,6 +1702,7 @@ def mutating_run(args):
     loaded = load2(args)
     validate_events2(loaded[0], loaded[1])
     active_run(loaded[1])
+    require_no_retained_pipeline(loaded[1])
     return loaded
 
 
@@ -1851,14 +1838,6 @@ def store_remediation(args, data, directory, step):
             raise Error(
                 "failed:verification remediation must cite the verify return digest "
                 f"({cited[0]}) and the rejected commit ({cited[1]})"
-            )
-    if outcome == "blocked:upstream_changed":
-        change = step.get("upstream_change", {})
-        cited = (change.get("old", "")[:12], change.get("new", "")[:12])
-        if not all(cited) or not all(part in value["diagnosis"] for part in cited):
-            raise Error(
-                "blocked:upstream_changed remediation must cite the prerequisite's old "
-                f"({cited[0]}) and new ({cited[1]}) commits"
             )
     if value["executor_mode"] == "reuse":
         if value["next_agent_id"] != step["agent_id"]:
@@ -2036,7 +2015,7 @@ def validate_retry_artifacts(directory, data):
             raise Error("retry remediation artifact digest mismatch")
 
 
-def ready(args, directory, data, plan, batches, step, allow_provisional=False):
+def ready(args, directory, data, plan, batches, step):
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
         if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
             raise Error(f"invalid {label}")
@@ -2055,7 +2034,7 @@ def ready(args, directory, data, plan, batches, step, allow_provisional=False):
             raise Error("retry requires --retry and bounded --summary")
     elif args.retry or args.retry_remediation_file:
         raise Error("initial ready transition is not a retry")
-    if not dependencies_ready(data, step, batches, allow_provisional):
+    if not dependencies_clean(data, step, batches):
         raise Error(
             "dependencies are not integrated or cleaned"
             if data.get("schema") == FORWARD_SCHEMA
@@ -2128,9 +2107,6 @@ def ready(args, directory, data, plan, batches, step, allow_provisional=False):
                 raise Error("blocked:capability_unavailable")
             step["capability_binding"] = resolved
             step["capability_binding_sha256"] = digest(resolved)
-    if step["status"] != "pending":
-        # A re-dispatched prerequisite invalidates what was stacked on its old commit.
-        mark_dependents_stale(data, step["id"])
     step["attempt_count"] += 1
     step["agent_id"] = next_agent_id
     step["attempt_id"] = str(uuid.uuid4())
@@ -2185,7 +2161,7 @@ def series_closeout_overlay(plan, block):
 
 
 def startable_step_ids(data, steps, batches):
-    """Steps a parent could start now: dispatch-ready, provisionally ready, or verify-pending."""
+    """Steps a parent could start now: ready, readiness candidates, or verify-pending."""
     leaf_verify = data.get("verify_policy") == "leaf_verify_v1"
     result = []
     for step in steps:
@@ -2200,7 +2176,6 @@ def startable_step_ids(data, steps, batches):
                 and batch_settled(data, batches, step["id"])
                 and stored_verdict(step) is None
                 and not step.get("verify_id")
-                and not step.get("upstream_stale")
             )
         if startable:
             result.append(step["id"])
@@ -2244,6 +2219,13 @@ def primary_next(directory, data, batches, plan):
             {"category": "terminal_closed", "outcome": data["outcome"]}
         )
 
+    stacked = retained_pipeline_steps(data)
+    if stacked:
+        # A retained provisional_v1 run with stacked state has no legal mutation left.
+        return bounded_action_next(
+            {"category": "contract_migration_required", "step_ids": stacked}, "step_ids"
+        )
+
     plan_id, run_id = data["plan_id"], data["run_id"]
     steps = ordered_steps(data["steps"])
     issued = []
@@ -2269,19 +2251,6 @@ def primary_next(directory, data, batches, plan):
         for step in steps
         if step["status"] == "completed" and batch_settled(data, batches, step["id"])
     ]
-    restackable = [sid for sid in completed if restack_ready(data, data["steps"][sid])]
-    if restackable:
-        pending = bool(data["steps"][restackable[0]].get("pending_acceptance"))
-        return bounded_action_next(
-            {
-                "category": "restack_acceptance" if pending else "restack_stale",
-                "step_ids": restackable,
-                "command": restack_command(data, restackable[0])
-                + (" --acceptance-exit-code N" if pending else ""),
-            },
-            "step_ids",
-        )
-    completed = [sid for sid in completed if not data["steps"][sid].get("upstream_stale")]
     if data.get("verify_policy") == "leaf_verify_v1":
         undecided = [sid for sid in completed if stored_verdict(data["steps"][sid]) is None]
         # A packet issued by verify-handoff is awaiting its verdict, not unissued.
@@ -2296,8 +2265,6 @@ def primary_next(directory, data, batches, plan):
             )
         # A rejected member holds its batch: only a retry routes it onward.
         completed = [sid for sid in completed if group_landable(data, batches, sid)]
-    # A provisional step waits for the prerequisite it stacked on to land first.
-    completed = [sid for sid in completed if not unlanded_base(data, data["steps"][sid])]
     if completed:
         return bounded_action_next(
             {
@@ -2480,40 +2447,11 @@ def commit_verified(step):
     return stored_verdict(step) in VERIFY_PASSING
 
 
-def require_not_stale(sid, step):
-    stale = step.get("upstream_stale")
-    if stale:
-        raise Error(
-            f"step {sid} is stale: its prerequisite {stale['step_id']} changed after it started; "
-            "restack it first"
-        )
-
-
 def require_verified(data, sid, step):
-    require_not_stale(sid, step)
-    require_prerequisite_landed(data, sid, step)
     if data.get("verify_policy") == "leaf_verify_v1" and not commit_verified(step):
         raise Error(
             f"step {sid} has no pass or inconclusive verification for its returned commit; "
             "run check-changeset, verify-handoff and record-verify first"
-        )
-
-
-def unlanded_base(data, step):
-    """The prerequisite a provisionally built step stacked on, while it is not yet landed."""
-    base = step.get("provisional_base")
-    if base and data["steps"][base["step_id"]]["status"] not in EXTERNAL_DEPENDENCY_STATES:
-        return base["step_id"]
-    return ""
-
-
-def require_prerequisite_landed(data, sid, step):
-    """A provisionally built step lands only after the prerequisite it stacked on."""
-    prerequisite = unlanded_base(data, step)
-    if prerequisite:
-        raise Error(
-            f"step {sid} is built on {prerequisite}, which is not integrated or cleaned; "
-            "land the prerequisite first"
         )
 
 
@@ -2785,6 +2723,7 @@ def close2(args):
     directory, data, plan, leafs = load2(args)
     validate_events2(directory, data)
     active_run(data)
+    require_no_retained_pipeline(data)
     # Resolved before every mutation below, so a refused series close leaves the
     # run active with no event, no stamp, and no artifact written.
     handoff = series_close_handoff(args, data, plan)
@@ -2855,6 +2794,7 @@ def reopen2(args):
     validate_events2(directory, data)
     if data["run_status"] != "closed" or data["outcome"] != "blocked":
         raise Error("only a retained blocked run may reopen")
+    require_no_retained_pipeline(data)
     if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
     if (
@@ -3041,7 +2981,7 @@ def valid_return(value, data, step, leaf, registered=None, standard=False):
         raise Error("non-completed returns require blockers")
     if registered:
         if any(blocker["code"] in VERIFIER_ONLY_CODES for blocker in blockers):
-            raise Error("failed:verification and blocked:upstream_changed are recorded only by the ledger, never returned by a worker")
+            raise Error("failed:verification is recorded only by the ledger, never returned by a worker")
         allowed = set().union(*RETURN_CODES.values()) - VERIFIER_ONLY_CODES
         if any(blocker["code"] not in allowed for blocker in blockers):
             raise Error("blocker code is not registered: use " + ", ".join(sorted(allowed)))
@@ -3286,8 +3226,6 @@ def build_worker_handoff(
         ]
     if precision is not None:
         value["precision"] = precision
-    if step.get("provisional_base"):
-        value["provisional_base"] = dict(step["provisional_base"])
     if changeset_base is not None:
         value["changeset_budget"] = {
             **validator_module().changeset_budget(leaf), "base_commit": changeset_base,
@@ -3301,7 +3239,7 @@ def build_worker_handoff(
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments", "changeset_budget", "precision", "provisional_base", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments", "changeset_budget", "precision", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -3338,16 +3276,6 @@ def valid_worker_handoff(value):
         raise Error("invalid worker handoff capability binding")
     if "precision" in value and value["precision"] not in set(PRECISION_POLICIES.values()):
         raise Error("invalid worker handoff precision")
-    base = value.get("provisional_base")
-    if "provisional_base" in value and not (
-        isinstance(base, dict)
-        and set(base) == {"step_id", "commit"}
-        and isinstance(base["step_id"], str)
-        and ID.fullmatch(base["step_id"])
-        and isinstance(base["commit"], str)
-        and COMMIT.fullmatch(base["commit"])
-    ):
-        raise Error("invalid worker handoff provisional base")
     budget = value.get("changeset_budget")
     if "changeset_budget" in value and not (
         isinstance(budget, dict)
@@ -3487,37 +3415,21 @@ def dispatch(args):
     # Every change stays in memory until identity and packets are proven, so a
     # failure anywhere leaves the checkpoint untouched.
     moves = []
-    prerequisite = provisional_prerequisite(data, data["steps"][group[0]], batches)
-    stacked = data["steps"][prerequisite]["returned_commit"] if prerequisite else ""
     for member in group:
         step = data["steps"][member]
         old = step["status"]
-        ready(args, directory, data, plan, batches, step, allow_provisional=True)
+        ready(args, directory, data, plan, batches, step)
         moves.append((member, old, step["attempt_id"]))
         advance(step, "ready", "ready", "in_progress", args.summary or "in progress")
     repo = repository_top(args)
     for member in group:
-        verify_worktree_identity(
-            repo, data["steps"][member], leafs[member], stacked or args.create_from
-        )
-    if stacked:
-        tree = data["steps"][group[0]]["assignment"]["worktree"]
-        contained = subprocess.run(
-            ["git", "-C", tree if Path(tree).is_absolute() else str(repo / tree),
-             "merge-base", "--is-ancestor", stacked, "HEAD"],
-            capture_output=True,
-        )
-        if contained.returncode:
-            raise Error(f"worktree {tree} does not contain provisional base {stacked[:12]}")
+        verify_worktree_identity(repo, data["steps"][member], leafs[member], args.create_from)
     if data.get("verify_policy") == "leaf_verify_v1":
         # The first member measures from the worktree HEAD at its first start; a
         # batch follower's base is the previous member's returned commit, which
         # does not exist yet, so it stays empty until the gate resolves it.
         step = data["steps"][group[0]]
-        if stacked:
-            step["provisional_base"] = {"step_id": prerequisite, "commit": stacked}
-            step["base_commit"] = stacked
-        elif "base_commit" not in step:
+        if "base_commit" not in step:
             step["base_commit"] = git_head(step["assignment"]["worktree"], repo)
         for member in group[1:]:
             data["steps"][member].setdefault("base_commit", "")
@@ -3886,12 +3798,9 @@ def verify_handoff(args):
     sid, step = selected_step(data, args.step_id)
     if step["status"] != "completed":
         raise Error("only a completed step can be verified")
-    require_not_stale(sid, step)
     members = unverified_members(data, step_batches(plan), sid)
     if not members:
         raise Error("every completed member already has a verdict for its returned commit")
-    for member in members:
-        require_not_stale(member, data["steps"][member])
     packets = []
     for member in members:
         packets.append(verify_handoff_packet(
@@ -3928,7 +3837,6 @@ def record_changeset(args):
         step.update(return_path="", return_sha256="")
         stop_step(step, "oversized", SCOPE_REJECTION_REASON, "scope_expanded",
                   "changed path outside write_set")
-        mark_dependents_stale(data, sid)
         event(directory, data, "record-changeset", step_id=sid)
         return result2("record-changeset", args, sid, step, changeset=verdict)
     if verdict["verdict"] != "oversized:changeset":
@@ -3938,7 +3846,6 @@ def record_changeset(args):
         f"{verdict['limits']['max_changed_lines']} lines / {verdict['limits']['max_files']} files"
     )
     stop_step(step, "oversized", "oversized:changeset", "oversized:changeset", summary)
-    mark_dependents_stale(data, sid)
     event(directory, data, "record-changeset", step_id=sid)
     return result2("record-changeset", args, sid, step, changeset=verdict)
 
@@ -4050,7 +3957,6 @@ def record_verify(args):
     if value["verdict"] == "reject":
         failure = verify_rejection_return(directory, step, value)
         disposition = reject_verified_step(directory, data, step, failure)
-        mark_dependents_stale(data, sid)
     event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
     result = result2("record-verify", args, sid, step, verdict=value["verdict"])
     if disposition:
@@ -4063,193 +3969,6 @@ def record_verify(args):
         else:
             result["next"] = checkpoint_next(directory, data, batches, plan)
     return result
-
-
-def mark_dependents_stale(data, sid):
-    """Flag each step stacked on `sid`'s commit, which `sid` no longer stands behind."""
-    for other in data["steps"].values():
-        base = other.get("provisional_base")
-        if (
-            base
-            and base["step_id"] == sid
-            and not other.get("upstream_stale")
-            and other["status"] not in EXTERNAL_DEPENDENCY_STATES
-        ):
-            other["upstream_stale"] = {"step_id": sid, "commit": base["commit"]}
-
-
-def restack_target(data, step):
-    """The prerequisite and its new base for a stale step, or ("", "") while it must wait.
-
-    A completed prerequisite supplies its new returned commit; an integrated one
-    leaves the parent tip as the base, which the caller resolves.
-    """
-    stale = step.get("upstream_stale")
-    base = step.get("provisional_base")
-    if not stale or not base:
-        return "", ""
-    prerequisite = data["steps"][stale["step_id"]]
-    if prerequisite["status"] in EXTERNAL_DEPENDENCY_STATES:
-        return stale["step_id"], "parent"
-    if (
-        prerequisite["status"] == "completed"
-        and not prerequisite.get("upstream_stale")
-        and prerequisite["returned_commit"] not in {"", base["commit"]}
-    ):
-        return stale["step_id"], prerequisite["returned_commit"]
-    return "", ""
-
-
-def restack_ready(data, step):
-    return step["status"] == "completed" and bool(restack_target(data, step)[0])
-
-
-def restack_command(data, step_id):
-    return (
-        f"--plan-id {data['plan_id']} restack --actor parent --run-id {data['run_id']} "
-        f"--step-id {step_id}"
-    )
-
-
-def patch_id(worktree, base, commit):
-    """Stable patch-id of the diff between two commits; "" when the diff is empty."""
-    diff = git_output(worktree, "diff", base, commit)
-    result = subprocess.run(
-        ["git", "-C", str(worktree), "patch-id", "--stable"],
-        input=diff, text=True, capture_output=True,
-    )
-    return result.stdout.split()[0] if result.returncode == 0 and result.stdout.split() else ""
-
-
-def restack_failure(directory, data, step, old, new, why):
-    """Route a failed restack to the repairable blocked:upstream_changed through the retry predicate."""
-    original = current_return(directory, step)
-    summary = f"restack onto {new[:12]} from {old[:12]} failed: {why}"[:MAX_BLOCKER_SUMMARY]
-    failure = {
-        "schema": "bounded-step-return-v1",
-        "step_id": step["id"],
-        "attempt_id": step["attempt_id"],
-        "agent_id": step["agent_id"],
-        "status": "blocked",
-        "changed_paths": original["changed_paths"],
-        "acceptance": original["acceptance"],
-        "blockers": [{"code": "blocked:upstream_changed", "summary": summary}],
-        "notes": [{
-            "type": "finding",
-            "message": "the builder's completed return was superseded by a failed restack",
-        }],
-        "unstarted_remainder": [],
-        "commit_hash": step["returned_commit"],
-    }
-    step["upstream_change"] = {"old": old, "new": new}
-    write(directory / step["return_path"], failure, MAX_RETURN)
-    step.update(return_sha256=digest(failure), reason=summary, retry_allowed=True, verify_id="")
-    step["fingerprints"].pop()
-    return settle_return(data, step, failure, digest(failure))
-
-
-def restack(args):
-    """Rebase a completed stale step onto its prerequisite's new base, keeping its verdict only for an unchanged patch."""
-    directory, data, plan, _leafs = mutating_run(args)
-    if data.get("pipeline_policy") != PIPELINE_POLICY:
-        raise Error("restack requires a run with provisional starts")
-    sid, step = selected_step(data, args.step_id)
-    if step["status"] != "completed" or not step.get("upstream_stale"):
-        raise Error("only a completed stale step can be restacked")
-    batches = step_batches(plan)
-    if sid in batches:
-        raise Error("restack does not support batch members")
-    prerequisite, new = restack_target(data, step)
-    if not prerequisite:
-        raise Error("the prerequisite has no new completed commit and is not integrated")
-    repo = repository_top(args)
-    worktree = Path(step["assignment"]["worktree"])
-    if not worktree.is_absolute():
-        worktree = repo / worktree
-    if new == "parent":
-        new = git_output(repo, "rev-parse", "HEAD").strip()
-    if dirty_paths(worktree):
-        raise Error("the step's worktree has uncommitted changes")
-    old, returned = step["provisional_base"]["commit"], step["returned_commit"]
-    head = git_output(worktree, "rev-parse", "HEAD").strip()
-    contained = subprocess.run(
-        ["git", "-C", str(worktree), "merge-base", "--is-ancestor", new, "HEAD"], capture_output=True
-    ).returncode == 0
-    blocked = ""
-    anchor = ""
-    if not contained:
-        # A recorded pending restack moves the target again from its rebased base, not the returned commit.
-        anchor = (step.get("pending_acceptance") or {}).get("new", "")
-        if anchor:
-            if subprocess.run(
-                ["git", "-C", str(worktree), "merge-base", "--is-ancestor", anchor, "HEAD"],
-                capture_output=True,
-            ).returncode:
-                raise Error("the step's worktree no longer contains its pending restack base")
-        elif head != returned:
-            raise Error("the step's worktree is not at its returned commit")
-        if args.acceptance_exit_code is not None:
-            raise Error(
-                "restack rebases first: run it without --acceptance-exit-code, re-run the scoped "
-                "acceptance in the rebased worktree, then repeat with the code"
-            )
-        rebased = subprocess.run(
-            ["git", "-C", str(worktree), "rebase", "--onto", new, anchor or old], text=True, capture_output=True
-        )
-        if rebased.returncode:
-            subprocess.run(["git", "-C", str(worktree), "rebase", "--abort"], capture_output=True)
-            blocked = "rebase conflict"
-            if anchor:
-                # The aborted worktree still sits on the earlier rebase, so record that base.
-                step["base_commit"] = step["provisional_base"]["commit"] = anchor
-    if not blocked:
-        head = git_output(worktree, "rev-parse", "HEAD").strip()
-        if git_output(worktree, "rev-parse", f"{head}^{{tree}}") != git_output(
-            worktree, "rev-parse", f"{returned}^{{tree}}"
-        ):
-            if args.acceptance_exit_code is None:
-                # The rebase landed: record what acceptance must re-run against, never fail after changing the worktree.
-                step["pending_acceptance"] = {"old": old, "new": new}
-                event(directory, data, "restack", step_id=sid, outcome="acceptance_pending")
-                return result2(
-                    "restack", args, sid, step, outcome="acceptance_pending", verdict_carried=False,
-                    next=bounded_action_next(
-                        {
-                            "category": "restack_acceptance",
-                            "step_ids": [sid],
-                            "command": restack_command(data, sid) + " --acceptance-exit-code N",
-                        },
-                        "step_ids",
-                    ),
-                )
-            if args.acceptance_exit_code != 0:
-                blocked = f"acceptance exit {args.acceptance_exit_code} after the rebase"
-                step["base_commit"] = new
-                step["provisional_base"]["commit"] = new
-    carried = False
-    step.pop("pending_acceptance", None)
-    if blocked:
-        disposition = restack_failure(directory, data, step, old, new, blocked)
-    else:
-        same = patch_id(worktree, old, returned) == patch_id(worktree, new, head)
-        carried = same and commit_verified(step)
-        if carried:
-            step["verify"]["commit"] = head
-        else:
-            step.pop("verify", None)
-        step.update(
-            returned_commit=head, base_commit=new, verify_id="", verify_commit="",
-        )
-        step["provisional_base"]["commit"] = new
-        del step["upstream_stale"]
-        step.pop("upstream_change", None)
-        disposition = "restacked"
-    mark_dependents_stale(data, sid)
-    event(directory, data, "restack", step_id=sid, outcome=disposition)
-    return result2(
-        "restack", args, sid, step, outcome=disposition, verdict_carried=carried,
-        next=checkpoint_next(directory, data, batches, plan),
-    )
 
 
 def read_bounded_input(path, maximum, label):
@@ -5498,11 +5217,6 @@ def parse():
     record_verify_parser.add_argument("--actor", required=True)
     record_verify_parser.add_argument("--run-id", required=True)
     record_verify_parser.add_argument("--return-file", required=True)
-    restack_parser = commands.add_parser("restack")
-    restack_parser.add_argument("--actor", required=True)
-    restack_parser.add_argument("--run-id", required=True)
-    restack_parser.add_argument("--step-id", required=True)
-    restack_parser.add_argument("--acceptance-exit-code", type=int)
     record_changeset_parser = commands.add_parser("record-changeset")
     record_changeset_parser.add_argument("--actor", required=True)
     record_changeset_parser.add_argument("--run-id", required=True)
@@ -5582,8 +5296,6 @@ def main(argv=None):
             value = record_verify(args)
         elif args.command == "record-changeset":
             value = record_changeset(args)
-        elif args.command == "restack":
-            value = restack(args)
         elif args.command == "check-changeset":
             value = check_changeset(args)
             return out(value, 0 if value["ok"] else 1)

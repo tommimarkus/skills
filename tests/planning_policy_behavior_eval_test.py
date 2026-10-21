@@ -96,10 +96,6 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-chain-distinct-owner-batch",
             "planning-policy-behavior-derived-setup-host-init",
             "planning-policy-behavior-generated-prompt-unchanged",
-            "planning-policy-behavior-pipeline-dependent-starts-during-verify",
-            "planning-policy-behavior-pipeline-land-order",
-            "planning-policy-behavior-pipeline-reject-stale-restack",
-            "planning-policy-behavior-pipeline-restack-conflict-upstream-changed",
         }
         self.assertTrue(required.issubset(self.behavior))
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]

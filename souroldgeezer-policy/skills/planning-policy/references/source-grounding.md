@@ -543,8 +543,10 @@ The 2026-10-21 run had seven leaves with a single parallel pair, spent roughly
 six to ten parent calls per leaf on setup and lifecycle, and found two pinning
 tests only mid-run. Those observations motivate the pin scan before approval, the
 broadened chain advisory, derived setup, the generated worker prompt, and letting
-a dependent build while its prerequisite's verifier runs.
+a dependent build while its prerequisite's verifier runs. That provisional-start
+pipeline was later removed for lack of measured throughput benefit; retained
+`provisional_v1` runs stay loadable.
 
 The synthetic `planning-policy-behavior-precision-*`, `chain-*`, `derived-*`,
-`generated-*`, and `pipeline-*` cases cover that workflow. They test the
+and `generated-*` cases cover that workflow. They test the
 documented behavior, not model reliability. No third-party text is copied.

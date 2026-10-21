@@ -386,12 +386,7 @@ that no leaf owns (`PLANSCOPE-UNOWNED-PIN`: advisory standard, blocking strict).
 `init-v5 --host H --evidence TEXT` derives assignments and the capability
 binding from `references/host-tiers.json`, and `dispatch` stores each packet and
 returns a generated worker prompt that the parent passes to the tier agent
-unchanged. In `leaf_verify_v1` runs (`pipeline_policy: provisional_v1`) a
-dependent may start from a completed prerequisite whose verify packet is issued;
-`land` keeps dependency order, a prerequisite that leaves completed makes
-dependents stale, and `restack` rebases them, carrying a verdict only for an
-unchanged patch, with failures routed to the repairable
-`blocked:upstream_changed`.
+unchanged.
 
 A leaf's acceptance command is scoped to its own write set; a whole-suite run
 belongs only to the parent's final verification, run once at closeout, never per

@@ -66,7 +66,7 @@ It retains the resolved binding with each assigned step. An assignment change
 requires an exact re-binding before the step can become ready; otherwise stop
 `blocked:capability_unavailable`, never silently substitute or downgrade.
 
-### Precision, derived setup, and pipelining
+### Precision and derived setup
 
 `init-v5` stamps `precision_policy` from the plan's `precision`: `standard_v1`
 or `strict_v1`; any other value fails ledger load, and a retained run without the
@@ -112,43 +112,9 @@ listed order). The parent passes it unchanged; adapters may append host facts
 only.
 `validate-return` accepts `-` (stdin) under the same 8 KiB bound.
 
-In a `leaf_verify_v1` run `init-v5` also stamps `pipeline_policy:
-provisional_v1` (`closeout_only` and retained runs keep integrated-or-cleaned
-readiness). A pending step is provisionally ready when every dependency is
-integrated or cleaned except exactly one, which is completed with an issued
-`verify_id` or a stored pass or inconclusive verdict for its returned commit; two
-or more unintegrated prerequisites wait. Dispatching it (or a batch whose first
-member is) creates its worktree from the prerequisite's returned commit, records
-`provisional_base {step_id, commit}`, and sets `base_commit` to it; an existing
-assigned worktree must already contain that commit. The packet carries
-`provisional_base`. `land` and `transition --to integrated` refuse the step until
-that prerequisite is integrated or cleaned. A `next` block or `show --next-only`
-also lists up to 4 other startable step ids in `concurrent`, within the 120 and
-240 proxy-token caps.
-
-When a prerequisite with provisional dependents moves from completed to failed,
-blocked, or oversized, or is re-dispatched, each dependent gains `upstream_stale
-{step_id, commit}` (an in-progress dependent keeps working and its return is
-recorded normally); `verify-handoff`, `land`, and `transition --to integrated`
-refuse it until restacked. `restack --actor parent --run-id R --step-id S
-[--acceptance-exit-code N]` acts on a completed stale step once its prerequisite
-has a new completed commit or is integrated: it runs `git rebase --onto NEW OLD`
-in the step's worktree, records the new `returned_commit` and `base_commit`, and
-clears `upstream_stale`. A stored pass or inconclusive verdict carries over only
-when `git patch-id --stable` of the step's own diff is unchanged; otherwise it
-needs verification again. A tree-changing restack without
-`--acceptance-exit-code` rebases, keeps the step stale with a recorded
-`pending_acceptance` (old and new base) and returns ok with a `next` naming the
-scoped-acceptance re-run, and the repeat call with the code completes or blocks
-the step (a code supplied to the call that rebases is refused before the
-rebase; if the target moves before the repeat call, restack rebases again from
-the recorded `pending_acceptance` base and stays pending); `restack` refuses a
-batch member, which remediates through retry. A non-zero code, or a rebase
-conflict (aborted, worktree left clean), moves the step to `blocked` with
-`blocked:upstream_changed`. That code is registered in the blocked family, never returned by a worker (excluded from the worker return
-schema like `failed:verification`), and repairable: a same-tier retry that does
-not spend the same-tier retry, with remediation citing the prerequisite's old
-and new commits.
+A `next` block or `show --next-only` also lists up to 4 other startable step
+ids (ready, dispatchable, or completed with neither a verdict nor an issued
+verify packet) in `concurrent`, within the 120 and 240 proxy-token caps.
 
 ### Driving transitions and validate --closeout
 

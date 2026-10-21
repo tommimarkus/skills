@@ -79,22 +79,8 @@ and never replaces the parent's integration or closeout verification. A verdict
 stands across the integration rebase; the scoped-acceptance rule below is
 unchanged.
 
-In a `leaf_verify_v1` run the ledger stamps `pipeline_policy: provisional_v1`.
-A pending step becomes provisionally ready when exactly one prerequisite is
-unintegrated and that prerequisite is completed with an issued verify packet (or
-a stored pass or inconclusive verdict); its dispatch stacks on the prerequisite's
-returned commit and its packet names the `provisional_base`. Launch such a
-dependent and the prerequisite's verifier together rather than waiting. `land`
-keeps dependency order and refuses the dependent until its prerequisite is
-integrated, so unverified work never reaches the parent branch. When the
-prerequisite leaves `completed` without integrating, its provisional dependents
-are marked stale (`upstream_stale`); the parent runs `restack`, which rebases the
-dependent and keeps a stored verdict only when `git patch-id --stable` of its own
-diff is unchanged. A tree-changing restack needs the parent's re-run of the leaf's
-scoped acceptance (`--acceptance-exit-code`); a rebase conflict or a failed
-re-run is the repairable `blocked:upstream_changed`. `next` and `show --next-only`
-list other startable steps in a `concurrent` field. Detail:
-[ledger contract](ledger-contract.md).
+`next` and `show --next-only` list other startable steps in a `concurrent`
+field. Detail: [ledger contract](ledger-contract.md).
 
 Final verification runs once, at closeout, never per integration cycle;
 per-integration checks are the helper's ancestry and fast-forward proofs, not

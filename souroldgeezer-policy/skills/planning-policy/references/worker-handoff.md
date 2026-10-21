@@ -26,9 +26,7 @@ host adapter may append host facts only. The worker may run `validate-return`
 with `--return-file -` to read its return from stdin. The packet's `precision`
 governs scope: under `standard` a changed path outside the write set is allowed,
 recorded by the parent, and judged by the verifier, so a worker names such paths
-in `changed_paths` rather than stopping; under `strict` it is a hard stop. A
-packet naming `provisional_base` means the worktree was stacked on a prerequisite
-commit still being verified; build on it and do not rebase or alter it.
+in `changed_paths` rather than stopping; under `strict` it is a hard stop.
 
 `planning-worker-handoff-v1` is at most 32 KiB. It carries the plan digest and
 plan/run/step/agent/attempt identities, exact assigned leaf (the effective leaf, with a bounded `amendments` summary
