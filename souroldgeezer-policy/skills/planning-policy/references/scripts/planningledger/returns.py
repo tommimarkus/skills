@@ -25,6 +25,7 @@ from .core import (
     canon,
     digest,
     ident,
+    read_bounded_bytes,
     rel,
     require_sha256,
     selected_step,
@@ -555,14 +556,7 @@ def validate_return(args: argparse.Namespace) -> JsonObject:
 
 def read_bounded_input(path: str, maximum: int, label: str) -> bytes:
     """Read at most one byte beyond a fixed input bound before JSON parsing."""
-    try:
-        with Path(path).open("rb") as file:
-            raw = file.read(maximum + 1)
-    except OSError as exc:
-        raise Error(f"cannot read {label}") from exc
-    if len(raw) > maximum:
-        raise Error(f"{label} exceeds byte limit")
-    return raw
+    return read_bounded_bytes(path, maximum, f"cannot read {label}", f"{label} exceeds byte limit")
 
 
 def next_after_return(

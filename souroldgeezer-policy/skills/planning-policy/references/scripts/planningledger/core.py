@@ -29,6 +29,7 @@ __all__ = [
     "approved_parent",
     "selected_step",
     "dependency_order",
+    "read_bounded_bytes",
     "read_bounded_json",
     "read_json",
     "required_file",
@@ -179,15 +180,25 @@ def read_json(path: str | Path, message: str) -> JsonValue:
         raise Error(message) from exc
 
 
-def read_bounded_json(path: str | Path, limit: int, invalid: str, oversize: str) -> JsonValue:
-    """Parse a JSON file, then cap its size: an unparsable file reports `invalid`."""
+def read_bounded_bytes(path: str | Path, limit: int, unreadable: str, oversize: str) -> bytes:
+    """Read at most one byte beyond `limit`: an unreadable file reports `unreadable`."""
     try:
-        raw = Path(path).read_bytes()
-        value: JsonValue = json.loads(raw)
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise Error(invalid) from exc
+        with Path(path).open("rb") as file:
+            raw = file.read(limit + 1)
+    except OSError as exc:
+        raise Error(unreadable) from exc
     if len(raw) > limit:
         raise Error(oversize)
+    return raw
+
+
+def read_bounded_json(path: str | Path, limit: int, invalid: str, oversize: str) -> JsonValue:
+    """Cap a JSON file's size, then parse it: an unparsable file reports `invalid`."""
+    raw = read_bounded_bytes(path, limit, invalid, oversize)
+    try:
+        value: JsonValue = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise Error(invalid) from exc
     return value
 
 

@@ -3,7 +3,9 @@
 import ast
 import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module
 
@@ -141,6 +143,42 @@ class PlanningLedgerPackageTest(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("usage: planning_ledger.py", result.stdout)
+
+
+class ReadBoundedJsonTest(unittest.TestCase):
+    """read_bounded_json caps the bytes it reads before it parses them."""
+
+    def read(self, content, limit=16):
+        from planningledger import core
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "input.json"
+            path.write_bytes(content)
+            return core.read_bounded_json(path, limit, "invalid message", "oversize message")
+
+    def error(self, content, limit=16):
+        from planningledger import core
+
+        with self.assertRaises(core.Error) as caught:
+            self.read(content, limit)
+        return str(caught.exception)
+
+    def test_an_oversized_malformed_file_reports_oversize_not_invalid(self):
+        self.assertEqual("oversize message", self.error(b"{" * 64))
+
+    def test_a_within_limit_malformed_file_reports_invalid(self):
+        self.assertEqual("invalid message", self.error(b"{not json"))
+
+    def test_a_missing_path_reports_invalid(self):
+        from planningledger import core
+
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(core.Error) as caught:
+                core.read_bounded_json(Path(directory) / "absent.json", 16, "invalid message", "oversize message")
+        self.assertEqual("invalid message", str(caught.exception))
+
+    def test_a_within_limit_valid_file_parses(self):
+        self.assertEqual({"a": 1}, self.read(b'{"a": 1}'))
 
 
 if __name__ == "__main__":
