@@ -87,7 +87,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 "write_set", "settled_decisions", "acceptance_command", "stop_conditions",
                 "must be at least `0.60`", "analytical_heavy_exception",
                 "planning-execution-cost-v1", "planning-cost-advisory-v1",
-                "Versions 1–4 are resume-only", "approval_ready", "dispatch_ready",
+                "Versions 1–4 were retired", "approval_ready", "dispatch_ready",
                 "planning-capability-binding-v1", "max_attempts", "1–5",
             ),
             "references/core-workflow.md": (
@@ -333,10 +333,11 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         )
         for fact in (
             "cohesive_outcome", "decomposition", "work_units",
-            "Versions 1–4 are resume-only", "init-v4",
-            "blocked:contract_migration_required", "Existing v1–v4 ledgers",
+            "accepts only `contract_version: 5`", "Versions 1–4 were retired",
+            "souroldgeezer-policy 2026.10.9", "ledger-compatibility.md",
         ):
             self.assertIn(fact, contract)
+        self.assertNotIn("resume_ready", contract)
 
     def test_persistent_handoff_writer_keeps_inline_fallback_and_read_only_validator(self) -> None:
         handoff = self.text(

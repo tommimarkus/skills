@@ -36,8 +36,13 @@ REQUIRED = (
     "work_unit_id",
 )
 PRECISION_MODES = ("standard", "strict")
-V2_REQUIRED = ("contract_version", "objective", "scope_summary", "approved_decisions")
-V2_RETURN_CONTRACT = "bounded-step-return-v1"
+CONTRACT_VERSION = 5
+RETIRED_VERSIONS_ERROR = (
+    "contract_version must be 5; plan contract versions 1-4 were retired after "
+    "souroldgeezer-policy 2026.10.9"
+)
+PLAN_REQUIRED = ("objective", "scope_summary", "approved_decisions")
+RETURN_CONTRACT = "bounded-step-return-v1"
 CAPABILITY_BASELINE = "plan-step-base-v1"
 CAPABILITY_BINDING_SCHEMA = "planning-capability-binding-v1"
 CAPABILITY_KINDS = {"tool", "skill", "service", "permission", "runtime"}
@@ -998,7 +1003,7 @@ def capability_requirements_valid(value: Any) -> bool:
 
 
 def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]], binding: Any) -> bool:
-    """Require one exact resolved binding for every v4 leaf, without making it a plan error."""
+    """Require one exact resolved binding for every leaf, without making it a plan error."""
     if not isinstance(binding, dict) or set(binding) != {"schema", "plan_sha256", "bindings"}:
         return False
     if binding.get("schema") != CAPABILITY_BINDING_SCHEMA:
@@ -1119,7 +1124,6 @@ def contract_result(
         "contract_version": contract_version,
         "approval_ready": approval_ready and not errors,
         "dispatch_ready": dispatch_ready and not errors,
-        "resume_ready": contract_version in {2, 3, 4} and not errors,
         "warnings": warnings,
         "standard_ready_ratio": ratio,
         "ready_weight": ready_weight,
@@ -1130,40 +1134,29 @@ def contract_result(
     }
 
 
-def _contract_version(
-    plan: dict[str, Any], has_version_alias: bool, errors: list[str], warnings: list[str]
-) -> int | None:
-    raw_version = plan.get("contract_version")
-    if raw_version is None:
-        if has_version_alias:
-            return None
-        warnings.append(
-            "unversioned plan is legacy contract version 1; "
-            "migrate to contract_version 5 before approval or dispatch"
+def is_contract_version(value: Any) -> bool:
+    return isinstance(value, int) and value == CONTRACT_VERSION
+
+
+def _plan_field_errors(plan: dict[str, Any], errors: list[str]) -> None:
+    for field in PLAN_REQUIRED:
+        if field not in plan:
+            errors.append(f"{field} is required for contract version {CONTRACT_VERSION}")
+    if not nonempty_string_in_range(plan.get("objective"), 1, 240):
+        errors.append("objective must be a non-empty string from 1 to 240 characters")
+    if not nonempty_string_in_range(plan.get("scope_summary"), 1, 480):
+        errors.append("scope_summary must be a non-empty string from 1 to 480 characters")
+    decisions = plan.get("approved_decisions")
+    if not isinstance(decisions, list) or not 1 <= len(decisions) <= 8:
+        errors.append("approved_decisions must be an array containing 1 to 8 strings")
+    elif any(not nonempty_string_in_range(decision, 1, 240) for decision in decisions):
+        errors.append(
+            "approved_decisions entries must be non-empty strings from 1 to 240 characters"
         )
-        return 1
-    if isinstance(raw_version, int) and raw_version in {2, 3, 4, 5}:
-        for field in V2_REQUIRED:
-            if field not in plan:
-                errors.append(f"{field} is required for contract version {raw_version}")
-        if not nonempty_string_in_range(plan.get("objective"), 1, 240):
-            errors.append("objective must be a non-empty string from 1 to 240 characters")
-        if not nonempty_string_in_range(plan.get("scope_summary"), 1, 480):
-            errors.append("scope_summary must be a non-empty string from 1 to 480 characters")
-        decisions = plan.get("approved_decisions")
-        if not isinstance(decisions, list) or not 1 <= len(decisions) <= 8:
-            errors.append("approved_decisions must be an array containing 1 to 8 strings")
-        elif any(not nonempty_string_in_range(decision, 1, 240) for decision in decisions):
-            errors.append(
-                "approved_decisions entries must be non-empty strings from 1 to 240 characters"
-            )
-        return raw_version
-    errors.append("contract_version must be 2, 3, 4, or 5 when specified")
-    return None
 
 
 def _work_unit_sections(
-    units: list[Any], contract_version: int | None, errors: list[str]
+    units: list[Any], errors: list[str]
 ) -> tuple[dict[str, int], dict[str, tuple[int, dict[str, Any]]]]:
     unit_sizes: dict[str, int] = {}
     unit_records: dict[str, tuple[int, dict[str, Any]]] = {}
@@ -1183,16 +1176,15 @@ def _work_unit_sections(
         else:
             unit_sizes[unit_id] = SIZES[size]
             unit_records[unit_id] = (index, unit)
-        if contract_version == 5:
-            outcome = normalized_outcome(unit.get("cohesive_outcome"))
-            if outcome is None:
-                errors.append(f"{prefix}.cohesive_outcome must be a non-empty string from 1 to 240 characters")
-            elif outcome in cohesive_outcomes:
-                errors.append(f"duplicate normalized cohesive_outcome: {outcome}")
-            else:
-                cohesive_outcomes.add(outcome)
-            if not isinstance(unit.get("decomposition"), dict):
-                errors.append(f"{prefix}.decomposition must be an object")
+        outcome = normalized_outcome(unit.get("cohesive_outcome"))
+        if outcome is None:
+            errors.append(f"{prefix}.cohesive_outcome must be a non-empty string from 1 to 240 characters")
+        elif outcome in cohesive_outcomes:
+            errors.append(f"duplicate normalized cohesive_outcome: {outcome}")
+        else:
+            cohesive_outcomes.add(outcome)
+        if not isinstance(unit.get("decomposition"), dict):
+            errors.append(f"{prefix}.decomposition must be an object")
     return unit_sizes, unit_records
 
 
@@ -1222,17 +1214,16 @@ def _selective_audit_errors(prefix: str, audit: Any, errors: list[str]) -> None:
 def _leaf_declaration_errors(
     prefix: str,
     leaf: dict[str, Any],
-    contract_version: int | None,
     strict: bool,
     admission: bool,
     errors: list[str],
 ) -> None:
-    if strict and contract_version == 5:
+    if strict:
         if not safe_exact_write_set(leaf):
             errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
         if not exact_path_list(leaf.get("read_set"), non_empty=True):
             errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
-    if contract_version == 5 and admission:
+    if admission:
         for field in ("read_set", "write_set"):
             errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
         if leaf.get("write_set") == [] and leaf.get("read_set", []) == []:
@@ -1255,9 +1246,7 @@ def _leaf_declaration_errors(
         errors.extend(f"{prefix}.{error}" for error in changeset_budget_errors(leaf))
 
 
-def _leaf_contract_errors(
-    prefix: str, leaf: dict[str, Any], contract_version: int | None, errors: list[str]
-) -> None:
+def _leaf_contract_errors(prefix: str, leaf: dict[str, Any], errors: list[str]) -> None:
     if hashable(leaf.get("size")) not in SIZES:
         errors.append(f"{prefix}.size must be small, medium, or large")
     if hashable(leaf.get("portable_tier")) not in TIERS:
@@ -1276,25 +1265,18 @@ def _leaf_contract_errors(
         errors.append(
             f"{prefix}.acceptance_command must be exactly one non-empty command string"
         )
-    if contract_version in {2, 3, 4, 5}:
-        attempts = leaf.get("max_attempts")
-        if (
-            not isinstance(attempts, int)
-            or isinstance(attempts, bool)
-            or not 1 <= attempts <= 5
-        ):
-            errors.append(
-                f"{prefix}.max_attempts must be an integer from 1 to 5 for "
-                f"contract version {contract_version}"
-            )
-        if leaf.get("return_contract") != V2_RETURN_CONTRACT:
-            errors.append(
-                f"{prefix}.return_contract must be exactly {V2_RETURN_CONTRACT} "
-                f"for contract version {contract_version}"
-            )
-    if contract_version in {4, 5} and not capability_requirements_valid(
-        leaf.get("capability_requirements")
-    ):
+    attempts = leaf.get("max_attempts")
+    if not isinstance(attempts, int) or isinstance(attempts, bool) or not 1 <= attempts <= 5:
+        errors.append(
+            f"{prefix}.max_attempts must be an integer from 1 to 5 for "
+            f"contract version {CONTRACT_VERSION}"
+        )
+    if leaf.get("return_contract") != RETURN_CONTRACT:
+        errors.append(
+            f"{prefix}.return_contract must be exactly {RETURN_CONTRACT} "
+            f"for contract version {CONTRACT_VERSION}"
+        )
+    if not capability_requirements_valid(leaf.get("capability_requirements")):
         errors.append(
             f"{prefix}.capability_requirements must be an exact {CAPABILITY_BASELINE} "
             "requirements object"
@@ -1310,7 +1292,6 @@ def _leaf_contract_errors(
 def _leaf_sections(
     leaves: list[Any],
     unit_sizes: dict[str, int],
-    contract_version: int | None,
     strict: bool,
     admission: bool,
     errors: list[str],
@@ -1333,7 +1314,7 @@ def _leaf_sections(
             errors.append(f"{prefix} must be an object")
             continue
         for field in REQUIRED:
-            if field == "read_set" and contract_version == 5 and not strict:
+            if field == "read_set" and not strict:
                 continue
             if field not in leaf:
                 errors.append(f"{prefix}.{field} is required")
@@ -1374,14 +1355,14 @@ def _leaf_sections(
                 errors.append(f"{prefix}.batch must be a stable bounded identifier")
             elif stable_id(leaf_id):
                 batches.setdefault(batch, []).append(leaf_id)
-        optional_read = contract_version == 5 and not strict and "read_set" not in leaf
+        optional_read = not strict and "read_set" not in leaf
         for field in ("read_set", "write_set", "stop_conditions"):
             if field == "read_set" and optional_read:
                 continue
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
-        _leaf_declaration_errors(prefix, leaf, contract_version, strict, admission, errors)
-        _leaf_contract_errors(prefix, leaf, contract_version, errors)
+        _leaf_declaration_errors(prefix, leaf, strict, admission, errors)
+        _leaf_contract_errors(prefix, leaf, errors)
         unit_id = leaf.get("work_unit_id")
         if hashable(unit_id) not in unit_sizes:
             errors.append(f"{prefix}.work_unit_id must name a declared work unit")
@@ -1593,11 +1574,15 @@ def validate(
     warnings: list[str] = []
     if not isinstance(plan, dict):
         return contract_result(None, False, warnings, ["plan must be an object"])
-    has_version_alias = "version" in plan
-    if has_version_alias:
+    if "version" in plan:
         errors.append("version is not a valid plan discriminator; use `contract_version`")
-    contract_version = _contract_version(plan, has_version_alias, errors, warnings)
-    if contract_version == 5 and admission and has_placeholder_decision(plan.get("approved_decisions")):
+    if not is_contract_version(plan.get("contract_version")):
+        errors.append(RETIRED_VERSIONS_ERROR)
+        result = contract_result(None, False, warnings, errors)
+        result["plan_sha256"] = canonical_plan_sha256(plan)
+        return result
+    _plan_field_errors(plan, errors)
+    if admission and has_placeholder_decision(plan.get("approved_decisions")):
         errors.append("approved_decisions cannot contain a standalone placeholder")
     precision = plan.get("precision", "standard")
     if "precision" in plan and precision not in PRECISION_MODES:
@@ -1612,16 +1597,15 @@ def validate(
         errors.append("work_units must be a non-empty array")
         units = []
 
-    unit_sizes, unit_records = _work_unit_sections(units, contract_version, errors)
+    unit_sizes, unit_records = _work_unit_sections(units, errors)
     leaf_ids, unit_leaves, dependencies, leaf_records, batches = _leaf_sections(
-        leaves, unit_sizes, contract_version, strict, admission, errors
+        leaves, unit_sizes, strict, admission, errors
     )
     _batch_errors(batches, leaf_records, dependencies, errors)
     _dependency_graph_errors(dependencies, leaf_ids, errors)
-    if contract_version == 5 and admission:
+    if admission:
         _leaf_ordering_errors(dependencies, leaf_records, errors)
-    if contract_version == 5:
-        _decomposition_errors(unit_leaves, unit_records, dependencies, errors)
+    _decomposition_errors(unit_leaves, unit_records, dependencies, errors)
     ratio, ready_weight, total_weight, exception_valid = _standard_ready_ratio(
         plan, unit_sizes, unit_leaves, errors
     )
@@ -1635,18 +1619,16 @@ def validate(
     scan = None
     if pin_roots and not errors:
         scan = _pin_findings(leaves, pin_roots, repo_root, strict, errors, warnings)
-    if contract_version in {2, 3, 4}:
-        warnings.append("blocked:contract_migration_required")
-    binding_matches = contract_version in {4, 5} and capability_binding_matches(plan, leaves, capability_binding)
-    if contract_version in {4, 5} and not binding_matches:
+    binding_matches = capability_binding_matches(plan, leaves, capability_binding)
+    if not binding_matches:
         warnings.append("blocked:capability_unavailable")
     advisory = bounded_cost_advisory(cost_advisory(plan, leaves))
     result = contract_result(
-        contract_version,
+        CONTRACT_VERSION,
         binding_matches,
         warnings,
         errors,
-        contract_version == 5,
+        True,
         ratio,
         ready_weight,
         total_weight,

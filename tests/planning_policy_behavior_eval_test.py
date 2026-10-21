@@ -1,5 +1,4 @@
 import importlib.util
-import copy
 import json
 import shutil
 import subprocess
@@ -8,6 +7,8 @@ import unittest
 from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
+
+from tests.planning_policy_shared_contract_test import leaf, v5_plan
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,19 +28,6 @@ def load_module(name, path):
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
-
-
-def leaf(identifier, unit, tier="standard"):
-    value = {
-        "id": identifier, "dependencies": [], "task": "One bounded concern", "boundary": "No adjacent edits",
-        "read_set": ["input.py"], "write_set": ["output.py"], "settled_decisions": {"shape": "set"},
-        "size": "medium", "portable_tier": tier, "worktree_owner": "task/eval",
-        "acceptance_command": "uv run python -m unittest tests.example", "return_contract": "bounded result",
-        "stop_conditions": ["missing_load_bearing_information"], "work_unit_id": unit,
-    }
-    if tier in {"analytical", "deep"}:
-        value["irreducible_unknown_or_risk"] = "A bounded unresolved compatibility question"
-    return value
 
 
 class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
@@ -121,10 +109,10 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             closeout = self.behavior[f"planning-policy-behavior-{host}-clean-closeout"]
             self.assertIn("routine cherry-pick", closeout["forbidden_behaviors"])
             self.assertTrue(any("once the first leaf is integrated" in check for check in closeout["required_checks"]))
-        accepted = self.contract.validate({"work_units": [{"id": "ordinary", "original_size": "medium"}, {"id": "unknown", "original_size": "small"}], "leaves": [leaf("ordinary-work", "ordinary"), leaf("unknown-work", "unknown", "analytical")]})
-        self.assertTrue(accepted["valid"])
+        accepted = self.contract.validate(v5_plan(leaf("ordinary-work", "ordinary"), leaf("unknown-work", "unknown", "analytical", owner="task/unknown"), work_units=[{"id": "ordinary", "original_size": "medium"}, {"id": "unknown", "original_size": "small"}]))
+        self.assertTrue(accepted["valid"], accepted["errors"])
         self.assertGreaterEqual(accepted["standard_ready_ratio"], 0.60)
-        split = self.contract.validate({"work_units": [{"id": "one-unit", "original_size": "small"}], "leaves": [leaf("known-half", "one-unit"), leaf("unknown-half", "one-unit", "analytical")]})
+        split = self.contract.validate(v5_plan(leaf("known-half", "one-unit"), leaf("unknown-half", "one-unit", "analytical"), work_units=[{"id": "one-unit", "original_size": "small"}]))
         self.assertFalse(split["valid"])
         ordinary = leaf("ordinary-design", "design")
         ordinary["selective_audit"] = {"owner": "software-design", "initial_inspection": True, "domain_match": True, "materially_changes_approach_or_acceptance": True, "targeted_inspection_or_focused_tests_cannot_resolve": True, "question": "Which module owns state?", "evidence_surface": "src/"}
@@ -132,9 +120,9 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         vague["selective_audit"] = {"owner": "lean-audit", "initial_inspection": True, "domain_match": True, "materially_changes_approach_or_acceptance": True, "targeted_inspection_or_focused_tests_cannot_resolve": True, "question": "review for risks", "evidence_surface": "skills/"}
         bounded = leaf("bounded-audit", "audit")
         bounded["selective_audit"] = {"owner": "test-quality-audit", "initial_inspection": True, "domain_match": True, "materially_changes_approach_or_acceptance": True, "targeted_inspection_or_focused_tests_cannot_resolve": True, "question": "Do parameterized tests conceal fixture coupling?", "evidence_surface": "tests/pagination_test.py"}
-        self.assertFalse(self.contract.validate({"work_units": [{"id": "design", "original_size": "medium"}], "leaves": [ordinary]})["valid"])
-        self.assertFalse(self.contract.validate({"work_units": [{"id": "risk", "original_size": "medium"}], "leaves": [vague]})["valid"])
-        self.assertTrue(self.contract.validate({"work_units": [{"id": "audit", "original_size": "medium"}], "leaves": [bounded]})["valid"])
+        self.assertFalse(self.contract.validate(v5_plan(ordinary, work_units=[{"id": "design", "original_size": "medium"}]))["valid"])
+        self.assertFalse(self.contract.validate(v5_plan(vague, work_units=[{"id": "risk", "original_size": "medium"}]))["valid"])
+        self.assertTrue(self.contract.validate(v5_plan(bounded, work_units=[{"id": "audit", "original_size": "medium"}]))["valid"])
 
     def test_retry_behavior_cases_bind_remediation_and_preserve_compatibility(self):
         same_tier = self.behavior["planning-policy-behavior-retry-same-tier-remediation"]
@@ -403,25 +391,6 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertEqual(result["status"], "passed")
         self.assertEqual(result["return_summary"]["acceptance"]["summary"], "one unittest passed")
         self.assertNotIn("private host transcript", json.dumps(result))
-
-    def test_v3_and_v4_resume_shapes_do_not_inherit_v5_work_unit_fields(self):
-        case = next(case for case in self.forward if case["id"] == "standard-implementation")
-        current = self.runner.handoff_for(case, "codex", 1)["plan"]
-        for version in (3, 4):
-            with self.subTest(version=version):
-                plan = copy.deepcopy(current)
-                plan["contract_version"] = version
-                plan["work_units"][0].pop("cohesive_outcome")
-                plan["work_units"][0].pop("decomposition")
-                if version == 3:
-                    plan["leaves"][0].pop("capability_requirements")
-                verdict = self.contract.validate(plan)
-                self.assertTrue(verdict["valid"], verdict["errors"])
-                self.assertFalse(verdict["approval_ready"])
-                self.assertFalse(verdict["dispatch_ready"])
-                if version == 4:
-                    binding = {"schema": "planning-capability-binding-v1", "plan_sha256": self.contract.canonical_plan_sha256(plan), "bindings": [{"step_id": case["id"], "host": "codex", "executor": "gpt-5.6-terra", "requirements": plan["leaves"][0]["capability_requirements"], "evidence": ["synthetic resume capability"]}]}
-                    self.assertTrue(self.contract.validate(plan, binding)["resume_ready"])
 
     def test_chained_retry_prompt_carries_only_bounded_ledger_remediation(self):
         case = next(case for case in self.forward if case["id"] == "synthetic-chained-escalation")

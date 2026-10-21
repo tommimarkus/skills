@@ -193,14 +193,6 @@ class PlanningPolicyCostTest(unittest.TestCase):
         self.assertEqual([{"entry": "planning-policy", "predicate": "unknown"}], adapter["routes"])
         self.assertTrue(all(item.get("provenance") for item in self.scenarios.values()))
 
-    def test_legacy_v4_scaffold_remains_outside_declared_load_routes(self):
-        for scenario_id in self.scenarios:
-            measured = self.measure(scenario_id)
-            self.assertFalse(
-                any(row["file"].endswith("templates/plan-v4.json") for row in measured["rows"]),
-                f"{scenario_id} must not load the legacy v4 scaffold for new authoring",
-            )
-
     def test_representative_delegated_checkpoint_is_bounded_and_rehydratable(self):
         ids = ("prepare", "implement", "verify")
         plan = {

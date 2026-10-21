@@ -13,11 +13,10 @@ invalid (the discriminator is never `version`).
 Version 5 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
 
-Versions 1–4 are resume-only or inspection-compatible: `init-v4` stops as
-`blocked:contract_migration_required`; v2/v3 preserve their resume behavior;
-unversioned v1 stays inspection-only. Existing v1–v4 ledgers
-remain readable/mutable according to [ledger compatibility](ledger-compatibility.md).
-Other explicit versions are invalid.
+The validator accepts only `contract_version: 5`; an absent discriminator or
+any other value is one validation error. Versions 1–4 were retired after
+souroldgeezer-policy 2026.10.9; a retained pre-v5 ledger run follows
+[ledger compatibility](ledger-compatibility.md).
 
 Each `leaves` entry has non-empty
 `id`, `dependencies`, `task`, `boundary`, `write_set`,
@@ -27,7 +26,7 @@ IDs/dependencies match `[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*` (maximum 64).
 Dependencies/read/write/stops are arrays (`read_set` is optional in v5 under
 standard precision); stops include
 `missing_load_bearing_information`. Sizes are small/medium/large and tiers are
-mechanical/standard/analytical/deep. Versions 2–5 require `max_attempts` 1–5 and
+mechanical/standard/analytical/deep. Every leaf requires `max_attempts` 1–5 and
 exact `bounded-step-return-v1`, never raw logs.
 
 Optional top-level `precision` is `standard` (default) or `strict`; any other
@@ -110,7 +109,7 @@ validation remains mandatory, with no new-approval bypass.
 
 ## Advisory execution cost
 
-Version 3 adds an at-most-4-KiB `execution_cost` object: schema
+An optional at-most-4-KiB `execution_cost` object has schema
 `planning-execution-cost-v1`, `mode: advisory`, expected attempts (default 1),
 optional per-leaf overrides within `max_attempts`, one to four final-verification
 commands, and at most eight bounded assumptions and unknowns each. Optional
@@ -192,7 +191,7 @@ uv run python "<skill-dir>/references/scripts/validate_plan_contract.py" validat
 ```
 
 Output includes validity/readiness, `contract_version`, `approval_ready`, `dispatch_ready`,
-`resume_ready`, `warnings`, and `cost_advisory`. Exit 0 is valid, 1 contract
+`warnings`, and `cost_advisory`. Exit 0 is valid, 1 contract
 failure, 2 usage/JSON failure. Only a v5 plan with its exact capability binding dispatches.
 
 `validate_plan_contract.py` remains read-only; approval handoff owns authorized saves.

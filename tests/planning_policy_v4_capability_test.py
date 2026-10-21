@@ -166,15 +166,6 @@ class CapabilityPlanContractTest(unittest.TestCase):
                 self.assertFalse(result["dispatch_ready"])
                 self.assertIn("blocked:capability_unavailable", result["warnings"])
 
-    def test_v4_is_resume_only_when_v5_becomes_the_forward_contract(self) -> None:
-        legacy = plan(version=4)
-        result = validate(legacy)
-        self.assertTrue(result["valid"], result["errors"])
-        self.assertTrue(result["resume_ready"])
-        self.assertFalse(result["approval_ready"])
-        self.assertFalse(result["dispatch_ready"])
-        self.assertIn("blocked:contract_migration_required", result["warnings"])
-
 
 class CapabilityLedgerTest(unittest.TestCase):
     def setUp(self) -> None:

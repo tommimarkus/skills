@@ -27,13 +27,20 @@ contract = load("planning_policy_v3_contract", POLICY / "validate_plan_contract.
 ledger = load("planning_policy_v3_ledger", POLICY / "planning_ledger.py")
 
 
-def plan(version: int = 5, cost: object = None, include_cost: bool = False) -> dict:
+def plan(cost: object = None, include_cost: bool = False) -> dict:
     value = {
-        "contract_version": version,
+        "contract_version": 5,
         "objective": "Ship one bounded change",
         "scope_summary": "One source file and its focused test",
         "approved_decisions": ["Keep cost data advisory"],
-        "work_units": [{"id": "build", "original_size": "small"}],
+        "work_units": [
+            {
+                "id": "build",
+                "original_size": "small",
+                "cohesive_outcome": "Ship the bounded change",
+                "decomposition": {"shape": "single"},
+            }
+        ],
         "leaves": [
             {
                 "id": "build",
@@ -51,21 +58,12 @@ def plan(version: int = 5, cost: object = None, include_cost: bool = False) -> d
                 "stop_conditions": ["missing_load_bearing_information"],
                 "work_unit_id": "build",
                 "max_attempts": 3,
+                "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
             }
         ],
     }
     if include_cost:
         value["execution_cost"] = cost
-    if version == 5:
-        value["work_units"][0].update(
-            cohesive_outcome="Ship the bounded change",
-            decomposition={"shape": "single"},
-        )
-    if version in {4, 5}:
-        value["leaves"][0]["capability_requirements"] = {
-            "baseline": "plan-step-base-v1",
-            "additional": [],
-        }
     return value
 
 
@@ -107,26 +105,6 @@ class PlanningPolicyV3ContractTest(unittest.TestCase):
         self.assertTrue(malformed["valid"] and malformed["dispatch_ready"])
         self.assertIn("PLANCOST-MISSING-PROFILE", missing["cost_advisory"]["codes"])
         self.assertIn("PLANCOST-INVALID-PROFILE", malformed["cost_advisory"]["codes"])
-
-    def test_v2_v3_and_v4_are_resume_only_and_v5_is_forward_dispatch_contract(self) -> None:
-        old = contract.validate(plan(version=2))
-        prior = contract.validate(plan(version=3))
-        legacy = contract.validate(plan(version=4))
-        current_plan = plan()
-        current = validate_current(current_plan)
-        self.assertTrue(old["valid"])
-        self.assertFalse(old["dispatch_ready"])
-        self.assertTrue(old["resume_ready"])
-        self.assertIn("blocked:contract_migration_required", old["warnings"])
-        self.assertTrue(prior["valid"])
-        self.assertFalse(prior["dispatch_ready"])
-        self.assertTrue(prior["resume_ready"])
-        self.assertTrue(legacy["valid"])
-        self.assertFalse(legacy["approval_ready"])
-        self.assertTrue(legacy["resume_ready"])
-        self.assertIn("blocked:contract_migration_required", legacy["warnings"])
-        self.assertTrue(current["dispatch_ready"])
-        self.assertTrue(current["approval_ready"])
 
     def test_known_lanes_compute_expected_and_high_without_mixing_units(self) -> None:
         profile = {

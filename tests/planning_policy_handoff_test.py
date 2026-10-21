@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-from tests.planning_policy_shared_contract_test import leaf, v4_plan, v5_plan
+from tests.planning_policy_shared_contract_test import leaf, v5_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'souroldgeezer-policy/skills/planning-policy/references/scripts/validate_plan_contract.py'
@@ -258,11 +258,13 @@ class PlanningPolicyHandoffTest(unittest.TestCase):
                              capture_output=True, text=True, timeout=10)
         self.assertEqual(run.returncode, 2)
 
-    def test_legacy_validate_unchanged_but_cannot_emit_new_handoff(self):
-        plan = v4_plan(leaf('prepare', 'u1', tier='mechanical'))
+    def test_retired_plan_version_fails_validation_and_cannot_emit_handoff(self):
+        plan = copy.deepcopy(self.plan)
+        plan['contract_version'] = 4
         code, result = self.cli('validate', '-', value=plan)
-        self.assertEqual(code, 0, result)
-        self.assertTrue(result['resume_ready'])
+        self.assertEqual(code, 1, result)
+        self.assertFalse(result['valid'])
+        self.assertNotIn('resume_ready', result)
         self.assertNotIn('handoff', result)
         code, result = self.cli('validate', '-', '--emit-handoff', 'inline', value=plan)
         self.assertEqual(code, 1, result)

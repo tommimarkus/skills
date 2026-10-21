@@ -51,8 +51,7 @@ absolute reference read-only. `PLAN` and `HANDOFF` accept `-` for stdin.
 The envelope has exactly `schema: planning-approval-handoff-v1`, `plan_sha256`,
 and **one** absolute `plan_path` or complete `plan`. Canonical hashing uses sorted
 keys, compact separators, ASCII escaping; formatting is irrelevant. Digests bind
-content, not provenance/approval. Emission/resolution require approval-ready v5;
-legacy validation is unchanged.
+content, not provenance/approval. Emission/resolution require approval-ready v5.
 
 References require regular files outside resolved `/tmp`, `/var/tmp`, `/dev/shm`,
 `/run/user`, the system temporary root, and absolute `TMPDIR`/`TEMP`/`TMP` roots.
