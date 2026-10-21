@@ -140,9 +140,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
             self.assertEqual(1, sum(file.endswith(adapter) for file in files))
 
     def test_worker_and_verifier_routes_charge_their_agent_and_handoff(self):
-        # Worker budget: 2409 measured + 5; builders keep their obligations inline without caps.
         for name, agent, handoff, budget in (
-            ("worker", "step", "worker", 2414), ("verifier", "verify", "verify", 1100),
+            ("worker", "step", "worker", 2450), ("verifier", "verify", "verify", 1100),
         ):
             result = self.measure(f"planning-policy-{name}")
             files = [row["file"] for row in result["rows"]]

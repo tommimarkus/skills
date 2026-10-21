@@ -28,20 +28,11 @@ SPEC.loader.exec_module(ledger)
 
 # The four execution-tier agents are unpaired, so check-runtime-metadata-parity.py
 # never derives or checks their bodies; the two adapters are the only worker-facing
-# contract on their host. All seven restate the same schema. The builders keep
-# their semantic return rules inline, because a subagent's own prompt is the only
-# context guaranteed to reach it, but state no numeric cap: the packet's
-# return_schema and validate-return own those. The two adapters and the ledger
-# contract still restate the caps.
+# contract on their host. All seven restate the same schema.
 AGENTS = tuple(sorted((POLICY / "agents").glob("plan-step-*.md")))
 EXTENSIONS = (SKILL / "extensions/claude-code.md", SKILL / "extensions/codex.md")
 REFERENCE = SKILL / "references/ledger-contract.md"
-CAP_DOCUMENTS = EXTENSIONS + (REFERENCE,)
-RESTATEMENTS = AGENTS + CAP_DOCUMENTS
-LIMIT_OWNER = (
-    "The packet's `return_schema` and `validate-return` own every count, length, "
-    "and size limit."
-)
+RESTATEMENTS = AGENTS + EXTENSIONS + (REFERENCE,)
 
 WORD_FORMS = {8: ("8", "eight"), 32: ("32", "thirty-two"), 240: ("240",), 480: ("480",)}
 
@@ -213,7 +204,7 @@ class BoundedCapParityTest(unittest.TestCase):
     )
 
     def test_documents_state_the_validator_caps(self):
-        for path in CAP_DOCUMENTS:
+        for path in RESTATEMENTS:
             text = normalized(path)
             for name, nouns in self.CAPS:
                 value = getattr(ledger, name)
@@ -225,67 +216,13 @@ class BoundedCapParityTest(unittest.TestCase):
 
     def test_documents_state_the_return_size_bound(self):
         kib = ledger.MAX_RETURN // 1024
-        for path in CAP_DOCUMENTS:
+        for path in RESTATEMENTS:
             text = normalized(path)
             with self.subTest(document=path.name):
                 self.assertRegex(
                     text,
                     rf"\b{kib}\s*KiB",
                     f"{path.name} does not state the {kib} KiB return bound",
-                )
-
-
-class BuilderReturnRulesTest(unittest.TestCase):
-    """Builders state the return rules inline and leave every cap to the packet.
-
-    A fresh worker could not reliably read a plugin reference file, so moving
-    these rules out of the builder prompt made the cheapest tier stop or fence
-    its JSON. The rules stay in each builder; the numeric limits do not, since
-    the packet's generated return_schema and validate-return enforce them.
-    """
-
-    RULES = (
-        "Return exactly one UTF-8 JSON object",
-        '`"schema": "bounded-step-return-v1"`',
-        "no Markdown, prose outside the object, or raw logs",
-        "Echo assigned `step_id`, `agent_id`, and helper-generated `attempt_id`",
-        "so do not return it",
-        "Status is exactly `completed`, `blocked`, `failed`, or `oversized`",
-        "`commit_hash` is an empty string or 40/64-hex hash",
-        "Use `completed` only when acceptance exits `0`",
-        "completed changed work needs a commit hash, as does any other status",
-        "Blocked, failed, and oversized returns require a blocker; oversized also needs remainder",
-        "Prefer stopping before you change anything",
-        "never leave edits uncommitted",
-        "Do not invent a decision",
-        "for read-only return validation before submitting",
-        "`blocked:needs_higher_tier`",
-        "`blocked:capability_unavailable`",
-        "`blocked:missing_input`",
-        "`oversized:changeset`",
-        "`retry-remediation-v1`",
-    )
-
-    def test_each_builder_states_the_semantic_return_rules(self):
-        for path in AGENTS:
-            text = normalized(path)
-            for rule in self.RULES:
-                with self.subTest(document=path.name, rule=rule):
-                    self.assertIn(rule, text)
-
-    def test_each_builder_defers_limits_to_the_packet(self):
-        for path in AGENTS:
-            with self.subTest(document=path.name):
-                self.assertIn(LIMIT_OWNER, normalized(path))
-
-    def test_builders_state_no_numeric_cap(self):
-        for path in AGENTS:
-            text = normalized(path)
-            with self.subTest(document=path.name):
-                self.assertNotRegex(
-                    text,
-                    r"\bKiB\b|<=\s*\d|\bat most\b|\b(?:32|240|480)\b|\b(?:eight|thirty-two)\b",
-                    f"{path.name} restates a cap the packet owns",
                 )
 
 

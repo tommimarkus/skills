@@ -22,6 +22,7 @@ RETURN_PROFILE = (
     "`commit_hash`",
     "`unstarted_remainder`",
     "`completed`, `blocked`, `failed`, or `oversized`",
+    "32 safe repository-relative",
     "`finding`",
     "`decision_needed`",
     "`residual_risk`",
@@ -125,19 +126,14 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn("raw logs", content)
             self.assertIn("Use `completed` only", content)
             self.assertNotIn("`commit_hash` is `null`", content)
+            self.assertTrue("return <=8 KiB" in content or "at most 8 KiB" in content)
             self.assertTrue("oversized also needs remainder" in content or "oversized` also requires an unstarted remainder" in content)
+            self.assertTrue("<=480-character" in content or "at most 480 characters" in content)
+            self.assertTrue("<=240-character summary" in content or "at most 240 characters" in content)
+            self.assertTrue('"exit_code": integer|null' in content or "integer/null exit code" in content)
+            self.assertTrue("eight blockers" in content or "at most eight" in content)
             self.assertTrue("empty string or 40/64-hex hash" in content or "empty\nstring or a 40- or 64-hex hash" in content)
             self.assertTrue("completed changed work needs a commit hash" in content or "completed\nwork with changed paths needs a commit hash" in content)
-
-        # Only the adapter restates the caps; the builders leave them to the packet's
-        # return_schema and validate-return (tests/planning_return_contract_parity_test.py).
-        adapter = documents[0]
-        self.assertIn("32 safe repository-relative", re.sub(r"\s+", " ", adapter))
-        self.assertTrue("return <=8 KiB" in adapter or "at most 8 KiB" in adapter)
-        self.assertTrue("<=480-character" in adapter or "at most 480 characters" in adapter)
-        self.assertTrue("<=240-character summary" in adapter or "at most 240 characters" in adapter)
-        self.assertTrue('"exit_code": integer|null' in adapter or "integer/null exit code" in adapter)
-        self.assertTrue("eight blockers" in adapter or "at most eight" in adapter)
 
         self.assertIn("return itself does not carry `run_id`", documents[0])
         self.assertIn("helper-generated assignment value", documents[0])
