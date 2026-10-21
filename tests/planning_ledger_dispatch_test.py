@@ -76,7 +76,7 @@ class DispatchHarness(unittest.TestCase):
             )
         return code, json.loads(stream.getvalue())
 
-    def init(self, leaves, units=None, worktrees=None):
+    def init(self, leaves, units=None, worktrees=None, **plan_fields):
         plan = {
             "contract_version": 5,
             "objective": "objective",
@@ -93,6 +93,7 @@ class DispatchHarness(unittest.TestCase):
                 }
                 for item in leaves
             ],
+            **plan_fields,
         }
         plan_path = self.scratch / "plan.json"
         plan_path.write_text(json.dumps(plan))

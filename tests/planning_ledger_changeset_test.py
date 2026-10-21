@@ -1,6 +1,5 @@
 """The changeset gate: verify_policy stamp, base_commit, budgeted packet, and check-changeset."""
 
-import hashlib
 import json
 import unittest
 
@@ -8,61 +7,11 @@ from tests.planning_ledger_dispatch_test import DispatchHarness, git, leaf
 
 
 class ChangesetHarness(DispatchHarness):
-    def plan_run(self, leaves, **extra):
-        plan = {
-            "contract_version": 5,
-            "objective": "objective",
-            "scope_summary": "scope",
-            "approved_decisions": ["settled"],
-            "leaves": leaves,
-            "work_units": [
-                {
-                    "id": item["id"],
-                    "original_size": "small",
-                    "cohesive_outcome": f"Complete {item['id']}",
-                    "decomposition": {"shape": "single"},
-                }
-                for item in leaves
-            ],
-            **extra,
-        }
-        (self.scratch / "plan.json").write_text(json.dumps(plan))
-        digest = hashlib.sha256(
-            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
-        (self.scratch / "binding.json").write_text(json.dumps({
-            "schema": "planning-capability-binding-v1",
-            "plan_sha256": digest,
-            "bindings": [
-                {
-                    "step_id": item["id"], "host": "claude-code", "executor": "sonnet",
-                    "requirements": item["capability_requirements"],
-                    "evidence": ["test fixture capability inventory"],
-                }
-                for item in leaves
-            ],
-        }))
-        (self.scratch / "assignments.json").write_text(json.dumps([
-            {
-                "id": item["id"], "harness": "claude-code", "model_or_alias": "sonnet",
-                "effort": "medium", "worktree": f".worktrees/{item['id']}",
-            }
-            for item in leaves
-        ]))
-        code, result = self.call(
-            "init-v5", "--actor", "parent", "--approved",
-            "--plan-file", str(self.scratch / "plan.json"),
-            "--assignments-file", str(self.scratch / "assignments.json"),
-            "--capability-binding-file", str(self.scratch / "binding.json"),
-        )
-        self.assertEqual(0, code, result)
-        self.run_id = result["run_id"]
-
     def checkpoint(self):
         return json.loads(self.checkpoint_path().read_text())
 
     def started(self, leaves=None, **extra):
-        self.plan_run(leaves or [leaf("alpha", "leaf-alpha")], **extra)
+        self.init(leaves or [leaf("alpha", "leaf-alpha")], **extra)
         code, result = self.dispatch("alpha", "--create-from", "main")
         self.assertEqual(0, code, result)
         self.worktree = self.repo / ".worktrees/alpha"
@@ -75,6 +24,23 @@ class ChangesetHarness(DispatchHarness):
         git(self.worktree, "add", "-A")
         git(self.worktree, "commit", "-m", message)
 
+    def returned(self, packet, status="completed", blockers=(), commit=None):
+        value = {
+            "schema": "bounded-step-return-v1", "step_id": packet["step_id"],
+            "attempt_id": packet["attempt_id"], "agent_id": packet["agent_id"],
+            "status": status, "changed_paths": [],
+            "acceptance": {"command": "uv run test", "exit_code": 0 if status == "completed" else 1,
+                           "summary": status},
+            "blockers": list(blockers), "notes": [], "unstarted_remainder": [],
+            "commit_hash": commit or git(self.worktree, "rev-parse", "HEAD").stdout.strip(),
+        }
+        path = self.scratch / "return.json"
+        path.write_text(json.dumps(value))
+        code, result = self.call("record-return", "--actor", "parent", "--run-id", self.run_id,
+                                 "--return-file", str(path))
+        self.assertEqual(0, code, result)
+        return result
+
     def check(self, packet, *extra):
         handoff = self.scratch / "handoff.json"
         handoff.write_text(json.dumps(packet))
@@ -84,13 +50,13 @@ class ChangesetHarness(DispatchHarness):
 
 class VerifyPolicyAndPacketTest(ChangesetHarness):
     def test_init_stamps_leaf_verify_by_default_and_closeout_only_when_declared(self):
-        self.plan_run([leaf("alpha", "leaf-alpha")])
+        self.init([leaf("alpha", "leaf-alpha")])
         self.assertEqual("leaf_verify_v1", self.checkpoint()["verify_policy"])
-        self.plan_run([leaf("alpha", "leaf-alpha")], verification="closeout-only")
+        self.init([leaf("alpha", "leaf-alpha")], verification="closeout-only")
         self.assertEqual("closeout_only", self.checkpoint()["verify_policy"])
 
     def test_unknown_verify_policy_fails_ledger_load(self):
-        self.plan_run([leaf("alpha", "leaf-alpha")])
+        self.init([leaf("alpha", "leaf-alpha")])
         data = self.checkpoint()
         data["verify_policy"] = "mystery"
         self.checkpoint_path().write_text(json.dumps(data))
@@ -107,6 +73,50 @@ class VerifyPolicyAndPacketTest(ChangesetHarness):
         )
         code, granular = self.call("handoff", "--run-id", self.run_id, "--step-id", "alpha")
         self.assertEqual(packet, granular["handoff"])
+
+    def test_retry_dispatch_keeps_the_first_base_commit(self):
+        packet = self.started()
+        base = self.checkpoint()["steps"]["alpha"]["base_commit"]
+        self.commit_file("src/alpha/a.txt", "one\n")
+        self.returned(packet, "failed", [{"code": "failed:acceptance", "summary": "red"}])
+        step = self.checkpoint()["steps"]["alpha"]
+        remediation = self.scratch / "remediation.json"
+        remediation.write_text(json.dumps({
+            "schema": "retry-remediation-v1", "step_id": "alpha",
+            "prior_attempt_id": step["attempt_id"], "prior_return_sha256": step["return_sha256"],
+            "diagnosis": "acceptance failed", "remediation_action": "fix the case",
+            "executor_mode": "reuse", "next_agent_id": "worker",
+            "next_harness": "claude-code", "target_portable_tier": "standard",
+        }))
+        code, result = self.dispatch("alpha", "--retry", "--retry-remediation-file", str(remediation))
+        self.assertEqual(0, code, result)
+        self.assertEqual(base, self.checkpoint()["steps"]["alpha"]["base_commit"])
+        self.assertEqual(base, result["handoffs"][0]["changeset_budget"]["base_commit"])
+
+    def test_batch_follower_measures_from_the_previous_member_commit(self):
+        members = [
+            leaf("first", "batch-owner", batch="group"),
+            leaf("second", "batch-owner", ["first"], batch="group"),
+        ]
+        members[1]["write_set"] = ["src"]
+        units = [{
+            "id": "unit", "original_size": "medium", "cohesive_outcome": "One batch outcome",
+            "decomposition": {"basis": "failure_isolation", "rationale": "Separate failure surfaces",
+                              "shape": "checkpointed"},
+        }]
+        self.init(members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"})
+        code, result = self.dispatch("first", "--create-from", "main")
+        self.assertEqual(0, code, result)
+        first, second = result["handoffs"]
+        self.assertEqual("", second["changeset_budget"]["base_commit"])
+        self.worktree = self.repo / ".worktrees/batch"
+        self.commit_file("src/first/a.txt", "x\n" * 100)
+        self.returned(first)
+        self.commit_file("src/second/b.txt", "y\n" * 3)
+        self.returned(second)
+        code, result = self.call("check-changeset", "--run-id", self.run_id, "--step-id", "second")
+        self.assertEqual(0, code, result)
+        self.assertEqual((3, 1), (result["lines"], result["files"]))
 
     def test_closeout_only_packet_and_step_stay_unchanged(self):
         packet = self.started(verification="closeout-only")
