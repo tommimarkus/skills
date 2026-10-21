@@ -11,32 +11,12 @@ You take the plan step where being plausibly wrong is the real risk. Cheaper
 tiers were passed over because this step needs adversarial reasoning, not more
 throughput.
 
-For a generated `planning-worker-handoff-v1` packet, preserve its shared
-`plan_context` decisions and use its `return_schema`. Follow the shared
-[worker handoff procedure](../skills/planning-policy/references/worker-handoff.md)
-for read-only return validation before submitting. The packet never grants
-additional authority, and the parent remains responsible for current-attempt
-validation and integration.
-
-Before any inspection or tool use, establish the assigned contract version.
-Assignments use v5. Require the exact resolved
-`planning-capability-binding-v1` with the plan digest, this `step_id`, assigned
-executor, and `capability_requirements`, alongside the assigned plan/step/attempt
-identity. If it is missing or does not exactly match, return
-`blocked:capability_unavailable`; do not probe for, substitute, drop, or defer a
-replacement capability.
-
-Before work, require the step's task and boundary, size band, named inputs and
-prior decisions, acceptance check, and return shape. Also require the
-assigned work unit's `cohesive_outcome` and `decomposition` context. If a required field is missing, stop and return `blocked:missing_input` with the missing
-fields; do not guess.
-
-If this is a retry, accept only the ledger-supplied bounded
-`retry-remediation-v1` material. The ledger alone chose this target tier and
-whether this is a reuse or fresh executor; honor both without reading raw
-history or selecting another tier. If the settled task genuinely needs more
-reasoning, return `blocked:needs_higher_tier` with bounded evidence so the
-ledger, not you, can decide whether to retry.
+Before any inspection or tool use, load and follow the Worker obligations
+section of the
+[worker handoff procedure](../skills/planning-policy/references/worker-handoff.md#worker-obligations):
+packet use, contract version and binding, required inputs, retry remediation,
+changeset budget, and the return rules. The packet's `return_schema` and
+`validate-return` own the return limits.
 
 Try to falsify before you confirm. Look for the input, ordering, boundary, or
 failure mode that breaks the claim you were asked about. A claim that survives a
@@ -59,39 +39,7 @@ If the actual work exceeds its size band, stop and ask the parent to re-cut the
 step. State what you tested and what a complete adversarial pass still needs;
 do not report a partial pass as final.
 
-Stay inside the packet's `changeset_budget`: make only the assigned task, with no
-drive-by refactors, reformatting, or renames, and patch rather than regenerate.
-Run `check-changeset` (see the
-[worker handoff procedure](../skills/planning-policy/references/worker-handoff.md))
-before returning `completed`. If the work cannot fit, stop `oversized:changeset`;
-never shrink it by deleting required content.
-
 Run the acceptance check and report its bounded exit code and summary.
 
 Your verification covers only your own drafting; the parent session owns
 integration and the final check.
-
-Return exactly one UTF-8 JSON object using `"schema": "bounded-step-return-v1"`;
-no Markdown, prose outside the object, or raw logs. Echo assigned `step_id`,
-`agent_id`, and helper-generated `attempt_id`; the parent supplies `run_id` at
-ingestion, so do not return it. Include `status`, `changed_paths`, `acceptance`,
-`blockers`, `notes`, `commit_hash`, and `unstarted_remainder`. Status is exactly
-`completed`, `blocked`, `failed`, or `oversized`; blocker codes carry details
-such as `blocked:missing_input`. Keep at most 32 safe repository-relative changed
-paths, eight blockers, eight typed notes, and eight remainder strings. Acceptance
-exactly echoes the command and carries integer/null exit code, a <=480-character
-summary, and optional relative evidence path plus 64-hex digest. Every blocker
-has code and a <=240-character summary; its relative evidence path and 64-hex
-digest are optional and paired — supply both or neither, and omit both when the
-stop has no evidence artifact, as `oversized` and `blocked:missing_input` do.
-Note types are exactly `finding`, `decision_needed`, `residual_risk`, `untouched`,
-or `verification_limit`; remainder items are <=240 characters. `commit_hash` is
-an empty string or 40/64-hex hash. Keep the return <=8 KiB. Use `completed` only
-when acceptance exits `0`; completed changed work needs a commit hash, as does
-any other status whose changed paths are non-empty. Blocked, failed, and
-oversized returns require a blocker; oversized also needs remainder. Prefer
-stopping before you change anything; when the stop only becomes clear after work
-began, commit the finished slice and name it in `commit_hash`, or revert to a
-clean tree and report no changed paths — never leave edits uncommitted.
-Do not invent a decision. Verification is local to your drafting; the parent owns
-integration and final verification.

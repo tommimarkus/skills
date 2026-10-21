@@ -27,12 +27,17 @@ assert SPEC.loader
 SPEC.loader.exec_module(ledger)
 
 # The four execution-tier agents are unpaired, so check-runtime-metadata-parity.py
-# never derives or checks their bodies; the two adapters are the only worker-facing
-# contract on their host. All seven restate the same schema.
+# never derives or checks their bodies. They no longer restate the return profile:
+# each links the worker-handoff.md Worker obligations section, which states the
+# semantic return rules once; the packet's return_schema owns every cap. The two
+# adapters and the ledger contract still restate the full schema with its caps.
 AGENTS = tuple(sorted((POLICY / "agents").glob("plan-step-*.md")))
 EXTENSIONS = (SKILL / "extensions/claude-code.md", SKILL / "extensions/codex.md")
 REFERENCE = SKILL / "references/ledger-contract.md"
-RESTATEMENTS = AGENTS + EXTENSIONS + (REFERENCE,)
+HANDOFF = SKILL / "references/worker-handoff.md"
+CAP_DOCUMENTS = EXTENSIONS + (REFERENCE,)
+RESTATEMENTS = CAP_DOCUMENTS + (HANDOFF,)
+OBLIGATIONS_LINK = "worker-handoff.md#worker-obligations"
 
 WORD_FORMS = {8: ("8", "eight"), 32: ("32", "thirty-two"), 240: ("240",), 480: ("480",)}
 
@@ -65,14 +70,16 @@ class ReturnStatusParityTest(unittest.TestCase):
                 for status in ledger.RETURN_STATUSES:
                     self.assertIn(status, text, f"{path.name} omits status {status!r}")
 
-    def test_wrappers_gate_binding_and_work_unit_context_on_v5_only(self):
+    def test_worker_obligations_gate_binding_and_work_unit_context_on_v5_only(self):
+        text = normalized(HANDOFF)
+        self.assertIn("## Worker obligations", text)
+        self.assertIn("Assignments use v5", text)
+        self.assertIn("`cohesive_outcome` and `decomposition` context", text)
+        self.assertNotIn("v1–v", text)
+        self.assertNotIn("v4–v5", text)
         for path in AGENTS:
-            text = normalized(path)
             with self.subTest(document=path.name):
-                self.assertIn("Assignments use v5", text)
-                self.assertNotIn("v1–v", text)
-                self.assertNotIn("v4–v5", text)
-                self.assertNotIn("report its raw output", text)
+                self.assertNotIn("v1–v", normalized(path))
 
     def test_codex_handoff_gates_binding_and_decomposition_on_v5_only(self):
         text = normalized(SKILL / "extensions/codex.md")
@@ -204,7 +211,7 @@ class BoundedCapParityTest(unittest.TestCase):
     )
 
     def test_documents_state_the_validator_caps(self):
-        for path in RESTATEMENTS:
+        for path in CAP_DOCUMENTS:
             text = normalized(path)
             for name, nouns in self.CAPS:
                 value = getattr(ledger, name)
@@ -216,7 +223,7 @@ class BoundedCapParityTest(unittest.TestCase):
 
     def test_documents_state_the_return_size_bound(self):
         kib = ledger.MAX_RETURN // 1024
-        for path in RESTATEMENTS:
+        for path in CAP_DOCUMENTS:
             text = normalized(path)
             with self.subTest(document=path.name):
                 self.assertRegex(
@@ -224,6 +231,48 @@ class BoundedCapParityTest(unittest.TestCase):
                     rf"\b{kib}\s*KiB",
                     f"{path.name} does not state the {kib} KiB return bound",
                 )
+
+
+class BuilderThinningTest(unittest.TestCase):
+    """Builders load the shared Worker obligations and restate no cap of their own."""
+
+    def test_each_builder_links_the_worker_obligations_section(self):
+        for path in AGENTS:
+            text = normalized(path)
+            with self.subTest(document=path.name):
+                self.assertIn(OBLIGATIONS_LINK, text)
+                self.assertIn("`return_schema`", text)
+                self.assertIn("`validate-return`", text)
+
+    def test_builders_and_obligations_restate_no_numeric_cap(self):
+        section = normalized(HANDOFF).split("## Worker obligations", 1)[1]
+        for path, text in [(p, normalized(p)) for p in AGENTS] + [(HANDOFF, section)]:
+            with self.subTest(document=path.name):
+                self.assertNotRegex(text, r"\bKiB\b|<=\s*\d|\bat most\b|\b(?:32|240|480)\b")
+                for word in ("eight",):
+                    self.assertNotRegex(text, rf"\b{word}\b")
+
+    def test_obligations_state_the_semantic_return_rules(self):
+        section = normalized(HANDOFF).split("## Worker obligations", 1)[1]
+        for rule in (
+            "exactly one UTF-8 JSON object",
+            "Use `completed` only when the acceptance command exits `0`",
+            "needs a commit hash",
+            "Prefer stopping before you change anything",
+            "never leave edits uncommitted",
+            "Do not invent a decision",
+            "`blocked:needs_higher_tier`",
+            "`blocked:capability_unavailable`",
+            "`blocked:missing_input`",
+            "`oversized:changeset`",
+            "`retry-remediation-v1`",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, section)
+        for status in ledger.RETURN_STATUSES:
+            self.assertIn(status, section)
+        for note_type in ledger.NOTE_TYPES:
+            self.assertIn(note_type, section)
 
 
 class NextBlockScopeParityTest(unittest.TestCase):

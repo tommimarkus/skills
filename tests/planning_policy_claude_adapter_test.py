@@ -67,20 +67,30 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
 
             self.assertRegex(content, rf"(?m)^model: {model}$")
             self.assertRegex(content, rf"(?m)^effort: {effort}$")
-            self.assertIn("`blocked:missing_input`", content)
             self.assertIn("ask the parent to re-cut", content)
-            self.assertIn("Return exactly one UTF-8 JSON object", content)
-            self.assertRegex(
-                content,
-                re.compile(r"parent owns\s+integration and final verification", re.I),
-            )
-            self.assertIn("`retry-remediation-v1`", content)
-            self.assertIn("`blocked:needs_higher_tier`", content)
-            self.assertIn("ledger", content)
-            self.assertIn("`cohesive_outcome`", content)
-            self.assertIn("`decomposition` context", content)
-            self.assertIn("assigned work unit", content)
+            self.assertIn("worker-handoff.md#worker-obligations", content)
             self.assertNotIn("v1–v", content)
+
+    def test_worker_obligations_carry_the_gap_stops_and_ownership_rules(self):
+        handoff = re.sub(
+            r"\s+",
+            " ",
+            (REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md").read_text(
+                encoding="utf-8"
+            ),
+        )
+        for marker in (
+            "`blocked:missing_input`",
+            "Return exactly one UTF-8 JSON object",
+            "`retry-remediation-v1`",
+            "`blocked:needs_higher_tier`",
+            "ledger",
+            "`cohesive_outcome`",
+            "`decomposition` context",
+            "assigned work unit",
+        ):
+            self.assertIn(marker, handoff)
+        self.assertIn("the parent remains responsible for current-attempt validation and integration", handoff)
 
     def test_standard_agent_does_not_allow_load_bearing_assumptions(self):
         standard = (AGENTS / "plan-step-standard.md").read_text(encoding="utf-8")
@@ -114,9 +124,12 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
             self.assertIn(fact, normalized)
         self.assertNotIn("2.1.284", adapter)
 
-    def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
+    def test_adapter_keeps_the_bounded_step_return_profile_and_builders_defer_to_the_packet(self):
         documents = [ADAPTER.read_text(encoding="utf-8")]
-        documents.extend((AGENTS / f"{tier}.md").read_text(encoding="utf-8") for tier in EXPECTED_TIERS)
+        for tier in EXPECTED_TIERS:
+            builder = (AGENTS / f"{tier}.md").read_text(encoding="utf-8")
+            self.assertNotIn("8 KiB", builder)
+            self.assertNotIn("<=480", builder)
 
         for content in documents:
             normalized = re.sub(r"\s+", " ", content)
