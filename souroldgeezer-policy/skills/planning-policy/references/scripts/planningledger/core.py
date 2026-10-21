@@ -32,7 +32,6 @@ __all__ = [
     "UsageError",
     "SCRIPTS_DIR",
     "LEDGER_SCRIPT",
-    "VALIDATOR_SCRIPT",
     "HOST_TIERS_FILE",
     "WORKTREE_HELPER",
 ]
@@ -41,7 +40,6 @@ __all__ = [
 # Every script path derives from the one directory that holds the entry shim.
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 LEDGER_SCRIPT = SCRIPTS_DIR / "planning_ledger.py"
-VALIDATOR_SCRIPT = SCRIPTS_DIR / "validate_plan_contract.py"
 HOST_TIERS_FILE = SCRIPTS_DIR.parent / "host-tiers.json"
 WORKTREE_HELPER = SCRIPTS_DIR.parents[2] / "git-workflow-policy/references/scripts/planning_worktree.py"
 

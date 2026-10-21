@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import functools
-import importlib.util
 import json
+
+from . import plancontract
 
 from .vocabulary import (
     AMENDMENT_FIELDS,
@@ -19,7 +19,6 @@ from .core import (
     Error,
     HOST_TIERS_FILE,
     UsageError,
-    VALIDATOR_SCRIPT,
     digest,
     ident,
     read_json,
@@ -188,15 +187,8 @@ def checkpoint_binding(data):
     }
 
 
-@functools.cache
 def validator_module():
-    spec = importlib.util.spec_from_file_location(
-        "plan_contract", VALIDATOR_SCRIPT
-    )
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader
-    spec.loader.exec_module(module)
-    return module
+    return plancontract
 
 
 def plan_validator():

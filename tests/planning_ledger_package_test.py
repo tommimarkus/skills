@@ -14,6 +14,7 @@ SHIM = SCRIPTS / "planning_ledger.py"
 # Lowest group first. A module imports only earlier groups, or same-group modules
 # without a cycle; nothing imports cli.
 IMPORT_ORDER = (
+    ("plancontract",),
     ("vocabulary",),
     ("core",),
     ("store",),
@@ -26,6 +27,9 @@ IMPORT_ORDER = (
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}
 # Every module of the package, per the module map in planningledger/__init__.py.
 EXTRACTED = set(GROUP)
+# plancontract is the validator implementation: the validate_plan_contract.py shim re-exports it,
+# so the ledger shim does not (its main and validate would collide with the ledger's).
+NOT_LEDGER_REEXPORTED = {"plancontract"}
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {
     "now": "core",
@@ -80,14 +84,14 @@ class PlanningLedgerPackageTest(unittest.TestCase):
         self.assertLessEqual(present, set(GROUP))
 
     def test_the_shim_reexports_every_modules_all(self):
-        for name in sorted(EXTRACTED):
+        for name in sorted(EXTRACTED - NOT_LEDGER_REEXPORTED):
             module = __import__(f"planningledger.{name}", fromlist=["*"])
             for exported in declared_all(parsed(name)):
                 with self.subTest(module=name, name=exported):
                     self.assertIs(getattr(module, exported), getattr(ledger, exported))
 
     def test_all_lists_exactly_the_modules_public_definitions(self):
-        for name in sorted(EXTRACTED):
+        for name in sorted(EXTRACTED - NOT_LEDGER_REEXPORTED):
             owned = {seam for seam, owner in SEAMS.items() if owner == name}
             with self.subTest(module=name):
                 self.assertEqual(defined(parsed(name)) - owned - {"__all__"}, set(declared_all(parsed(name))))

@@ -4,12 +4,14 @@ The entry script keeps its path and CLI; it re-exports each module's explicit
 ``__all__``. This file imports nothing, so loading the package never loads a module.
 
 Module map:
+- plancontract: the stdlib-only plan validator and its CLI; imports no other module, and the
+  validate_plan_contract.py shim (not the ledger shim) re-exports it.
 - vocabulary: constants, schema ids, return-code families, limits and policies.
 - core: Error, UsageError, canonical encoding and digest, identifiers, time, read_json,
   and the script path anchors derived from SCRIPTS_DIR.
 - store: ledger root, run layout, atomic write, event append, safe_run_contents.
 - gitops: every git and worktree-helper subprocess call.
-- contract: plan validator bridge, leaves, amendments, effective leaves, capability
+- contract: plan validator seam over plancontract, leaves, amendments, effective leaves, capability
   binding and the host tier map.
 - checkpoint: run integrity, the single run validator, retired-contract refusal, load2,
   mutating_run.
@@ -27,7 +29,7 @@ Import order, lowest first. A module imports only an earlier group, or a same-gr
 module without a cycle; nothing imports cli; a helper several modules use lives in the
 lowest module all of them may import (this is why run validation helpers sit in
 checkpoint and the init command in closeout):
-vocabulary < core < store < {gitops, contract} < checkpoint < {schedule, series}
+plancontract < vocabulary < core < store < {gitops, contract} < checkpoint < {schedule, series}
 < {returns, dispatch, verify, retention, closeout, tracing} < cli.
 
 Substitution seams (now in core, run_worktree_helper in gitops, plan_validator and
