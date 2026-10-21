@@ -53,8 +53,9 @@ It also stamps `return_codes: registered_v1`, which closes the blocker-code
 vocabulary for that run: `blocked:missing_input`, `blocked:needs_higher_tier`,
 `blocked:model_unavailable`, `blocked:capability_unavailable`,
 `blocked:environment`, `failed:acceptance`, `failed:execution`, and
-`oversized:scope`. `record-return` and `validate-return` then reject any other
-blocker code, and a blocked, failed, or oversized return must carry at least one
+`oversized:scope`, and `oversized:changeset` (a builder's self-reported
+over-budget stop, never retried). `record-return` and `validate-return` then
+reject any other blocker code, and a blocked, failed, or oversized return must carry at least one
 code of its own status; the error names that status's allowed codes. Handoff
 packets from a stamped run carry the registered `return_schema` variant, whose
 blocker `code` is an enum. An absent `return_codes` keeps the open

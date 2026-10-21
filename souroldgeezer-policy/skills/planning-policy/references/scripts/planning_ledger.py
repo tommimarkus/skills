@@ -162,8 +162,11 @@ RETURN_CODES = {
         )
     ),
     "failed": ("failed:acceptance", "failed:execution"),
-    "oversized": ("oversized:scope",),
+    "oversized": ("oversized:scope", "oversized:changeset"),
 }
+VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
+CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
+MAX_CHECK_OUTSIDE = 8
 RUN_SCHEMAS = {2, 3, 4, 5}
 CAPABILITY_SCHEMAS = {4, 5}
 LIVE_NEXT_SCHEMAS = {4, 5}
@@ -1397,6 +1400,7 @@ def init5(args):
         "close_reason": "",
         "retry_policy": ESCALATING_RETRY_POLICY,
         "return_codes": REGISTERED_RETURN_CODES,
+        "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
@@ -1450,6 +1454,7 @@ def load2(args):
         or data.get("run_id") != args.run_id
         or data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
+        or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
     ):
         raise Error("invalid run checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
@@ -2729,7 +2734,9 @@ def worker_handoff_context(plan):
     return context
 
 
-def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, registered=False):
+def build_worker_handoff(
+    plan, step, plan_id, run_id, retry_remediation=None, registered=False, changeset_base=None
+):
     """Build one self-contained v5 worker assignment without mutating a ledger."""
     ident(plan_id, "plan id")
     uuid4(run_id, "run id")
@@ -2812,6 +2819,10 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, re
             {key: item[key] for key in ("reason", "add_write", "add_read", *AMENDMENT_OPTIONAL) if key in item}
             for item in amendments
         ]
+    if changeset_base is not None:
+        value["changeset_budget"] = {
+            **validator_module().changeset_budget(leaf), "base_commit": changeset_base,
+        }
     value["handoff_sha256"] = worker_handoff_digest(value)
     if len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
@@ -2821,7 +2832,7 @@ def build_worker_handoff(plan, step, plan_id, run_id, retry_remediation=None, re
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments", "changeset_budget"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -2856,6 +2867,20 @@ def valid_worker_handoff(value):
     current = {"agent_id": value["agent_id"], "harness": value.get("host"), "model_or_alias": value.get("executor")}
     if not valid_stored_binding(value.get("capability_binding"), value["plan_sha256"], sid, leaf, current):
         raise Error("invalid worker handoff capability binding")
+    budget = value.get("changeset_budget")
+    if "changeset_budget" in value and not (
+        isinstance(budget, dict)
+        and set(budget) == CHANGESET_BUDGET_FIELDS
+        and all(
+            isinstance(budget[key], int) and not isinstance(budget[key], bool) and budget[key] >= 1
+            for key in ("max_changed_lines", "max_files")
+        )
+        and isinstance(budget["exempt_paths"], list)
+        and all(isinstance(path, str) for path in budget["exempt_paths"])
+        and isinstance(budget["base_commit"], str)
+        and (not budget["base_commit"] or COMMIT.fullmatch(budget["base_commit"]))
+    ):
+        raise Error("invalid worker handoff changeset budget")
     amendments = value.get("amendments", [])
     if not isinstance(amendments, list) or len(amendments) > MAX_AMENDMENTS or (
         "amendments" in value and not amendments
@@ -2885,6 +2910,9 @@ def step_handoff(directory, data, plan, step):
     return build_worker_handoff(
         plan, step, data["plan_id"], data["run_id"], remediation,
         registered=data.get("return_codes") == REGISTERED_RETURN_CODES,
+        changeset_base=(
+            step.get("base_commit", "") if data.get("verify_policy") == "leaf_verify_v1" else None
+        ),
     )
 
 
@@ -2947,6 +2975,18 @@ def verify_worktree_identity(repo, step, leaf, create_from):
         )
 
 
+def git_head(worktree, repo):
+    path = Path(worktree)
+    result = subprocess.run(
+        ["git", "-C", str(path if path.is_absolute() else repo / path), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode:
+        raise Error("cannot read worktree HEAD")
+    return result.stdout.strip()
+
+
 def dispatch(args):
     """Ready and start a leaf, or a whole pending batch, and return its packets."""
     directory, data, plan, leafs = mutating_run(args)
@@ -2974,6 +3014,15 @@ def dispatch(args):
     repo = repository_top(args)
     for member in group:
         verify_worktree_identity(repo, data["steps"][member], leafs[member], args.create_from)
+    if data.get("verify_policy") == "leaf_verify_v1":
+        # The first member measures from the worktree HEAD at its first start; a
+        # batch follower's base is the previous member's returned commit, which
+        # does not exist yet, so it stays empty until the gate resolves it.
+        step = data["steps"][group[0]]
+        if "base_commit" not in step:
+            step["base_commit"] = git_head(step["assignment"]["worktree"], repo)
+        for member in group[1:]:
+            data["steps"][member].setdefault("base_commit", "")
     packets = [step_handoff(directory, data, plan, data["steps"][member]) for member in group]
     for member, old, attempt_id in moves:
         for before, after in ((old, "ready"), ("ready", "in_progress")):
@@ -3037,6 +3086,121 @@ def validate_return(args):
         "handoff_sha256": handoff_value["handoff_sha256"],
         "return_sha256": digest(return_value),
     }
+
+
+class UsageError(Error):
+    """A malformed or inapplicable invocation, reported with exit status 2."""
+
+
+def git_output(worktree, *arguments):
+    result = subprocess.run(
+        ["git", "-C", str(worktree), *arguments], text=True, capture_output=True
+    )
+    if result.returncode:
+        raise Error(f"git {arguments[0]} failed in the worktree")
+    return result.stdout
+
+
+def numstat_rows(worktree, base, commit):
+    """Rows of (paths, changed lines); a binary row is zero lines, a rename one row."""
+    tokens = git_output(worktree, "diff", "--numstat", "-z", "-M", f"{base}..{commit}").split("\0")
+    rows, index = [], 0
+    while index < len(tokens):
+        head = tokens[index]
+        index += 1
+        if not head:
+            continue
+        added, deleted, path = head.split("\t", 2)
+        paths = [path]
+        if not path:
+            paths = [tokens[index + 1], tokens[index]]
+            index += 2
+        rows.append((paths, 0 if added == "-" else int(added) + int(deleted)))
+    return rows
+
+
+def dirty_paths(worktree):
+    entries = git_output(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+    paths, index = [], 0
+    while index < len(entries):
+        entry = entries[index]
+        index += 1
+        if len(entry) > 3:
+            paths.append(entry[3:])
+            if entry[0] in "RC":
+                index += 1
+    return paths
+
+
+def changeset_verdict(worktree, base, commit, leaf, budget):
+    exempt = budget["exempt_paths"]
+    covers = validator_module().write_set_covers
+    lines = files = 0
+    outside = []
+    for paths, changed in numstat_rows(worktree, base, commit):
+        if all(covers(exempt, path) for path in paths):
+            continue
+        lines += changed
+        files += 1
+        outside.extend(
+            path for path in paths
+            if path not in outside and not changed_path_allowed(path, leaf["write_set"])
+        )
+    # Uncommitted work is outside what the measured commit records, so it fails
+    # the same way a path outside the write set does.
+    stray = dirty_paths(worktree)
+    if outside or stray:
+        verdict, listed = "outside_write_set", outside or stray
+    elif lines > budget["max_changed_lines"] or files > budget["max_files"]:
+        verdict, listed = "oversized:changeset", []
+    else:
+        verdict, listed = "pass", []
+    return {
+        "ok": verdict == "pass",
+        "verdict": verdict,
+        "lines": lines,
+        "files": files,
+        "limits": {key: budget[key] for key in ("max_changed_lines", "max_files")},
+        "outside": listed[:MAX_CHECK_OUTSIDE],
+    }
+
+
+def check_changeset(args):
+    """Read-only changeset gate: builder preflight on HEAD, or the parent on a returned commit."""
+    if args.handoff_file:
+        if not args.worktree:
+            raise UsageError("--handoff-file requires --worktree")
+        packet = valid_worker_handoff(
+            json.loads(read_bounded_input(args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff"))
+        )
+        budget = packet.get("changeset_budget")
+        if budget is None:
+            raise UsageError("this handoff carries no changeset budget")
+        base = args.base or budget["base_commit"]
+        if not base:
+            raise UsageError("base commit unknown for this batch member; pass --base")
+        worktree, leaf = args.worktree, packet["leaf"]
+        commit = git_output(worktree, "rev-parse", "HEAD").strip()
+    elif args.run_id and args.step_id:
+        directory, data, plan, leafs = load2(args)
+        validate_events2(directory, data)
+        sid, step = selected_step(data, args.step_id)
+        if data.get("verify_policy") != "leaf_verify_v1":
+            raise UsageError("this run does not use leaf verification")
+        commit = step["returned_commit"]
+        if not commit:
+            raise UsageError("the step has no returned commit")
+        base = step.get("base_commit", "")
+        members = step_batches(plan).get(sid, ())
+        if not base and sid in members and members.index(sid) > 0:
+            base = data["steps"][members[members.index(sid) - 1]]["returned_commit"]
+        if not base:
+            raise UsageError("the step has no recorded base commit")
+        budget = validator_module().changeset_budget(leafs[sid])
+        worktree, leaf = step["assignment"]["worktree"], leafs[sid]
+    else:
+        raise UsageError("pass --handoff-file with --worktree, or --run-id with --step-id")
+    return changeset_verdict(worktree, base, commit, leaf, budget)
 
 
 def read_bounded_input(path, maximum, label):
@@ -4214,6 +4378,12 @@ def parse():
     validate_return_parser = commands.add_parser("validate-return")
     validate_return_parser.add_argument("--handoff-file", required=True)
     validate_return_parser.add_argument("--return-file", required=True)
+    check_parser = commands.add_parser("check-changeset")
+    check_parser.add_argument("--handoff-file")
+    check_parser.add_argument("--worktree")
+    check_parser.add_argument("--base")
+    check_parser.add_argument("--run-id")
+    check_parser.add_argument("--step-id")
     commands.add_parser("list")
     close = commands.add_parser("close")
     close.add_argument("--actor", required=True)
@@ -4281,6 +4451,9 @@ def main(argv=None):
             value = handoff(args)
         elif args.command == "validate-return":
             value = validate_return(args)
+        elif args.command == "check-changeset":
+            value = check_changeset(args)
+            return out(value, 0 if value["ok"] else 1)
         elif args.command == "list":
             value = list_runs(args)
         elif args.command == "close":
@@ -4300,6 +4473,8 @@ def main(argv=None):
         else:
             value = purge(args)
         return out(value)
+    except UsageError as exc:
+        return out({"ok": False, "error": str(exc)}, 2)
     except Error as exc:
         return out({"ok": False, "error": str(exc)}, 3)
     except OSError as exc:

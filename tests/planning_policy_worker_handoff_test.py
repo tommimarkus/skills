@@ -148,6 +148,23 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
                           "attempt_id", "status", "handoff_sha256", "return_sha256"}, set(result))
         self.assertEqual("completed", result["status"])
 
+    def test_changeset_budget_rides_the_packet_and_is_shape_checked(self) -> None:
+        packet = self.handoff(self.started_run())
+        self.assertEqual(
+            {"max_changed_lines", "max_files", "exempt_paths", "base_commit"},
+            set(packet["changeset_budget"]),
+        )
+        handoff_file = self.root / "handoff.json"
+        return_file = self.root / "return.json"
+        return_file.write_text(json.dumps(self.completed_return(packet)), encoding="utf-8")
+        packet["changeset_budget"]["max_files"] = 0
+        packet["handoff_sha256"] = ledger.worker_handoff_digest(packet)
+        handoff_file.write_text(json.dumps(packet), encoding="utf-8")
+        code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
+                                 "--return-file", str(return_file))
+        self.assertNotEqual(0, code, result)
+        self.assertEqual("invalid worker handoff changeset budget", result["error"])
+
     def test_packet_and_return_tampering_are_rejected_without_ledger_mutation(self) -> None:
         packet = self.handoff(self.started_run())
         handoff_file = self.root / "handoff.json"
