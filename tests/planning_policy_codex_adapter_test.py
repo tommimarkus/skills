@@ -1,3 +1,5 @@
+import json
+import re
 import unittest
 from pathlib import Path
 
@@ -34,6 +36,18 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             "https://developers.openai.com/api/docs/guides/latest-model",
         ):
             self.assertIn(marker, self.text)
+
+    def test_tier_table_and_verifier_models_equal_the_host_tier_map(self):
+        host = json.loads(
+            (REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/host-tiers.json").read_text()
+        )["hosts"]["codex"]
+        for tier, entry in host["tiers"].items():
+            self.assertRegex(
+                self.text, rf"`plan-step-{tier}`[^|]*\| `{entry['model']}` / `{entry['effort']}` \|"
+            )
+        flat = re.sub(r"\s+", " ", self.text)
+        for entry in host["verifiers"].values():
+            self.assertIn(f"`{entry['model']}` / `{entry['effort']}`", flat)
 
     def test_requires_complete_handoff_and_honest_stops(self):
         for marker in (

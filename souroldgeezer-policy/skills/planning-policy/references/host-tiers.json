@@ -1,0 +1,29 @@
+{
+  "schema": "planning-host-tiers-v1",
+  "hosts": {
+    "claude-code": {
+      "tiers": {
+        "mechanical": {"model": "haiku", "effort": "low", "skill": false},
+        "standard": {"model": "sonnet", "effort": "medium", "skill": true},
+        "analytical": {"model": "opus", "effort": "high", "skill": true},
+        "deep": {"model": "opus", "effort": "xhigh", "skill": true}
+      },
+      "verifiers": {
+        "plan-verify-standard": {"model": "sonnet", "effort": "medium"},
+        "plan-verify-analytical": {"model": "opus", "effort": "high"}
+      }
+    },
+    "codex": {
+      "tiers": {
+        "mechanical": {"model": "gpt-5.6-luna", "effort": "low", "skill": true},
+        "standard": {"model": "gpt-5.6-terra", "effort": "medium", "skill": true},
+        "analytical": {"model": "gpt-5.6-sol", "effort": "high", "skill": true},
+        "deep": {"model": "gpt-5.6-sol", "effort": "xhigh", "skill": true}
+      },
+      "verifiers": {
+        "plan-verify-standard": {"model": "gpt-5.6-terra", "effort": "medium"},
+        "plan-verify-analytical": {"model": "gpt-5.6-sol", "effort": "high"}
+      }
+    }
+  }
+}

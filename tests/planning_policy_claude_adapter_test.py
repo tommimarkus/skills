@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 import re
 import unittest
@@ -6,11 +7,11 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md"
 AGENTS = REPO_ROOT / "souroldgeezer-policy/agents"
+HOST_TIERS = json.loads(
+    (REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/host-tiers.json").read_text()
+)["hosts"]["claude-code"]
 EXPECTED_TIERS = {
-    "plan-step-mechanical": ("haiku", "low"),
-    "plan-step-standard": ("sonnet", "medium"),
-    "plan-step-analytical": ("opus", "high"),
-    "plan-step-deep": ("opus", "xhigh"),
+    f"plan-step-{tier}": (entry["model"], entry["effort"]) for tier, entry in HOST_TIERS["tiers"].items()
 }
 RETURN_PROFILE = (
     '`"schema": "bounded-step-return-v1"`',
@@ -39,8 +40,12 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertIn("`blocked:missing_input`", adapter)
         self.assertIn("Never substitute a versioned model identifier", adapter)
         self.assertIn("never silently\ndowngrade", adapter)
+        self.assertEqual(4, len(EXPECTED_TIERS))
         for tier, (model, effort) in EXPECTED_TIERS.items():
             self.assertIn(f"| `{tier}` | `{model}` | `{effort}` |", adapter)
+        flat = re.sub(r"\s+", " ", adapter)
+        for verifier, entry in HOST_TIERS["verifiers"].items():
+            self.assertIn(f"`souroldgeezer-policy:{verifier}` (`{entry['model']}`/`{entry['effort']}`)", flat)
 
     def test_adapter_leaves_retry_targeting_to_the_ledger(self):
         adapter = ADAPTER.read_text(encoding="utf-8")

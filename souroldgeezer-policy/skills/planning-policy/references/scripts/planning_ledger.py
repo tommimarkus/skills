@@ -1214,9 +1214,58 @@ def read_plan(path, contract_version=FORWARD_SCHEMA):
     return data
 
 
+def host_tiers():
+    """The single host tier map: per host, the tier models, skill support, and verifiers."""
+    return read_json(Path(__file__).resolve().parent.parent / "host-tiers.json", "cannot read host tier map")
+
+
+def host_entry(host):
+    entry = host_tiers().get("hosts", {}).get(host)
+    if entry is None:
+        raise UsageError(f"unknown host {host}; the tier map names {sorted(host_tiers()['hosts'])}")
+    return entry
+
+
+def derived_setup(plan, host, evidence_text):
+    """Derive the assignments and capability binding of a host run from the tier map."""
+    entry = host_entry(host)
+    evidence = [line.strip() for line in evidence_text.splitlines() if line.strip()]
+    if not 1 <= len(evidence) <= 8 or any(len(line) > 240 for line in evidence):
+        raise UsageError("--evidence needs 1 to 8 lines of at most 240 characters")
+    assigned, bound = [], []
+    for leaf in plan["leaves"]:
+        tier = entry["tiers"][leaf["portable_tier"]]
+        requirements = leaf["capability_requirements"]
+        if not tier["skill"] and any(item["kind"] == "skill" for item in requirements["additional"]):
+            raise Error("blocked:capability_unavailable")
+        assigned.append({
+            "id": leaf["id"], "harness": host, "model_or_alias": tier["model"],
+            "effort": tier["effort"], "worktree": f".worktrees/{leaf['worktree_owner']}",
+        })
+        bound.append({
+            "step_id": leaf["id"], "host": host, "executor": tier["model"],
+            "requirements": requirements, "evidence": evidence,
+        })
+    binding = {"schema": "planning-capability-binding-v1", "plan_sha256": digest(plan), "bindings": bound}
+    return assigned, binding
+
+
+def tier_alias(args, data, tier):
+    """A host run's dispatch alias is the map entry for the tier; an explicit value must equal it."""
+    if args.command != "dispatch" or not data.get("host"):
+        return args.model_or_alias
+    expected = host_entry(data["host"])["tiers"][tier]["model"]
+    if args.model_or_alias and args.model_or_alias != expected:
+        raise Error(f"model_or_alias must equal the host tier map entry {expected} for tier {tier}")
+    return expected
+
+
 def capability_bindings(path, plan):
     """Load one complete v4/v5 binding and retain assigned-step evidence."""
-    value = read_json(path, "cannot read capability binding file")
+    return checked_binding(read_json(path, "cannot read capability binding file"), plan)
+
+
+def checked_binding(value, plan):
     result = plan_validator()(plan, capability_binding=value)
     if not result.get("valid") or not result.get("dispatch_ready"):
         raise Error("blocked:capability_unavailable")
@@ -1268,7 +1317,10 @@ def valid_stored_binding(value, plan_hash, sid, leaf, assignment):
 
 
 def assignments(path, plan):
-    values = read_json(path, "cannot read assignments file")
+    return checked_assignments(read_json(path, "cannot read assignments file"), plan)
+
+
+def checked_assignments(values, plan):
     if not isinstance(values, list):
         raise Error("assignments file must be an array")
     leaves = leaves_by_id(plan)
@@ -1374,18 +1426,44 @@ def series_predecessor_disclosure(ledger_root, series):
     return "matched"
 
 
+def refuse_unowned_pins(args, plan, top):
+    """A strict plan must prove no unowned pinning test exists before the run starts."""
+    if plan.get("precision") != "strict":
+        return
+    if not args.pin_roots:
+        raise UsageError("a strict plan requires --pin-roots")
+    scan = plan_validator()(plan, pin_roots=args.pin_roots, repo_root=top)
+    pins = [item for item in scan.get("errors", []) if item.startswith("PLANSCOPE-UNOWNED-PIN")]
+    if pins:
+        raise Error("; ".join(pins[:MAX_CHECK_OUTSIDE])[:480])
+
+
 def init5(args):
     approved_parent(args)
     plan = read_plan(args.plan_file, FORWARD_SCHEMA)
-    assigned = assignments(args.assignments_file, plan)
     top = repository_top(args)
+    refuse_unowned_pins(args, plan, top)
+    supplied = (args.assignments_file, args.capability_binding_file)
+    if args.host and any(supplied):
+        raise UsageError("--host derives the assignments and binding; pass neither file")
+    if not args.host and not all(supplied):
+        raise UsageError("pass --assignments-file and --capability-binding-file, or --host with --evidence")
+    if args.host:
+        derived, derived_binding = derived_setup(plan, args.host, args.evidence)
+        assigned = checked_assignments(derived, plan)
+    else:
+        assigned = assignments(args.assignments_file, plan)
     # Resolve a relative worktree once, so every later command and every
     # artifact comparison sees one absolute path whatever its cwd.
     assigned = {
         sid: {**item, "worktree": os.path.normpath(top / item["worktree"])}
         for sid, item in assigned.items()
     }
-    bindings = capability_bindings(args.capability_binding_file, plan)
+    bindings = (
+        checked_binding(derived_binding, plan)
+        if args.host
+        else capability_bindings(args.capability_binding_file, plan)
+    )
     ledger_root = root(args)
     collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
     series = plan.get("series")
@@ -1457,6 +1535,7 @@ def init5(args):
         "return_codes": REGISTERED_RETURN_CODES,
         "verify_policy": "closeout_only" if plan.get("verification") == "closeout-only" else "leaf_verify_v1",
         "precision_policy": "strict_v1" if plan.get("precision") == "strict" else "standard_v1",
+        **({"host": args.host} if args.host else {}),
         "steps": steps,
     }
     write(run / "plan.json", plan, 64 * 1024)
@@ -1512,6 +1591,7 @@ def load2(args):
         or data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}
         or data.get("verify_policy") not in {None, *VERIFY_POLICIES}
         or data.get("precision_policy") not in {None, *PRECISION_POLICIES}
+        or (data.get("host") is not None and data["host"] not in host_tiers().get("hosts", {}))
     ):
         raise Error("invalid run checkpoint")
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
@@ -1888,7 +1968,8 @@ def ready(args, directory, data, plan, batches, step):
         }
         if data.get("schema") in CAPABILITY_SCHEMAS:
             current_assignment["model_or_alias"] = (
-                args.model_or_alias or step["current_assignment"]["model_or_alias"]
+                tier_alias(args, data, remediation["target_portable_tier"])
+                or step["current_assignment"]["model_or_alias"]
             )
         step.update(
             current_tier=remediation["target_portable_tier"],
@@ -1909,7 +1990,7 @@ def ready(args, directory, data, plan, batches, step):
             }
             if data.get("schema") in CAPABILITY_SCHEMAS:
                 current_assignment["model_or_alias"] = (
-                    args.model_or_alias or step["assignment"]["model_or_alias"]
+                    tier_alias(args, data, step["current_tier"]) or step["assignment"]["model_or_alias"]
                 )
             step["current_assignment"] = current_assignment
     if data.get("schema") in CAPABILITY_SCHEMAS:
@@ -4820,8 +4901,11 @@ def parse():
     init5_parser.add_argument("--actor", required=True)
     init5_parser.add_argument("--approved", action="store_true")
     init5_parser.add_argument("--plan-file", required=True)
-    init5_parser.add_argument("--assignments-file", required=True)
-    init5_parser.add_argument("--capability-binding-file", required=True)
+    init5_parser.add_argument("--assignments-file")
+    init5_parser.add_argument("--capability-binding-file")
+    init5_parser.add_argument("--host")
+    init5_parser.add_argument("--evidence", default="")
+    init5_parser.add_argument("--pin-roots", nargs="+", metavar="ROOT")
     trans = commands.add_parser("transition")
     trans.add_argument("--actor", required=True)
     trans.add_argument("--run-id")
