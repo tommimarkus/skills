@@ -433,12 +433,11 @@ class RestackTest(UpstreamHarness):
 
 
 class ConcurrentActionsTest(PipelineHarness):
-    def test_a_provisionally_ready_step_is_listed_beside_the_verify_action(self):
+    def test_a_provisionally_ready_step_is_the_action_while_alpha_awaits_its_verdict(self):
         self.alpha_in_review()
         block = self.next_only()
-        self.assertEqual("verify_pending", block["category"])
-        self.assertEqual(["alpha"], block["step_ids"])
-        self.assertEqual(["beta"], block["concurrent"])
+        self.assertEqual("ready_pending", block["category"])
+        self.assertEqual(["beta"], block["ready_step_ids"])
         self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
 
     def test_a_dispatch_ready_step_is_listed_beside_an_unverified_step(self):

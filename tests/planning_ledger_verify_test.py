@@ -305,9 +305,13 @@ class LandGateTest(VerifyHarness):
         one, two = issued["handoffs"]
         code, result = self.record_verify(self.verify_return(one))
         self.assertEqual(0, code, result)
-        self.assertEqual(["second"], result["next"]["step_ids"])
+        # The sibling's packet is already issued, so it awaits its verdict.
+        self.assertEqual(("await_verify", ["second"]), (result["next"]["category"], result["next"]["step_ids"]))
+        self.assertNotIn("command", result["next"])
         self.assertEqual(3, self.land("second")[0])
         self.assertEqual(0, self.record_verify(self.verify_return(two))[0])
+        shown = self.call("show", "--run-id", self.run_id, "--next-only")[1]
+        self.assertEqual("integrate_completed", shown["next"]["category"])
         code, landed = self.land("second")
         self.assertEqual(0, code, landed)
         self.assertEqual(["first", "second"], landed["integrated"])

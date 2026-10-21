@@ -2232,6 +2232,11 @@ def checkpoint_next(directory, data, batches, plan):
     return with_concurrent(data, batches, primary_next(directory, data, batches, plan))
 
 
+def verify_issued(step):
+    """True when verify-handoff issued a packet for the step's returned commit."""
+    return bool(step.get("verify_id")) and step.get("verify_commit") == step["returned_commit"]
+
+
 def primary_next(directory, data, batches, plan):
     """Select one highest-priority legal v4/v5 action from the checkpoint."""
     if data["run_status"] == "closed":
@@ -2241,6 +2246,7 @@ def primary_next(directory, data, batches, plan):
 
     plan_id, run_id = data["plan_id"], data["run_id"]
     steps = ordered_steps(data["steps"])
+    issued = []
     integrated = [step["id"] for step in steps if step["status"] == "integrated"]
     cleanup = None
     if integrated:
@@ -2277,7 +2283,11 @@ def primary_next(directory, data, batches, plan):
         )
     completed = [sid for sid in completed if not data["steps"][sid].get("upstream_stale")]
     if data.get("verify_policy") == "leaf_verify_v1":
-        unverified = [sid for sid in completed if stored_verdict(data["steps"][sid]) is None]
+        undecided = [sid for sid in completed if stored_verdict(data["steps"][sid]) is None]
+        # A packet issued by verify-handoff is awaiting its verdict, not unissued.
+        issued = [sid for sid in undecided if verify_issued(data["steps"][sid])]
+        unverified = [sid for sid in undecided if sid not in issued]
+        completed = [sid for sid in completed if sid not in issued]
         if unverified:
             return bounded_action_next(
                 {"category": "verify_pending", "step_ids": unverified,
@@ -2351,6 +2361,9 @@ def primary_next(directory, data, batches, plan):
                 "attempt_id": first["attempt_id"],
             }
         )
+
+    if issued:
+        return bounded_action_next({"category": "await_verify", "step_ids": issued}, "step_ids")
 
     if cleanup:
         return cleanup

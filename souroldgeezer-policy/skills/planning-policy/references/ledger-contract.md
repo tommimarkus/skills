@@ -537,7 +537,8 @@ the parent with `record-changeset --actor parent --run-id R --step-id S`: it
 re-measures the returned commit, moves a completed step to `oversized` with
 `oversized:changeset`, never retries it, and refuses any other verdict.
 `show --next-only` keeps `verify_pending` immediately before
-`integrate_completed` (land), which already precedes the failure retry.
+`integrate_completed` (land), which already precedes the failure retry; members
+whose verify packet is issued wait as `await_verify` instead.
 
 `init-v5` stamps `verify_policy: leaf_verify_v1` (plan `verification`
 `per-leaf` or absent) or `closeout_only`; a retained run without the stamp
