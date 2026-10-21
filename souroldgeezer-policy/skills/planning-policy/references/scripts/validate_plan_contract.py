@@ -73,6 +73,22 @@ HANDOFF_INLINE_MAX = 68 * 1024
 HANDOFF_BLOCK_LINE_MAX = 4096
 
 
+def hashable(value: Any) -> Any:
+    """Key a JSON array or object by its canonical text so set and dict lookups never raise.
+
+    Every other JSON value is returned unchanged, so lookups keep their exact
+    results; a malformed array or object simply matches nothing it should not.
+    """
+    if isinstance(value, (dict, list)):
+        return ("unhashable", json.dumps(value, sort_keys=True, separators=(",", ":")))
+    return value
+
+
+def searchable(value: Any) -> Any:
+    """Membership target for a declared field: containers and strings as-is, other scalars hold nothing."""
+    return value if isinstance(value, (dict, list, str)) else ()
+
+
 def proxy_tokens(value: Any) -> int:
     serialized = json.dumps(value, sort_keys=True, separators=(",", ":"))
     matches = PROXY_TOKEN_RE.finditer(serialized)
@@ -126,7 +142,7 @@ def tier_mix(leaves: list[dict[str, Any]]) -> dict[str, Any]:
     for leaf in leaves:
         if not isinstance(leaf, dict):
             continue
-        if leaf.get("portable_tier") in counts:
+        if hashable(leaf.get("portable_tier")) in counts:
             counts[leaf["portable_tier"]] += 1
         if mechanical_shaped(leaf):
             over_assigned += 1
@@ -205,7 +221,7 @@ def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
         if isinstance(entry, dict) and stable_id(entry.get("id"))
     }
     for entry in leaves:
-        if not isinstance(entry, dict) or entry.get("portable_tier") not in BATCHABLE_TIERS:
+        if not isinstance(entry, dict) or hashable(entry.get("portable_tier")) not in BATCHABLE_TIERS:
             continue
         dependencies = entry.get("dependencies")
         if not isinstance(dependencies, list):
@@ -214,7 +230,7 @@ def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
         owner = entry.get("worktree_owner")
         for dependency in dependencies:
             parent = by_id.get(dependency) if isinstance(dependency, str) else None
-            if not isinstance(parent, dict) or parent.get("portable_tier") not in BATCHABLE_TIERS:
+            if not isinstance(parent, dict) or hashable(parent.get("portable_tier")) not in BATCHABLE_TIERS:
                 continue
             if parent.get("worktree_owner") != owner:
                 if is_pure_chain_pair(parent, entry, leaves):
@@ -231,7 +247,7 @@ def total_declared_weight(plan: dict[str, Any]) -> int:
     if not isinstance(units, list):
         return 0
     return sum(
-        SIZES.get(unit.get("original_size"), 0) for unit in units if isinstance(unit, dict)
+        SIZES.get(hashable(unit.get("original_size")), 0) for unit in units if isinstance(unit, dict)
     )
 
 
@@ -402,7 +418,7 @@ def pin_scan(
 
 
 def band_budget(leaf: dict[str, Any]) -> tuple[int, int]:
-    return BUDGET_DEFAULTS.get(leaf.get("size"), BUDGET_DEFAULTS["medium"])
+    return BUDGET_DEFAULTS.get(hashable(leaf.get("size")), BUDGET_DEFAULTS["medium"])
 
 
 def changeset_budget(leaf: dict[str, Any]) -> dict[str, Any]:
@@ -545,8 +561,8 @@ def direct_dependency(first: dict[str, Any], second: dict[str, Any]) -> bool:
         isinstance(first_id, str)
         and isinstance(second_id, str)
         and (
-            first_id in second.get("dependencies", [])
-            or second_id in first.get("dependencies", [])
+            first_id in searchable(second.get("dependencies", []))
+            or second_id in searchable(first.get("dependencies", []))
         )
     )
 
@@ -974,7 +990,7 @@ def capability_requirements_valid(value: Any) -> bool:
     return all(
         isinstance(item, dict)
         and set(item) == {"kind", "name", "reason"}
-        and item.get("kind") in CAPABILITY_KINDS
+        and hashable(item.get("kind")) in CAPABILITY_KINDS
         and nonempty_string_in_range(item.get("name"), 1, 120)
         and nonempty_string_in_range(item.get("reason"), 1, 240)
         for item in additional
@@ -1004,7 +1020,7 @@ def capability_binding_matches(plan: dict[str, Any], leaves: list[dict[str, Any]
         if not isinstance(item, dict) or set(item) != {"step_id", "host", "executor", "requirements", "evidence"}:
             return False
         step_id = item.get("step_id")
-        if step_id in observed or step_id not in expected:
+        if hashable(step_id) in observed or hashable(step_id) not in expected:
             return False
         if not nonempty_string_in_range(item.get("host"), 1, 80):
             return False
@@ -1036,7 +1052,7 @@ def predecessor_errors(predecessor: Any) -> list[str]:
     run_id = predecessor.get("run_id")
     if not isinstance(run_id, str) or not UUID4_RE.fullmatch(run_id):
         errors.append(f"{prefix}.run_id must be a canonical lowercase UUID4")
-    if predecessor.get("outcome") not in SERIES_OUTCOMES:
+    if hashable(predecessor.get("outcome")) not in SERIES_OUTCOMES:
         errors.append(f"{prefix}.outcome must be one of {sorted(SERIES_OUTCOMES)}")
     handoff_sha256 = predecessor.get("handoff_sha256")
     if handoff_sha256 != "" and (
@@ -1126,7 +1142,7 @@ def _contract_version(
             "migrate to contract_version 5 before approval or dispatch"
         )
         return 1
-    if raw_version in {2, 3, 4, 5} and isinstance(raw_version, int):
+    if isinstance(raw_version, int) and raw_version in {2, 3, 4, 5}:
         for field in V2_REQUIRED:
             if field not in plan:
                 errors.append(f"{field} is required for contract version {raw_version}")
@@ -1162,7 +1178,7 @@ def _work_unit_sections(
             errors.append(f"{prefix}.id must be a stable bounded identifier")
         elif unit_id in unit_sizes:
             errors.append(f"duplicate work unit id: {unit_id}")
-        elif size not in SIZES:
+        elif hashable(size) not in SIZES:
             errors.append(f"{prefix}.original_size must be small, medium, or large")
         else:
             unit_sizes[unit_id] = SIZES[size]
@@ -1196,7 +1212,7 @@ def _selective_audit_errors(prefix: str, audit: Any, errors: list[str]) -> None:
     ):
         if audit.get(field) is not True:
             errors.append(f"{prefix}.selective_audit.{field} must be true")
-    if audit.get("owner") not in AUDIT_OWNERS:
+    if hashable(audit.get("owner")) not in AUDIT_OWNERS:
         errors.append(f"{prefix}.selective_audit.owner must be an owning audit")
     question = audit.get("question")
     if vague_audit_question(question):
@@ -1242,9 +1258,9 @@ def _leaf_declaration_errors(
 def _leaf_contract_errors(
     prefix: str, leaf: dict[str, Any], contract_version: int | None, errors: list[str]
 ) -> None:
-    if leaf.get("size") not in SIZES:
+    if hashable(leaf.get("size")) not in SIZES:
         errors.append(f"{prefix}.size must be small, medium, or large")
-    if leaf.get("portable_tier") not in TIERS:
+    if hashable(leaf.get("portable_tier")) not in TIERS:
         errors.append(
             f"{prefix}.portable_tier must be mechanical, standard, analytical, or deep"
         )
@@ -1283,7 +1299,7 @@ def _leaf_contract_errors(
             f"{prefix}.capability_requirements must be an exact {CAPABILITY_BASELINE} "
             "requirements object"
         )
-    if leaf.get("portable_tier") in {"analytical", "deep"} and not nonempty(
+    if hashable(leaf.get("portable_tier")) in {"analytical", "deep"} and not nonempty(
         leaf.get("irreducible_unknown_or_risk")
     ):
         errors.append(
@@ -1367,7 +1383,7 @@ def _leaf_sections(
         _leaf_declaration_errors(prefix, leaf, contract_version, strict, admission, errors)
         _leaf_contract_errors(prefix, leaf, contract_version, errors)
         unit_id = leaf.get("work_unit_id")
-        if unit_id not in unit_sizes:
+        if hashable(unit_id) not in unit_sizes:
             errors.append(f"{prefix}.work_unit_id must name a declared work unit")
         else:
             unit_leaves[unit_id].append(leaf)
@@ -1392,12 +1408,12 @@ def _batch_errors(
                 f"batch {batch_id} has {len(members)} members; batches must have 2 to 8 members"
             )
         for member in members:
-            if leaf_records[member][1].get("portable_tier") not in BATCHABLE_TIERS:
+            if hashable(leaf_records[member][1].get("portable_tier")) not in BATCHABLE_TIERS:
                 errors.append(
                     f"batch {batch_id} member {member} must have portable_tier mechanical "
                     "or standard"
                 )
-        owners = {leaf_records[member][1].get("worktree_owner") for member in members}
+        owners = {hashable(leaf_records[member][1].get("worktree_owner")) for member in members}
         if len(owners) > 1:
             errors.append(f"batch {batch_id} members must share one worktree_owner")
         member_positions = {member: leaf_records[member][0] for member in members}
@@ -1470,7 +1486,7 @@ def _decomposition_errors(
         if not isinstance(decomposition, dict):
             continue
         shape = decomposition.get("shape")
-        if shape not in {"single", "parallel", "checkpointed"}:
+        if hashable(shape) not in {"single", "parallel", "checkpointed"}:
             errors.append(f"{prefix}.shape must be single, parallel, or checkpointed")
             continue
         if shape == "single":
@@ -1488,10 +1504,10 @@ def _decomposition_errors(
                 errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
             if len(members) < 2:
                 errors.append(f"work unit {unit_id} parallel decomposition must map at least two leaves")
-            member_ids = {member.get("id") for member in members}
-            if any(set(dependencies.get(member.get("id"), [])) & member_ids for member in members):
+            member_ids = {hashable(member.get("id")) for member in members}
+            if any(set(dependencies.get(hashable(member.get("id")), [])) & member_ids for member in members):
                 errors.append(f"work unit {unit_id} parallel leaves must have no intra-unit dependencies")
-            if len({member.get("worktree_owner") for member in members}) != len(members):
+            if len({hashable(member.get("worktree_owner")) for member in members}) != len(members):
                 errors.append(f"work unit {unit_id} parallel leaves must have distinct worktree_owner values")
             for member_index, member in enumerate(members):
                 if not safe_exact_write_set(member):
@@ -1505,14 +1521,15 @@ def _decomposition_errors(
             continue
         if set(decomposition) != {"shape", "basis", "rationale"}:
             errors.append(f"{prefix} for checkpointed must have exactly shape, basis, and rationale")
-        if decomposition.get("basis") not in {"failure_isolation", "rollback_boundary"}:
+        if hashable(decomposition.get("basis")) not in {"failure_isolation", "rollback_boundary"}:
             errors.append(f"{prefix}.basis must be failure_isolation or rollback_boundary for checkpointed")
         if not nonempty_string_in_range(decomposition.get("rationale"), 1, 240):
             errors.append(f"{prefix}.rationale must be a non-empty string from 1 to 240 characters")
         if len(members) < 2:
             errors.append(f"work unit {unit_id} checkpointed decomposition must map at least two leaves")
+        member_ids = {hashable(item.get("id")) for item in members}
         for member_index, member in enumerate(members):
-            intra = [dep for dep in dependencies.get(member.get("id"), []) if dep in {item.get("id") for item in members}]
+            intra = [dep for dep in dependencies.get(hashable(member.get("id")), []) if dep in member_ids]
             expected = [] if member_index == 0 else [members[member_index - 1].get("id")]
             if intra != expected:
                 errors.append(f"work unit {unit_id} checkpointed leaves must form one linear ordered dependency chain")
@@ -1532,7 +1549,7 @@ def _standard_ready_ratio(
         if not members:
             errors.append(f"work unit {unit_id} has no leaves")
             continue
-        if all(member.get("portable_tier") in {"mechanical", "standard"} for member in members):
+        if all(hashable(member.get("portable_tier")) in {"mechanical", "standard"} for member in members):
             ready_weight += weight
     ratio = ready_weight / total_weight if total_weight else 0.0
     exception = plan.get("analytical_heavy_exception")

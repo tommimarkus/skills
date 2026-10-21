@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import hashlib
 import importlib.util
 import io
@@ -86,6 +87,65 @@ def v5_plan(*leaves, work_units=None, **overrides):
 
 
 ABSENT = object()
+CONTAINERS = ([], {}, [[]], [{}])
+
+
+def malformed_shape_plan():
+    """A valid v5 plan reaching every hashed field: parallel, batched checkpoint, audit, budget, series."""
+    first, second = leaf("first", "parallel"), leaf("second", "parallel")
+    third = leaf("third", "staged", "mechanical")
+    fourth = leaf("fourth", "staged", "mechanical", dependencies=["third"])
+    audited = leaf("audited", "audit")
+    for item, owner in ((first, "task/first"), (second, "task/second"), (third, "task/staged"),
+                        (fourth, "task/staged"), (audited, "task/audit")):
+        item.update(worktree_owner=owner, size="small")
+    third["batch"] = fourth["batch"] = "stages"
+    third["changeset_budget"] = {"max_files": 8, "reason": "Generated fixtures count as files"}
+    audited["selective_audit"] = {
+        "owner": "test-quality-audit", "initial_inspection": True, "domain_match": True,
+        "materially_changes_approach_or_acceptance": True,
+        "targeted_inspection_or_focused_tests_cannot_resolve": True,
+        "question": "Do parameterized pagination tests conceal a fixture-coupling failure?",
+        "evidence_surface": "tests/pagination_test.py",
+    }
+    units = [
+        {"id": "parallel", "original_size": "medium", "cohesive_outcome": "Deliver independent interfaces",
+         "decomposition": {"shape": "parallel", "basis": "parallel_independence", "rationale": "Disjoint writes."}},
+        {"id": "staged", "original_size": "medium", "cohesive_outcome": "Deliver a recoverable migration",
+         "decomposition": {"shape": "checkpointed", "basis": "rollback_boundary", "rationale": "Each stage isolates rollback."}},
+        {"id": "audit", "original_size": "small"},
+    ]
+    plan = v5_plan(first, second, third, fourth, audited, work_units=units, series=slice_two_series())
+    for item in plan["leaves"]:
+        item["capability_requirements"]["additional"] = [
+            {"kind": "skill", "name": "repository-policy", "reason": "The task needs its workflow."}
+        ]
+    return plan
+
+
+def malformed_shape_paths(plan):
+    """Every field path whose malformed JSON array or object once raised instead of reporting an error."""
+    yield ("contract_version",), CONTAINERS
+    yield ("series", "predecessor", "outcome"), CONTAINERS
+    yield ("leaves", 4, "selective_audit", "owner"), CONTAINERS
+    for index in range(len(plan["work_units"])):
+        yield ("work_units", index, "original_size"), CONTAINERS
+        yield ("work_units", index, "decomposition", "shape"), CONTAINERS
+        yield ("work_units", index, "decomposition", "basis"), CONTAINERS
+    for index in range(len(plan["leaves"])):
+        for field in ("id", "size", "portable_tier", "worktree_owner", "work_unit_id"):
+            yield ("leaves", index, field), CONTAINERS
+        yield ("leaves", index, "capability_requirements", "additional", 0, "kind"), CONTAINERS
+        yield ("leaves", index, "dependencies"), (None, 0)
+
+
+def with_value(value, path, replacement):
+    result = copy.deepcopy(value)
+    node = result
+    for part in path[:-1]:
+        node = node[part]
+    node[path[-1]] = replacement
+    return result
 
 
 def assert_mode_field(case, field, valid, invalid, build):
@@ -212,6 +272,27 @@ class SharedContractTest(unittest.TestCase):
         self.assertTrue(result["approval_ready"])
         self.assertFalse(result["dispatch_ready"])
         self.assertTrue(MODULE.validate(template, capability_binding=capability_binding(template))["dispatch_ready"])
+
+    def test_malformed_json_shapes_return_errors_instead_of_raising(self):
+        plan = malformed_shape_plan()
+        binding = capability_binding(plan)
+        self.assertTrue(MODULE.validate(plan, capability_binding=binding)["dispatch_ready"])
+        for path, values in malformed_shape_paths(plan):
+            for value in values:
+                with self.subTest(path=path, value=value):
+                    result = MODULE.validate(with_value(plan, path, value))
+                    self.assertFalse(result["valid"])
+                    self.assertTrue(result["errors"])
+        for value in CONTAINERS:
+            with self.subTest(step_id=value):
+                changed = with_value(binding, ("bindings", 0, "step_id"), value)
+                result = MODULE.validate(plan, capability_binding=changed)
+                self.assertFalse(result["dispatch_ready"])
+                self.assertIn("blocked:capability_unavailable", result["warnings"])
+        unsized = with_value(plan["leaves"][2], ("size",), [])
+        self.assertEqual(
+            {"max_changed_lines": 400, "max_files": 8, "exempt_paths": []}, MODULE.changeset_budget(unsized)
+        )
 
     def test_accepts_weighted_medium_ready_plan(self):
         plan = {
