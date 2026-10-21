@@ -18,14 +18,21 @@ remain readable/mutable according to [ledger compatibility](ledger-compatibility
 Other explicit versions are invalid.
 
 Each `leaves` entry has non-empty
-`id`, `dependencies`, `task`, `boundary`, `read_set`, `write_set`,
+`id`, `dependencies`, `task`, `boundary`, `write_set`,
 `settled_decisions`, `size`, `portable_tier`, `worktree_owner` (its git branch), one string
 `acceptance_command`, `return_contract`, `stop_conditions`, and `work_unit_id`.
 IDs/dependencies match `[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*` (maximum 64).
-Dependencies/read/write/stops are arrays; stops include
+Dependencies/read/write/stops are arrays (`read_set` is optional in v5 under
+standard precision); stops include
 `missing_load_bearing_information`. Sizes are small/medium/large and tiers are
 mechanical/standard/analytical/deep. Versions 2–5 require `max_attempts` 1–5 and
 exact `bounded-step-return-v1`, never raw logs.
+
+Optional top-level `precision` is `standard` (default) or `strict`; any other
+value is invalid. Standard: v5 `read_set` may be absent, and `write_set` and any
+present `read_set` may name areas. Strict: every `write_set` is non-empty and
+exact (no glob characters) and `read_set` is a non-empty exact array. Both
+modes keep exact disjoint parallel write sets and the overlap ordering rule.
 
 An optional `batch` field names a shared-dispatch group using `id`'s stable
 identifier form: 2 to 8 members, each `mechanical` or `standard`, sharing one

@@ -35,6 +35,7 @@ REQUIRED = (
     "stop_conditions",
     "work_unit_id",
 )
+PRECISION_MODES = ("standard", "strict")
 V2_REQUIRED = ("contract_version", "objective", "scope_summary", "approved_decisions")
 V2_RETURN_CONTRACT = "bounded-step-return-v1"
 CAPABILITY_BASELINE = "plan-step-base-v1"
@@ -216,6 +217,20 @@ def safe_exact_write_set(leaf: dict[str, Any]) -> bool:
             and not any(character in path for character in GLOB_CHARS)
             for path in normalized
         )
+    )
+
+
+def exact_path_list(value: Any, *, non_empty: bool) -> bool:
+    """Strict-precision test for a path list: safe paths, no glob characters, optionally non-empty."""
+    if not isinstance(value, list) or (non_empty and not value):
+        return False
+    return all(
+        isinstance(path, str)
+        and bool(path.strip())
+        and not path.startswith("/")
+        and ".." not in path.split("/")
+        and not any(character in path for character in GLOB_CHARS)
+        for path in value
     )
 
 
@@ -1024,6 +1039,10 @@ def validate(
         errors.append("contract_version must be 2, 3, 4, or 5 when specified")
     if contract_version == 5 and admission and has_placeholder_decision(plan.get("approved_decisions")):
         errors.append("approved_decisions cannot contain a standalone placeholder")
+    precision = plan.get("precision", "standard")
+    if "precision" in plan and precision not in PRECISION_MODES:
+        errors.append("precision must be standard or strict")
+    strict = precision == "strict"
     leaves = plan.get("leaves")
     units = plan.get("work_units")
     if not isinstance(leaves, list) or not leaves:
@@ -1074,6 +1093,8 @@ def validate(
             errors.append(f"{prefix} must be an object")
             continue
         for field in REQUIRED:
+            if field == "read_set" and contract_version == 5 and not strict:
+                continue
             if field not in leaf:
                 errors.append(f"{prefix}.{field} is required")
         for field in (
@@ -1113,13 +1134,21 @@ def validate(
                 errors.append(f"{prefix}.batch must be a stable bounded identifier")
             elif stable_id(leaf_id):
                 batches.setdefault(batch, []).append(leaf_id)
+        optional_read = contract_version == 5 and not strict and "read_set" not in leaf
         for field in ("read_set", "write_set", "stop_conditions"):
+            if field == "read_set" and optional_read:
+                continue
             if not isinstance(leaf.get(field), list):
                 errors.append(f"{prefix}.{field} must be an array")
+        if strict and contract_version == 5:
+            if not exact_path_list(leaf.get("write_set"), non_empty=True):
+                errors.append(f"{prefix}.write_set must be a non-empty exact path list without glob characters under strict precision")
+            if not exact_path_list(leaf.get("read_set"), non_empty=True):
+                errors.append(f"{prefix}.read_set must be a non-empty exact path list without glob characters under strict precision")
         if contract_version == 5 and admission:
             for field in ("read_set", "write_set"):
                 errors.extend(f"{prefix}.{error}" for error in declared_path_set_errors(leaf, field))
-            if leaf.get("read_set") == [] and leaf.get("write_set") == []:
+            if leaf.get("write_set") == [] and leaf.get("read_set", []) == []:
                 errors.append(f"{prefix}.read_set and {prefix}.write_set cannot both be empty")
             if nonempty(leaf.get("worktree_owner")) and not valid_branch_name(
                 leaf.get("worktree_owner")
