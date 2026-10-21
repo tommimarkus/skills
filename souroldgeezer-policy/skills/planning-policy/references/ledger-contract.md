@@ -136,7 +136,8 @@ needs verification again. A tree-changing restack without
 `--acceptance-exit-code` rebases, keeps the step stale with a recorded
 `pending_acceptance` (old and new base) and returns ok with a `next` naming the
 scoped-acceptance re-run, and the repeat call with the code completes or blocks
-the step; `restack` refuses a batch member, which remediates through retry. A
+the step (a code supplied to the call that rebases is refused before the
+rebase); `restack` refuses a batch member, which remediates through retry. A
 non-zero code, or a rebase conflict (aborted, worktree left clean), moves the
 step to `blocked` with `blocked:upstream_changed`. That code is registered in the
 blocked family, never returned by a worker (excluded from the worker return

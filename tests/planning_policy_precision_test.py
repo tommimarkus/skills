@@ -17,9 +17,10 @@ def errors_of(plan):
 
 
 class PrecisionFieldTest(unittest.TestCase):
-    def test_absent_and_known_modes_are_valid(self):
-        assert_mode_field(self, "precision", (ABSENT, "standard", "strict"),
-                          ("loose", "", None, ["strict"], 1), plan_with)
+    def test_absent_and_known_modes_are_valid_and_others_are_contract_errors(self):
+        valid = (ABSENT, "standard", "strict")
+        invalid = ("loose", "", None, ["strict"], 1)
+        assert_mode_field(self, "precision", valid, invalid, plan_with)
 
     def test_standard_allows_absent_read_set_and_areas(self):
         plan = plan_with(write_set=["outputs", "src/**/*.py"], read_set=["docs"])

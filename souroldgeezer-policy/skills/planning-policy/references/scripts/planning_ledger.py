@@ -4138,6 +4138,11 @@ def restack(args):
     if not contained:
         if head != returned:
             raise Error("the step's worktree is not at its returned commit")
+        if args.acceptance_exit_code is not None:
+            raise Error(
+                "restack rebases first: run it without --acceptance-exit-code, re-run the scoped "
+                "acceptance in the rebased worktree, then repeat with the code"
+            )
         rebased = subprocess.run(
             ["git", "-C", str(worktree), "rebase", "--onto", new, old], text=True, capture_output=True
         )

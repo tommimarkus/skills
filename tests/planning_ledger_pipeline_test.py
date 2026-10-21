@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from tests.planning_ledger_dispatch_test import bare, git, leaf, ledger
+from tests.planning_ledger_dispatch_test import bare, batch_leaves, git, leaf, ledger
 from tests.planning_ledger_verify_test import VerifyHarness
 
 
@@ -206,6 +206,12 @@ class UpstreamHarness(PipelineHarness):
         return self.call("restack", "--actor", "parent", "--run-id", self.run_id,
                          "--step-id", "beta", *extra)
 
+    def restacked(self, code):
+        """Restack in both phases: the rebase, then the repeat with the re-run acceptance `code`."""
+        first, pending = self.restack()
+        self.assertEqual((0, "acceptance_pending"), (first, pending["outcome"]), pending)
+        return self.restack("--acceptance-exit-code", str(code))
+
     def head(self, step_id):
         return git(self.repo / ".worktrees" / step_id, "rev-parse", "HEAD").stdout.strip()
 
@@ -271,7 +277,7 @@ class RestackTest(UpstreamHarness):
     def test_a_changed_patch_needs_verification_again(self):
         self.stacked({SHARED: "one\ntwo\nTHREE\n"})
         self.alpha_fixed({SHARED: "ONE\ntwo\nthree\n"})
-        code, result = self.restack("--acceptance-exit-code", "0")
+        code, result = self.restacked(0)
         self.assertEqual(0, code, result)
         self.assertEqual(("restacked", False), (result["outcome"], result["verdict_carried"]))
         self.assertNotIn("verify", self.step("beta"))
@@ -306,7 +312,7 @@ class RestackTest(UpstreamHarness):
     def test_a_failed_reacceptance_blocks_and_keeps_the_rebased_worktree(self):
         self.stacked({"src/beta.txt": "b\n"})
         fixed = self.alpha_fixed({"src/alpha/g.txt": "g\n"})
-        code, result = self.restack("--acceptance-exit-code", "1")
+        code, result = self.restacked(1)
         self.assertEqual(0, code, result)
         self.assertEqual("retry_eligible", result["outcome"])
         beta = self.step("beta")
@@ -314,6 +320,30 @@ class RestackTest(UpstreamHarness):
         self.assertIn("acceptance exit 1", beta["blockers"][0]["summary"])
         self.assertEqual(fixed, beta["base_commit"])
         self.assertIn("upstream_stale", beta)
+
+    def test_a_code_supplied_to_the_rebasing_call_is_refused_before_the_rebase(self):
+        self.stacked({"src/beta.txt": "b\n"})
+        self.alpha_fixed({"src/alpha/g.txt": "g\n"})
+        before = self.head("beta")
+        code, refused = self.restack("--acceptance-exit-code", "0")
+        self.assertEqual(3, code, refused)
+        self.assertIn("rebases first", refused["error"])
+        self.assertEqual(before, self.head("beta"))
+        beta = self.step("beta")
+        self.assertIn("upstream_stale", beta)
+        self.assertNotIn("pending_acceptance", beta)
+
+    def test_restack_refuses_a_batch_member(self):
+        self.init(*batch_leaves())
+        code, started = self.dispatch("first", "--create-from", "main")
+        self.assertEqual(0, code, started)
+        data = self.checkpoint()
+        data["steps"]["second"].update(status="completed", upstream_stale={"step_id": "first", "commit": "0" * 40})
+        self.checkpoint_path().write_text(json.dumps(data))
+        code, refused = self.call("restack", "--actor", "parent", "--run-id", self.run_id,
+                                  "--step-id", "second")
+        self.assertEqual(3, code, refused)
+        self.assertIn("batch members", refused["error"])
 
     def test_restack_waits_for_a_new_prerequisite_commit(self):
         self.stacked({"src/beta.txt": "b\n"})
@@ -334,7 +364,7 @@ class RestackTest(UpstreamHarness):
         self.passed("alpha")
         self.assertEqual(0, self.land("alpha")[0])
         tip = git(self.repo, "rev-parse", "HEAD").stdout.strip()
-        code, result = self.restack("--acceptance-exit-code", "0")
+        code, result = self.restacked(0)
         self.assertEqual(0, code, result)
         self.assertEqual(tip, self.step("beta")["base_commit"])
         code, landed = self.land("beta")
