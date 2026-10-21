@@ -26,8 +26,8 @@ overrides defaults.
    Refine the whole plan for its parent using the
    [orchestrator readability target](#orchestrator-readability).
    Size each leaf to its changeset budget (see the
-   [plan contract](plan-contract.md#verification-and-changeset-budget)); split
-   or re-cut rather than raise a limit.
+   [plan contract](plan-contract.md#verification-and-changeset-budget)): split
+   or re-cut a leaf that would exceed it, or give the reason a raise requires.
    Review acceptance for actual task coverage; structural validation cannot.
    Leaf acceptance covers its write set; whole-suite verification stays with
    the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
@@ -136,8 +136,8 @@ semantics. An agent reports bounded evidence and never self-escalates, alters
 its contract, or treats an oversized/missing-input stop as retryable work.
 
 The human plan includes one compact **Execution economics** line: expected/high
-attempts; verify dispatches; tier mix; largest repeated-context driver; declared-model-token range
-or `indeterminate`; final-verification reserve or `indeterminate`;
+attempts; verify dispatches; tier mix; largest repeated-context driver;
+declared-model-token range or `indeterminate`; final-verification reserve or `indeterminate`;
 `tracing: off`.
 Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
 

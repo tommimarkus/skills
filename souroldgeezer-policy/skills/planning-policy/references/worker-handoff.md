@@ -46,8 +46,8 @@ pass. The parent records the original submitted result and any correction as
 observed evidence, without inventing an execution attempt for artifact repair.
 
 In a `leaf_verify_v1` run the packet carries `changeset_budget`
-(`max_changed_lines`, `max_files`, `exempt_paths`, `base_commit`). Before
-committing, preflight the work read-only:
+(`max_changed_lines`, `max_files`, `exempt_paths`, `base_commit`). After
+committing and before returning, preflight the committed work read-only:
 
 ```text
 python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" check-changeset --handoff-file HANDOFF --worktree WORKTREE [--base COMMIT]
