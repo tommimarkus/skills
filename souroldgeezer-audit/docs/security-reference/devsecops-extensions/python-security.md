@@ -158,7 +158,7 @@ authenticated service boundary and an explicit policy for its target namespace.
 access to credentials, internal administration, or a privileged callback path.
 
 ### `pys.HC-10` — Self-contained token validation weakened
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-16, jsts.HC-12 and pys.HC-10; edit all 3 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-16, jsts.HC-12, and pys.HC-10; edit all three together. -->
 
 **Pattern:** `jwt.decode` (PyJWT) is called with `options` that disable `verify_signature`, `verify_exp`, `verify_aud`, or `verify_iss`; is called without an explicit `algorithms` allowlist, or allows `none`; or an unverified header/claims helper (PyJWT, python-jose, Authlib) drives an access decision. Reading unverified claims only parses the token; it proves nothing about who issued it.
 
@@ -167,7 +167,7 @@ access to credentials, internal administration, or a privileged callback path.
 **Severity:** `block` when signature verification, algorithm allowlisting, or trusted-key sourcing is absent or bypassed for a token that gates access; `warn` when only lifetime, issuer, or audience checks are disabled, escalated to `block` when multiple issuers or audiences are accepted.
 
 ### `pys.HC-11` — Sensitive cookie attributes weakened
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-17, jsts.HC-13 and pys.HC-11; edit all 3 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-17, jsts.HC-13, and pys.HC-11; edit all three together. -->
 
 **Pattern:** Django `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, or `SESSION_COOKIE_HTTPONLY` set to `False` in production settings; Flask `SESSION_COOKIE_SECURE` or `SESSION_COOKIE_HTTPONLY` set to `False`, or `SESSION_COOKIE_SAMESITE = None` without `Secure`; or `set_cookie` (Django, Flask, Starlette/FastAPI) for a session or authentication value with `secure=False` or `httponly=False`.
 
@@ -194,7 +194,7 @@ access to credentials, internal administration, or a privileged callback path.
 **Severity:** `block`
 
 ### `pys.HC-14` — Non-public route lacks authentication/authorization enforcement
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in jsts.HC-16 and pys.HC-14; edit all 2 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in jsts.HC-16 and pys.HC-14; edit both together. -->
 
 **Pattern:** a Django view without `login_required`, `LoginRequiredMixin`, or `permission_required`; a DRF view with `permission_classes` set to `AllowAny` or empty; a Flask view without the project's login decorator; or a FastAPI route without the project's auth dependency, when the handler changes state or returns non-public data and no global default-deny (DRF `DEFAULT_PERMISSION_CLASSES`, Django `LoginRequiredMiddleware`, FastAPI app or router dependencies) covers it. Object-level ownership stays `DSO-SUB-4`.
 

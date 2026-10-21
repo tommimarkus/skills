@@ -39,21 +39,25 @@ EXIT_REFUSED = 1  # a rule refused the request
 EXIT_UPSTREAM = 3  # GitHub unreachable, or no such release
 
 
+# The exit-carrying error and CalVer key deliberately parallel dediren_runtime.py,
+# for the restated-grammar reason above.
+# lean-audit:dup-intentional:begin
 class PinError(Exception):
     """A refusal or upstream failure carrying its operator-facing exit code."""
 
     def __init__(self, message: str, code: int = EXIT_REFUSED) -> None:
-        self.code = code
         super().__init__(message)
+        self.code = code
 
 
 def calver_key(version: str) -> tuple[int, int, int] | None:
     """Sortable key for a ``YYYY.0M.MICRO`` string, or None when it is not one."""
     match = CALVER_RE.match(version.strip())
-    if match is None:
+    if match is None or not 1 <= int(match.group(2)) <= 12:
         return None
     year, month, micro = (int(group) for group in match.groups())
-    return (year, month, micro) if 1 <= month <= 12 else None
+    return year, month, micro
+# lean-audit:dup-intentional:end
 
 
 def require_calver(version: str, label: str) -> tuple[int, int, int]:

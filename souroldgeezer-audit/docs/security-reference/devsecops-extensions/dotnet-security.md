@@ -293,7 +293,7 @@ plausible but not proven.
 > log text.
 
 ### `dns.HC-16` — Self-contained token validation weakened
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-16, jsts.HC-12 and pys.HC-10; edit all 3 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-16, jsts.HC-12, and pys.HC-10; edit all three together. -->
 
 **Pattern:** a bearer or ID token is accepted although validation is switched off or short-circuited. `TokenValidationParameters` (used by `AddJwtBearer`, `AddOpenIdConnect`, or a manual `ValidateToken` / `ValidateTokenAsync` call) sets `RequireSignedTokens = false`, `ValidateIssuerSigningKey = false`, or a `SignatureValidator` that returns the token without verifying it; or it sets `ValidateLifetime`, `ValidateIssuer`, or `ValidateAudience` to `false`. A second shape is `ReadJwtToken` / `ReadJsonWebToken` claims feeding an authorization decision with no validation step, because reading a token only parses it.
 
@@ -313,7 +313,7 @@ Then check whether the token gates access and whether the result is used for an 
 > Leave signature, signing-key, lifetime, issuer, and audience validation enabled and configure the expected issuer, audience, and signing keys explicitly. Use `ReadJwtToken` only to inspect claims that do not drive an access decision; make decisions from the principal produced by the authentication handler.
 
 ### `dns.HC-17` — Sensitive cookie attributes weakened
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-17, jsts.HC-13 and pys.HC-11; edit all 3 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-17, jsts.HC-13, and pys.HC-11; edit all three together. -->
 
 **Pattern:** a session, authentication, or antiforgery cookie is issued with attributes that expose it. `CookieOptions`, cookie-authentication options, session options, or antiforgery cookie options set `Secure = false`, `HttpOnly = false`, `CookieSecurePolicy.None` or `CookieSecurePolicy.SameAsRequest` in production configuration, or `SameSiteMode.None` without `Secure`. A `CookiePolicyOptions` block that weakens the same attributes counts.
 
@@ -333,7 +333,7 @@ Then confirm the cookie carries a session, credential, or antiforgery value and 
 > Set `Secure = true`, `HttpOnly = true`, and `SameSite` to `Lax` or `Strict` unless a documented cross-site flow needs `None` (which then requires `Secure`). Use `CookieSecurePolicy.Always` in production and keep relaxed values behind a development-only branch.
 
 ### `dns.HC-18` — Disallowed or legacy cryptographic primitive used for a security purpose
-<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-18, pys.HC-12 and jsts.HC-14; edit all 3 together. -->
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-18, pys.HC-12, and jsts.HC-14; edit all three together. -->
 
 **Pattern:** MD5, SHA-1, `HMACMD5`, or `HMACSHA1` used for signatures, integrity checks, tokens, or key derivation; `DES`, `TripleDES`, or `RC2`; `CipherMode.ECB`; a constant, hard-coded, or reused IV or nonce; or `RSAEncryptionPadding.Pkcs1` for encryption. Approved primitives are not findings. For random values `dns.HC-10` stays the specific rule.
 
