@@ -7,6 +7,13 @@ from tests.planning_ledger_dispatch_test import DispatchHarness, batch_leaves, g
 
 
 class ChangesetHarness(DispatchHarness):
+    def call(self, *arguments):
+        """Every init-v5 names an empty pin root, which strict plans require."""
+        if arguments[:1] == ("init-v5",):
+            (self.repo / "pins").mkdir(exist_ok=True)
+            arguments += ("--pin-roots", "pins")
+        return super().call(*arguments)
+
     def checkpoint(self):
         return json.loads(self.checkpoint_path().read_text())
 

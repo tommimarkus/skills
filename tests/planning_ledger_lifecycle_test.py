@@ -164,9 +164,17 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             str(self.assignments(plan_id, count)),
             "--capability-binding-file",
             str(self.capability_binding(selected_plan)),
+            *self.pin_roots(precision),
         )
         self.assertEqual(0, code, result)
         return result["run_id"]
+
+    def pin_roots(self, precision):
+        """A strict plan names an empty pin root at init."""
+        if precision != "strict":
+            return ()
+        (self.root / "pins").mkdir(exist_ok=True)
+        return ("--pin-roots", "pins")
 
     def checkpoint(self, plan_id, run_id):
         return json.loads(
