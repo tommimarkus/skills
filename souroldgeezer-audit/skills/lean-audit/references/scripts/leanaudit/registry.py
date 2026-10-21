@@ -47,6 +47,9 @@ class Registry:
     carve_outs: tuple[tuple[str, str], ...]
     exempt_paths: tuple[str, ...]
     verbosity: VerbosityConfig = field(default_factory=VerbosityConfig)
+    # Optional per-entry `except` globs, index-aligned with carve_outs; a pair is
+    # not carved out when either path matches an entry's except list.
+    carve_excepts: tuple[tuple[str, ...], ...] = ()
 
 
 def _parse_verbosity(data: dict[str, object]) -> VerbosityConfig:
@@ -88,11 +91,23 @@ def load_registry(path: Path | None) -> Registry:
         for h in data.get("canonical_home", [])
         if "path" in h and "heading" in h
     )
-    carves = tuple((c["a"], c["b"]) for c in data.get("carve_out", []) if "a" in c and "b" in c)
+    entries = [c for c in data.get("carve_out", []) if "a" in c and "b" in c]
+    carves = tuple((c["a"], c["b"]) for c in entries)
+    # Lenient: a non-list `except` or a non-string item is ignored, never aborts.
+    excepts = tuple(
+        tuple(g for g in c["except"] if isinstance(g, str))
+        if isinstance(c.get("except"), list)
+        else ()
+        for c in entries
+    )
     exempt = tuple(data.get("exempt_paths", []))
     verbosity = _parse_verbosity(data.get("verbosity", {}))
     return Registry(
-        canonical_homes=homes, carve_outs=carves, exempt_paths=exempt, verbosity=verbosity
+        canonical_homes=homes,
+        carve_outs=carves,
+        exempt_paths=exempt,
+        verbosity=verbosity,
+        carve_excepts=excepts,
     )
 
 
@@ -160,7 +175,13 @@ def _pair_matches(a: str, b: str, x: str, y: str) -> bool:
 def carved_out(reg: Registry, x: str, y: str) -> bool:
     if x == y:
         return False
-    for a, b in BUILTIN_CARVE_OUTS + reg.carve_outs:
+    for a, b in BUILTIN_CARVE_OUTS:
+        if _pair_matches(a, b, x, y):
+            return True
+    for i, (a, b) in enumerate(reg.carve_outs):
+        skip = reg.carve_excepts[i] if i < len(reg.carve_excepts) else ()
+        if any(path_captures(g, p) is not None for g in skip for p in (x, y)):
+            continue
         if _pair_matches(a, b, x, y):
             return True
     return False

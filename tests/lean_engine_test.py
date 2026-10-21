@@ -468,6 +468,30 @@ class CarveOuts(unittest.TestCase):
             "a/skills/x/references/procedures/project-assimilation.md",
             "b/skills/y/references/procedures/project-assimilation.md"))
 
+    def _except_registry(self, body: str):
+        eng = load_engine()
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / ".lean-audit.toml"
+            p.write_text('[[carve_out]]\na = "**/agents/*.md"\nb = "**/agents/*.md"\n' + body,
+                         encoding="utf-8")
+            return eng, eng.load_registry(p)
+
+    def test_carveout_except_matches_either_side(self):
+        eng, reg = self._except_registry('except = ["p/agents/plan-*.md"]\n')
+        self.assertTrue(eng.carved_out(reg, "p/agents/a.md", "p/agents/b.md"))
+        self.assertFalse(eng.carved_out(reg, "p/agents/plan-x.md", "p/agents/b.md"))   # one side
+        self.assertFalse(eng.carved_out(reg, "p/agents/a.md", "p/agents/plan-x.md"))   # other side
+
+    def test_carveout_except_absent_or_empty_keeps_behaviour(self):
+        for body in ("", "except = []\n"):
+            eng, reg = self._except_registry(body)
+            self.assertTrue(eng.carved_out(reg, "p/agents/plan-x.md", "p/agents/b.md"))
+
+    def test_carveout_except_malformed_is_ignored(self):
+        for body in ('except = "p/agents/plan-*.md"\n', 'except = [1, true]\n'):
+            eng, reg = self._except_registry(body)
+            self.assertTrue(eng.carved_out(reg, "p/agents/plan-x.md", "p/agents/b.md"))
+
 
 class RepoResidual(unittest.TestCase):
     # One scan is shared because the corpus is immutable during the run and the

@@ -235,6 +235,38 @@ class RuntimeMetadataParityTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertIn("Runtime metadata parity OK", result.stdout)
 
+    def _write_verifiers(self, repo: Path, analytical_body: str) -> None:
+        for name, body in (("plan-verify-standard", "Verify one leaf."), ("plan-verify-analytical", analytical_body)):
+            write(
+                repo / "souroldgeezer-policy" / "agents" / f"{name}.md",
+                f"""
+                ---
+                name: {name}
+                description: Verifier fixture for {name}.
+                ---
+
+                {body}
+                """,
+            )
+
+    def test_identical_verifier_bodies_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo, plugin_name="souroldgeezer-policy")
+            self._write_verifiers(repo, "Verify one leaf.")
+            result = run_checker(repo)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+
+    def test_divergent_verifier_bodies_are_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo, plugin_name="souroldgeezer-policy")
+            self._write_verifiers(repo, "Verify one leaf differently.")
+            result = run_checker(repo)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("plan-verify-analytical.md", result.stdout)
+        self.assertIn("plan-verify-standard.md", result.stdout)
+
     def test_plugin_manifest_missing_version_is_detected(self) -> None:
         self._assert_broken_fixture_flags(
             "souroldgeezer-example/.claude-plugin/plugin.json",

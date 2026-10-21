@@ -29,9 +29,18 @@ b = "**/references/core-workflow.md"
 a = "**/references/source-grounding.md"
 b = "**/references/source-grounding.md"
 
-[[carve_out]]                                   # subagent thin wrappers are intentionally parallel (CLAUDE.md § Subagents)
+[[carve_out]]                                   # router wrapper bodies are canonical and enforced by check-runtime-metadata-parity.py, whose only other permitted agents are the six execution-tier names excepted here
 a = "**/agents/*.md"
 b = "**/agents/*.md"
+except = ["souroldgeezer-policy/agents/plan-*.md"]
+
+[[carve_out]]                                   # Claude Code has no inline effort override, so each tier is its own definition on one gradient sharing a spine; edit the four together
+a = "souroldgeezer-policy/agents/plan-step-*.md"
+b = "souroldgeezer-policy/agents/plan-step-*.md"
+
+[[carve_out]]                                   # verifier bodies are byte-identical by contract, enforced by check-runtime-metadata-parity.py; only frontmatter differs
+a = "souroldgeezer-policy/agents/plan-verify-*.md"
+b = "souroldgeezer-policy/agents/plan-verify-*.md"
 
 [[carve_out]]                                   # plugin-docs-level compact catalog restates its own plugin's rubric
 a = "{plugin}/docs/*-reference/*smell-catalog*.md"

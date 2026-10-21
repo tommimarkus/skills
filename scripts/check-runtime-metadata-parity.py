@@ -1036,6 +1036,24 @@ def check_skill_metadata(repo: Path, plugin_dirs: list[Path], findings: list[Fin
     return public_skill_names
 
 
+def check_verifier_body_sync(repo: Path, plugin_dirs: list[Path], findings: list[Finding]) -> None:
+    """The two plan verifiers differ only in frontmatter; their bodies must be identical."""
+    for plugin_dir in plugin_dirs:
+        standard = plugin_dir / "agents" / "plan-verify-standard.md"
+        analytical = plugin_dir / "agents" / "plan-verify-analytical.md"
+        if not (standard.is_file() and analytical.is_file()):
+            continue
+        if read_markdown_body(standard) != read_markdown_body(analytical):
+            findings.append(
+                Finding(
+                    repo_relative(repo, analytical),
+                    "verifier-body",
+                    f"body identical to {repo_relative(repo, standard)}",
+                    "body differs",
+                )
+            )
+
+
 def check_internal_skill_wrappers(repo: Path, findings: list[Finding]) -> None:
     internal_skill_names: set[str] = set()
     shared_internal_skills_dir = repo / "internal-skills"
@@ -1145,6 +1163,7 @@ def check_repo(repo: Path) -> list[Finding]:
     plugin_dirs = check_plugin_metadata(repo, findings)
     check_mcp_packaging(repo, plugin_dirs, findings)
     check_skill_metadata(repo, plugin_dirs, findings)
+    check_verifier_body_sync(repo, plugin_dirs, findings)
     check_internal_skill_wrappers(repo, findings)
     check_stop_hook_parity(repo, findings)
     return findings
