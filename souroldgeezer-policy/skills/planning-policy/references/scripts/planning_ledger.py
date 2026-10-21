@@ -1988,7 +1988,7 @@ def checkpoint_next(directory, data, batches, plan):
         unverified = [sid for sid in completed if stored_verdict(data["steps"][sid]) is None]
         if unverified:
             return bounded_action_next(
-                {"category": "verify_completed", "step_ids": unverified,
+                {"category": "verify_pending", "step_ids": unverified,
                  **verify_commands(data, unverified[0])},
                 "step_ids",
             )
