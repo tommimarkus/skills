@@ -9,6 +9,7 @@ import posixpath
 import re
 import sys
 import tomllib
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from leanaudit.cli import add_shared_flags
 from leanaudit.discovery import git_worktree_root, read_repo
 from leanaudit.registry import (
     Registry,
-    carved_out,
+    carve_out_rule,
     has_override,
     has_verbose_override,
     load_registry,
@@ -31,6 +32,7 @@ __all__ = [
     "MID_BAND",
     "MIN_TOKENS",
     "Section",
+    "Suppression",
     "build_index",
     "containment",
     "evaluate_added_block",
@@ -138,28 +140,68 @@ class Finding:
     metrics: tuple[tuple[str, float], ...] = ()
 
 
+@dataclass(frozen=True)
+class Suppression:
+    """A carved-out candidate at or above MID_BAND that score_section skipped;
+    `rule` is the (a, b) carve-out pair that declared it."""
+
+    path: str
+    heading: str
+    matched_path: str
+    matched_heading: str
+    containment: float
+    rule: tuple[str, str]
+
+
 def _is_home(reg: Registry, path: str, heading: str) -> bool:
     return (path, heading) in reg.canonical_homes
 
 
-def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding | None:
+def score_section(
+    sec: Section,
+    index: list[Section],
+    reg: Registry,
+    suppressed: list[Suppression] | None = None,
+) -> Finding | None:
+    """Score sec against its best match among candidates that are neither
+    path-exempt nor carved out for the pair, so a declared pair never masks an
+    undeclared one. Each carved candidate at or above MID_BAND is appended to
+    `suppressed` when the caller supplies a list."""
     if len(normalize(sec.body)) < MIN_TOKENS:
         return None
     if has_override(sec.body):
         return None
     if path_exempt(reg, sec.path):
         return None
+    # A candidate below MID_BAND can be neither reported nor recorded, so the
+    # path rules run only above it, once per candidate path.
+    declared: dict[str, tuple[bool, tuple[str, str] | None]] = {}
     best = None
     best_c = 0.0
     for other in index:
         if other.path == sec.path:
             continue
         c = containment(sec.shingles, other.shingles)
+        if c < MID_BAND:
+            continue
+        if other.path not in declared:
+            exempt = path_exempt(reg, other.path)
+            declared[other.path] = (
+                exempt,
+                None if exempt else carve_out_rule(reg, sec.path, other.path),
+            )
+        exempt, rule = declared[other.path]
+        if exempt:
+            continue
+        if rule is not None:
+            if suppressed is not None:
+                suppressed.append(
+                    Suppression(sec.path, sec.heading, other.path, other.heading, round(c, 3), rule)
+                )
+            continue
         if c > best_c:
             best, best_c = other, c
-    if best is None or best_c < MID_BAND:
-        return None
-    if path_exempt(reg, best.path) or carved_out(reg, sec.path, best.path):
+    if best is None:
         return None
     hit, score = best, round(best_c, 3)
 
@@ -180,29 +222,37 @@ def score_section(sec: Section, index: list[Section], reg: Registry) -> Finding 
 
 
 def evaluate_added_block(
-    root: Path, source: str, block: str, registry: Path | None
+    root: Path,
+    source: str,
+    block: str,
+    registry: Path | None,
+    suppressed: list[Suppression] | None = None,
 ) -> list[Finding]:
     """Score one added/edited block against the guarded-markdown corpus.
 
     Shared by the --added-text CLI path and the PreToolUse guard hook. `source`
     is repo-relative; `registry=None` defaults to `root/.lean-audit.toml`.
-    Carve-outs and the sync-intentional override are honoured via score_section.
+    Carve-outs and the sync-intentional override are honoured via score_section,
+    which appends carved candidates to `suppressed` when a list is supplied.
     """
     reg = load_registry(registry if registry is not None else root / ".lean-audit.toml")
     files = read_repo(root, root)
     files[source] = block
     index = build_index(files)
     targets = [s for s in index if s.path == source]
-    return [f for f in (score_section(s, index, reg) for s in targets) if f is not None]
+    scored = (score_section(s, index, reg, suppressed) for s in targets)
+    return [f for f in scored if f is not None]
 
 
 # Finding collectors intentionally share the local list-and-filter shape.
 # lean-audit:dup-intentional:begin
-def scan(files: dict[str, str], reg: Registry) -> list[Finding]:
+def scan(
+    files: dict[str, str], reg: Registry, suppressed: list[Suppression] | None = None
+) -> list[Finding]:
     index = build_index(files)
     findings = []
     for sec in index:
-        f = score_section(sec, index, reg)
+        f = score_section(sec, index, reg, suppressed)
         if f is not None:
             findings.append(f)
     return findings
@@ -479,6 +529,25 @@ def scan_verbosity(files: dict[str, str], reg: Registry) -> list[Finding]:
     return findings
 
 
+_SUPPRESSED_PAIR_LIMIT = 50
+
+
+def _suppressed_coverage(suppressions: list[Suppression], in_scope: set[str]) -> dict[str, object]:
+    """The bounded coverage.suppressed disclosure: every in-scope carved pair is
+    counted (overall and per rule); at most _SUPPRESSED_PAIR_LIMIT are listed."""
+    kept = sorted(
+        (s for s in suppressions if s.path in in_scope or s.matched_path in in_scope),
+        key=lambda s: (-s.containment, s.path, s.heading, s.matched_path, s.matched_heading),
+    )
+    by_rule = sorted(Counter(s.rule for s in kept).items(), key=lambda kv: (-kv[1], kv[0]))
+    return {
+        "count": len(kept),
+        "by_rule": [{"rule": list(rule), "count": n} for rule, n in by_rule],
+        "pairs": [dataclasses.asdict(s) for s in kept[:_SUPPRESSED_PAIR_LIMIT]],
+        "truncated": len(kept) > _SUPPRESSED_PAIR_LIMIT,
+    }
+
+
 def _emit(findings: list[Finding], fmt: str, coverage: dict[str, object] | None = None) -> None:
     if fmt == "json":
         payload: dict[str, object] = {"findings": [dataclasses.asdict(f) for f in findings]}
@@ -493,6 +562,13 @@ def _emit(findings: list[Finding], fmt: str, coverage: dict[str, object] | None 
                 f"scanned_files={coverage['scanned_files']} "
                 f"in_scope_files={coverage['in_scope_files']}"
             )
+            suppressed = coverage.get("suppressed")
+            if isinstance(suppressed, dict):
+                print(
+                    f"suppressed: count={suppressed['count']} "
+                    f"listed={len(suppressed['pairs'])} "
+                    f"truncated={str(suppressed['truncated']).lower()}"
+                )
         for f in findings:
             print(
                 f'{f.code} [{f.severity}] {f.path} §"{f.heading}" '
@@ -559,8 +635,9 @@ def main(argv: list[str]) -> int:
             }
             if not in_scope:
                 raise ValueError("no eligible in-scope Markdown files were found")
+            suppressions: list[Suppression] = []
             findings = (
-                scan(files, reg)
+                scan(files, reg, suppressions)
                 + scan_stale_refs(files, root)
                 + find_dead_refs(files, reg)
                 + scan_bloat(files)
@@ -571,6 +648,7 @@ def main(argv: list[str]) -> int:
                 for finding in findings
                 if finding.path in in_scope or finding.matched_path in in_scope
             ]
+            coverage["suppressed"] = _suppressed_coverage(suppressions, set(in_scope))
     # Each stable CLI keeps its own named error prefix and exit contract.
     # lean-audit:dup-intentional:begin
     except (OSError, ValueError, tomllib.TOMLDecodeError, re.error) as exc:

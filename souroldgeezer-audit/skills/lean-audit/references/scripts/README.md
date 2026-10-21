@@ -95,7 +95,7 @@ they exist to single-source contracts shared by sibling modules.
 |---|---|---|---|
 | [`hook_envelope.py`](leanaudit/hook_envelope.py) | leaf | Parse the PreToolUse/Stop hook JSON payload, shape the `permissionDecision` envelope Claude Code™ reads, and log one fail-open diagnostic line to stderr. Public: `HookPayload`, `read_payload`, `permission_decision`, `fail_open_log`. | stdlib |
 | [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | stdlib |
-| [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs (with optional per-entry `except` globs) / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
+| [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs (with optional per-entry `except` globs) / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry`, `VerbosityConfig`, `load_registry`, `carve_out_rule`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
 | [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
 | [`context_trace.py`](leanaudit/context_trace.py) | leaf | Stream JSONL; normalize provider/host usage metadata; report coverage/calibration eligibility; and aggregate bounded native-Codex lifecycle/output-byte counters without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`, `summarize_trace_records`. | stdlib |
@@ -129,6 +129,10 @@ this guide does not redefine them.
   block from stdin, needs `--source`), `--corpus-root`, `--registry`,
   `--format {text,json}`. **Exit 0** = clean, **1** = a block-severity finding
   present, **2** = engine error (bad args, unreadable file, TOML/regex error).
+  A section's best match is chosen only among candidates neither path-exempt nor
+  carved out, and a successful scan adds `coverage.suppressed` (`count`,
+  `by_rule`, up to 50 in-scope `pairs`, `truncated`; one `suppressed:` line in
+  text) for carved pairs at or above the advisory band.
 - **`code_lens.py <dir>`** — source-code copy-paste clones. Emits
   `LA-CODE-DUP-1/2`. Flags: `--min-tokens` (default 20), `--registry`,
   `--format {text,json}`. Same exit-code convention (2 also on `--min-tokens < 1`).

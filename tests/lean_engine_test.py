@@ -197,6 +197,74 @@ class Scoring(unittest.TestCase):
         self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))
 
 
+class CarveOutMasking(unittest.TestCase):
+    """A declared pair never hides a section's next-best undeclared match."""
+
+    WORDS = [f"w{i}" for i in range(40)]
+    SKILL = "p/skills/x/SKILL.md"
+    AGENT = "p/agents/x.md"
+
+    def _index(self, eng, extra: dict[str, str]):
+        full = " ".join(self.WORDS)
+        files = {self.SKILL: f"# A\n{full}", self.AGENT: f"# Mirror\n{full}", **extra}
+        idx = eng.build_index(files)
+        return [s for s in idx if s.path == self.SKILL][0], idx
+
+    def test_carved_best_match_no_longer_masks_second_best(self):
+        eng = load_engine()
+        # 34 of 40 tokens -> 31 of 37 shingles (~0.84), above HIGH_BAND but below the carved 1.0.
+        near = " ".join(self.WORDS[:34])
+        a, idx = self._index(eng, {"docs/other.md": f"# Other\n{near}"})
+        suppressed = []
+        f = eng.score_section(a, idx, eng.load_registry(None), suppressed)
+        self.assertIsNotNone(f)
+        self.assertEqual((f.code, f.severity), ("LA-DUP-1", "block"))
+        self.assertEqual((f.matched_path, f.matched_heading), ("docs/other.md", "Other"))
+        self.assertEqual(
+            suppressed,
+            [eng.Suppression(self.SKILL, "A", self.AGENT, "Mirror", 1.0, eng.BUILTIN_CARVE_OUTS[0])],
+        )
+
+    def test_carved_only_match_returns_none_and_records_rule(self):
+        eng = load_engine()
+        a, idx = self._index(eng, {})
+        suppressed = []
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None), suppressed))
+        self.assertEqual([s.rule for s in suppressed], [eng.BUILTIN_CARVE_OUTS[0]])
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None)))  # list is optional
+
+    def test_exempt_and_sub_mid_band_candidates_leave_no_record(self):
+        eng = load_engine()
+        full = " ".join(self.WORDS)
+        weak = " ".join(self.WORDS[:12])  # 9 of 37 shingles, below MID_BAND
+        files = {self.SKILL: f"# A\n{full}", ".claude/skills/x/SKILL.md": f"# W\n{full}",
+                 self.AGENT: f"# Mirror\n{weak}"}
+        idx = eng.build_index(files)
+        a = [s for s in idx if s.path == self.SKILL][0]
+        suppressed = []
+        self.assertIsNone(eng.score_section(a, idx, eng.load_registry(None), suppressed))
+        self.assertEqual(suppressed, [])
+
+    def test_except_glob_entry_does_not_suppress(self):
+        eng = load_engine()
+        full = " ".join(self.WORDS)
+        files = {"p/agents/plan-a.md": f"# A\n{full}", "p/agents/b.md": f"# B\n{full}"}
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / ".lean-audit.toml"
+            path.write_text('[[carve_out]]\na = "**/agents/*.md"\nb = "**/agents/*.md"\n'
+                            'except = ["p/agents/plan-*.md"]\n', encoding="utf-8")
+            reg = eng.load_registry(path)
+        idx = eng.build_index(files)
+        a = [s for s in idx if s.path == "p/agents/plan-a.md"][0]
+        suppressed = []
+        f = eng.score_section(a, idx, reg, suppressed)
+        self.assertEqual((f.code, f.matched_path), ("LA-DUP-1", "p/agents/b.md"))
+        self.assertEqual(suppressed, [])
+        b = [s for s in idx if s.path == "p/agents/b.md"][0]
+        self.assertIsNotNone(eng.score_section(b, idx, reg, suppressed))
+        self.assertEqual(suppressed, [])
+
+
 class Cli(unittest.TestCase):
     def _repo(self, d):
         words = " ".join(f"w{i}" for i in range(40))
@@ -264,6 +332,81 @@ class Cli(unittest.TestCase):
             self.assertIn("LA-DEAD-1", codes)
             self.assertIn("LA-BLOAT-1", codes)
             self.assertEqual(r.returncode, 0)
+
+
+class SuppressedCoverage(unittest.TestCase):
+    """Normal-scan coverage discloses in-scope declared suppressions, bounded."""
+
+    BODY = "# Shared\n" + " ".join(f"word{i}" for i in range(40)) + "\n"
+    DIR = "refs/references"
+    RULE = ["refs/references/*.md", "refs/references/*.md"]
+
+    def _main(self, root: Path, *args: str) -> tuple[int, str]:
+        eng = load_engine()
+        out = io.StringIO()
+        with mock.patch.dict(eng.read_repo.__globals__, {"git_worktree_root": lambda _: None}), \
+                contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = eng.main([*args, "--corpus-root", str(root)])
+        return code, out.getvalue()
+
+    def _corpus(self, root: Path, n: int) -> None:
+        (root / self.DIR).mkdir(parents=True)
+        for i in range(n):
+            (root / self.DIR / f"f{i:02d}.md").write_text(self.BODY, encoding="utf-8")
+        (root / ".lean-audit.toml").write_text(
+            f'[[carve_out]]\na = "{self.RULE[0]}"\nb = "{self.RULE[1]}"\n', encoding="utf-8")
+
+    def test_pairs_cap_at_fifty_with_truncated_and_by_rule(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._corpus(root, 9)  # 9 * 8 = 72 directed carved pairs, all at containment 1.0
+            code, out = self._main(root, str(root), "--format", "json")
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertFalse([f for f in payload["findings"] if f["code"].startswith("LA-DUP")])
+        sup = payload["coverage"]["suppressed"]
+        self.assertEqual((sup["count"], len(sup["pairs"]), sup["truncated"]), (72, 50, True))
+        self.assertEqual(sup["by_rule"], [{"rule": self.RULE, "count": 72}])
+        first = sup["pairs"][0]
+        self.assertEqual(
+            (first["path"], first["matched_path"], first["containment"], first["rule"]),
+            (f"{self.DIR}/f00.md", f"{self.DIR}/f01.md", 1.0, self.RULE))
+        keys = [(p["path"], p["matched_path"]) for p in sup["pairs"]]
+        self.assertEqual(keys, sorted(keys))
+
+    def test_text_summary_line_follows_coverage_line(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._corpus(root, 2)
+            code, out = self._main(root, str(root))
+        lines = out.splitlines()
+        self.assertEqual(code, 0)
+        self.assertTrue(lines[0].startswith("coverage: "))
+        self.assertEqual(lines[1], "suppressed: count=2 listed=2 truncated=false")
+
+    def test_named_file_keeps_only_its_own_pairs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._corpus(root, 3)  # 6 carved pairs among siblings; f00 is a side of 4
+            _, out = self._main(root, str(root / self.DIR / "f00.md"), "--format", "json")
+        sup = json.loads(out)["coverage"]["suppressed"]
+        self.assertEqual((sup["count"], sup["truncated"]), (4, False))
+        self.assertEqual(sup["by_rule"], [{"rule": self.RULE, "count": 4}])
+        self.assertTrue(all(f"{self.DIR}/f00.md" in {p["path"], p["matched_path"]}
+                            for p in sup["pairs"]))
+
+    def test_error_and_added_text_outputs_carry_no_suppressed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "empty").mkdir()
+            code, out = self._main(root, str(root / "empty"), "--format", "json")
+            self.assertEqual(code, 2)
+            self.assertNotIn("suppressed", json.loads(out)["coverage"])
+            self._corpus(root, 2)
+            r = run_engine("--added-text", "-", "--source", f"{self.DIR}/new.md",
+                           "--corpus-root", str(root), "--format", "json", stdin=self.BODY)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("coverage", json.loads(r.stdout))
 
 
 class StaleRefs(unittest.TestCase):
@@ -491,6 +634,15 @@ class CarveOuts(unittest.TestCase):
         for body in ('except = "p/agents/plan-*.md"\n', 'except = [1, true]\n'):
             eng, reg = self._except_registry(body)
             self.assertTrue(eng.carved_out(reg, "p/agents/plan-x.md", "p/agents/b.md"))
+
+    def test_carve_out_rule_names_the_first_matching_pair(self):
+        eng, reg = self._except_registry('except = ["p/agents/plan-*.md"]\n')
+        self.assertEqual(eng.carve_out_rule(reg, "p/skills/a/SKILL.md", "p/agents/a.md"),
+                         eng.BUILTIN_CARVE_OUTS[0])
+        self.assertEqual(eng.carve_out_rule(reg, "p/agents/a.md", "p/agents/b.md"),
+                         ("**/agents/*.md", "**/agents/*.md"))
+        self.assertIsNone(eng.carve_out_rule(reg, "p/agents/plan-x.md", "p/agents/b.md"))
+        self.assertIsNone(eng.carve_out_rule(reg, "p/agents/a.md", "p/agents/a.md"))
 
 
 class RepoResidual(unittest.TestCase):

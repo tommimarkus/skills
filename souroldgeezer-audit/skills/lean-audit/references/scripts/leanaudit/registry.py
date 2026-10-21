@@ -14,6 +14,7 @@ __all__ = [
     "VERBOSE_OVERRIDE",
     "Registry",
     "VerbosityConfig",
+    "carve_out_rule",
     "carved_out",
     "has_override",
     "has_verbose_override",
@@ -172,19 +173,25 @@ def _pair_matches(a: str, b: str, x: str, y: str) -> bool:
     return False
 
 
-def carved_out(reg: Registry, x: str, y: str) -> bool:
+def carve_out_rule(reg: Registry, x: str, y: str) -> tuple[str, str] | None:
+    """The first (a, b) pair that carves out x/y — built-ins first, then registry
+    entries in order, honouring each entry's except globs — or None."""
     if x == y:
-        return False
+        return None
     for a, b in BUILTIN_CARVE_OUTS:
         if _pair_matches(a, b, x, y):
-            return True
+            return (a, b)
     for i, (a, b) in enumerate(reg.carve_outs):
         skip = reg.carve_excepts[i] if i < len(reg.carve_excepts) else ()
         if any(path_captures(g, p) is not None for g in skip for p in (x, y)):
             continue
         if _pair_matches(a, b, x, y):
-            return True
-    return False
+            return (a, b)
+    return None
+
+
+def carved_out(reg: Registry, x: str, y: str) -> bool:
+    return carve_out_rule(reg, x, y) is not None
 
 
 def path_exempt(reg: Registry, path: str) -> bool:
