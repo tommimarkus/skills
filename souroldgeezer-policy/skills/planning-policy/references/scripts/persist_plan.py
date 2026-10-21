@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import validate_plan_contract as contract
+from planningledger import plancontract as contract
 
 RAW_PLAN_MAX = 4 * contract.HANDOFF_PLAN_MAX
 MKDIR_SUPPORTS_DIR_FD = os.mkdir in os.supports_dir_fd

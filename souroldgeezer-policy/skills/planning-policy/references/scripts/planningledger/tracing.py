@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 import uuid
+from pathlib import Path
 
 from . import contract, core
 from .checkpoint import active_run, load_run
-from .core import Error, digest, parent, proxy_tokens, read_json
+from .core import Error, JsonObject, JsonValue, digest, parent, proxy_tokens, read_json
 from .store import valid_usage_summary, write
 from .vocabulary import MAX_USAGE, MAX_USAGE_TOKENS
 
@@ -21,11 +23,13 @@ __all__ = [
 ]
 
 
-def usage_path(directory):
+def usage_path(directory: Path) -> Path:
     return directory / "usage"
 
 
-def trace_run(args, require_usage=True, require_open=False):
+def trace_run(
+    args: argparse.Namespace, require_usage: bool = True, require_open: bool = False
+) -> tuple[Path, JsonObject, JsonObject, dict[str, JsonObject], Path, JsonValue]:
     parent(args.actor)
     directory, data, plan, leafs = load_run(args)
     usage = usage_path(directory)
@@ -37,7 +41,7 @@ def trace_run(args, require_usage=True, require_open=False):
     return directory, data, plan, leafs, usage, metadata
 
 
-def trace_result(action, data, **facts):
+def trace_result(action: str, data: JsonObject, **facts: object) -> JsonObject:
     return {
         "ok": True,
         "action": action,
@@ -47,7 +51,7 @@ def trace_result(action, data, **facts):
     }
 
 
-def trace_init(args):
+def trace_init(args: argparse.Namespace) -> JsonObject:
     directory, data, _plan, _leafs, usage, _metadata = trace_run(args, require_usage=False)
     active_run(data)
     if usage.exists():
@@ -60,7 +64,7 @@ def trace_init(args):
     return trace_result("trace-init", data)
 
 
-def trace_record(args):
+def trace_record(args: argparse.Namespace) -> JsonObject:
     directory, data, _plan, _leafs, _usage, _metadata = trace_run(args, require_open=True)
     value = valid_usage_summary(read_json(args.usage_file, "cannot read usage file"))
     supplied_identity = (value["run_id"],)
@@ -94,7 +98,7 @@ def trace_record(args):
     )
 
 
-def trace_show(args):
+def trace_show(args: argparse.Namespace) -> JsonObject:
     _directory, data, plan, _leafs, usage, _metadata = trace_run(args)
     records_dir = usage / "records"
     values = (
@@ -105,7 +109,7 @@ def trace_show(args):
             for path in sorted(records_dir.iterdir())
         ]
     )
-    stages = {}
+    stages: dict[str, dict[str, int]] = {}
     cycles = set()
     totals = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     provenance = set()
@@ -118,7 +122,7 @@ def trace_show(args):
         for key in totals:
             totals[key] += value[key]
     forecast = contract.plan_validator()(plan)["cost_advisory"]
-    comparison = "indeterminate:forecast"
+    comparison: str | JsonObject = "indeterminate:forecast"
     findings = []
     declared = plan.get("execution_cost", {}).get("declared_model_tokens", {})
     worker_ranges = declared.get("worker_attempts") if isinstance(declared, dict) else None
@@ -128,7 +132,9 @@ def trace_show(args):
         and isinstance(worker_ranges, dict)
     ):
         cycle_keys = {(value["step_id"], value["attempt_id"]) for value in values}
-        ranges = [worker_ranges.get(step_id) for step_id, _attempt_id in cycle_keys]
+        ranges: list[JsonValue] = [
+            worker_ranges.get(step_id) for step_id, _attempt_id in cycle_keys
+        ]
         if all(
             isinstance(value, dict)
             and set(value) == {"low", "expected", "high"}
@@ -171,7 +177,7 @@ def trace_show(args):
     return result
 
 
-def trace_close(args):
+def trace_close(args: argparse.Namespace) -> JsonObject:
     _directory, data, _plan, _leafs, usage, metadata = trace_run(args)
     if metadata.get("closed_at"):
         raise Error("usage trace is already closed")

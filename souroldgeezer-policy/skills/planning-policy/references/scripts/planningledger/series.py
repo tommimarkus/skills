@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
 from .checkpoint import valid_series_handoff, validate_events, validate_run
-from .core import Error, ident, read_json, uuid4
+from .core import Error, JsonObject, JsonValue, ident, read_json, uuid4
 from .store import safe_run_contents
 from .vocabulary import MAX_SERIES_HANDOFF, SERIES_HANDOFF_LIST_FIELDS, SERIES_HANDOFF_SCHEMA
 
@@ -19,7 +20,9 @@ __all__ = [
 ]
 
 
-def load_predecessor_run(ledger_root, plan_id, run_id):
+def load_predecessor_run(
+    ledger_root: Path, plan_id: str, run_id: str
+) -> tuple[JsonObject, JsonObject]:
     """Load and fully re-validate a predecessor run's checkpoint and plan.
 
     Any failure here is the predecessor's fault, never the successor's, so every
@@ -35,13 +38,13 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
     return checkpoint, plan
 
 
-def series_predecessor_disclosure(ledger_root, series):
+def series_predecessor_disclosure(ledger_root: Path, series: JsonObject) -> str:
     """Compute the init-v5 predecessor cross-check for a slice > 1 successor.
 
     Never raises: a gc'd, purged, unreadable, or tampered predecessor is
     disclosed as "unresolvable" rather than failing the successor's init.
     """
-    predecessor = series.get("predecessor")
+    predecessor: JsonValue = series.get("predecessor")
     try:
         plan_id = ident(predecessor["plan_id"], "predecessor plan id")
         run_id = uuid4(predecessor["run_id"], "predecessor run id")
@@ -62,7 +65,7 @@ def series_predecessor_disclosure(ledger_root, series):
     return "matched"
 
 
-def read_series_handoff_content(path):
+def read_series_handoff_content(path: str) -> JsonObject:
     """Read the parent-supplied content file for a series close.
 
     The caller supplies exactly the four bounded content fields. Identity is
@@ -81,7 +84,7 @@ def read_series_handoff_content(path):
     return value
 
 
-def composed_series_handoff(path, data, series):
+def composed_series_handoff(path: str, data: JsonObject, series: JsonObject) -> JsonObject:
     return valid_series_handoff(
         {
             "schema": SERIES_HANDOFF_SCHEMA,
@@ -94,7 +97,9 @@ def composed_series_handoff(path, data, series):
     )
 
 
-def series_close_handoff(args, data, plan):
+def series_close_handoff(
+    args: argparse.Namespace, data: JsonObject, plan: JsonObject
+) -> JsonObject | None:
     """Resolve the series close matrix before `close_run` mutates anything.
 
     Returns the composed artifact, or None when this close stamps no handoff.

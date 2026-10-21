@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -18,6 +19,8 @@ from .contract import (
 )
 from .core import (
     Error,
+    JsonObject,
+    JsonValue,
     bounded_reason,
     canon,
     digest,
@@ -28,6 +31,7 @@ from .core import (
     uuid4,
 )
 from .schedule import (
+    Batches,
     attempt_return_recorded,
     batch_settled,
     bounded_action_next,
@@ -97,7 +101,7 @@ __all__ = [
 ]
 
 
-def stop_step(step, status, reason, code, summary):
+def stop_step(step: JsonObject, status: str, reason: str, code: str, summary: str) -> None:
     step.update(
         status=status,
         retry_allowed=False,
@@ -106,12 +110,22 @@ def stop_step(step, status, reason, code, summary):
     )
 
 
-def reject_return(directory, data, step, sid, reason, code, summary):
+def reject_return(
+    directory: Path,
+    data: JsonObject,
+    step: JsonObject,
+    sid: str,
+    reason: str,
+    code: str,
+    summary: str,
+) -> None:
     stop_step(step, "oversized", reason, code, summary)
     event(directory, data, "record-return", step_id=sid, status="oversized")
 
 
-def step_result(action, args, sid, step, **extra):
+def step_result(
+    action: str, args: argparse.Namespace, sid: str, step: JsonObject, **extra: object
+) -> JsonObject:
     return {
         "ok": True,
         "action": action,
@@ -122,13 +136,13 @@ def step_result(action, args, sid, step, **extra):
     }
 
 
-def advance(step, old, expected, target, summary):
+def advance(step: JsonObject, old: str, expected: str, target: str, summary: str) -> None:
     if old != expected:
         raise Error(f"only {expected} steps can become {target}")
     step.update(status=target, reason=summary[:480])
 
 
-def needs_higher_tier(step, kind, outcome):
+def needs_higher_tier(step: JsonObject, kind: str, outcome: str) -> bool:
     return kind == "reasoning" and (
         outcome == "blocked:needs_higher_tier"
         or (
@@ -138,7 +152,14 @@ def needs_higher_tier(step, kind, outcome):
     )
 
 
-def valid_return(value, data, step, leaf, registered=None, standard=False):
+def valid_return(
+    value: JsonValue,
+    data: JsonObject,
+    step: JsonObject,
+    leaf: JsonObject,
+    registered: bool | None = None,
+    standard: bool = False,
+) -> JsonObject:
     if registered is None:
         registered = data.get("return_codes") == REGISTERED_RETURN_CODES
     if not isinstance(value, dict) or len(canon(value)) > MAX_RETURN:
@@ -273,13 +294,13 @@ def valid_return(value, data, step, leaf, registered=None, standard=False):
     return value
 
 
-def bounded_return_schema(registered=False):
+def bounded_return_schema(registered: bool = False) -> JsonObject:
     """Return structural output guidance; valid_return owns semantic checks."""
     evidence = {
         "evidence_path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
         "sha256": {"type": "string", "pattern": SHA.pattern},
     }
-    schema = {
+    schema: JsonObject = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "additionalProperties": False,
@@ -362,7 +383,7 @@ def bounded_return_schema(registered=False):
     return schema
 
 
-def worker_handoff_digest(value):
+def worker_handoff_digest(value: JsonObject) -> str:
     return digest(
         {
             key: item
@@ -372,7 +393,7 @@ def worker_handoff_digest(value):
     )
 
 
-def worker_handoff_context(plan):
+def worker_handoff_context(plan: JsonValue) -> JsonObject:
     if not isinstance(plan, dict):
         raise Error("invalid worker handoff plan context")
     context = {
@@ -396,7 +417,7 @@ def worker_handoff_context(plan):
     return context
 
 
-def valid_worker_handoff(value):
+def valid_worker_handoff(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
     if (
@@ -486,7 +507,7 @@ def valid_worker_handoff(value):
     return value
 
 
-def validate_return(args):
+def validate_return(args: argparse.Namespace) -> JsonObject:
     try:
         handoff_raw = read_bounded_input(
             args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff"
@@ -532,7 +553,7 @@ def validate_return(args):
     }
 
 
-def read_bounded_input(path, maximum, label):
+def read_bounded_input(path: str, maximum: int, label: str) -> bytes:
     """Read at most one byte beyond a fixed input bound before JSON parsing."""
     try:
         with Path(path).open("rb") as file:
@@ -544,7 +565,17 @@ def read_bounded_input(path, maximum, label):
     return raw
 
 
-def next_after_return(args, directory, data, batches, sid, step, value, disposition, plan):
+def next_after_return(
+    args: argparse.Namespace,
+    directory: Path,
+    data: JsonObject,
+    batches: Batches,
+    sid: str,
+    step: JsonObject,
+    value: JsonObject,
+    disposition: str,
+    plan: JsonObject,
+) -> JsonObject:
     """Report the retry decision `record` just made under the escalating policy."""
     scope = f"--plan-id {args.plan_id} transition --actor parent --run-id {args.run_id}"
     if disposition == "completed" and not batch_settled(data, batches, sid):
@@ -579,7 +610,7 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
     return bounded_next(block, droppable=("command",), trimmable="outside_paths")
 
 
-def amend(args):
+def amend(args: argparse.Namespace) -> JsonObject:
     """Parent-only execution-metadata amendment; plan.json and plan_hash never change."""
     directory, data, plan, leafs = mutating_run(args)
     sid, step = selected_step(data, args.step_id)
@@ -603,7 +634,7 @@ def amend(args):
     ):
         raise Error(f"--acceptance-command must be 1 to {MAX_AMENDED_COMMAND} characters")
     requested = {"add_write": args.add_write, "add_read": args.add_read}
-    amendment = {"reason": reason}
+    amendment: JsonObject = {"reason": reason}
     for key, field in (("add_write", "write_set"), ("add_read", "read_set")):
         paths = list(dict.fromkeys(requested[key]))
         if len(paths) > MAX_AMENDMENT_PATHS:
@@ -677,7 +708,7 @@ def amend(args):
     )
 
 
-def return_fingerprint(value):
+def return_fingerprint(value: JsonObject) -> str:
     return digest(
         {
             key: value[key]
@@ -693,7 +724,7 @@ def return_fingerprint(value):
     )
 
 
-def settle_return(data, step, value, fingerprint):
+def settle_return(data: JsonObject, step: JsonObject, value: JsonObject, fingerprint: str) -> str:
     """Apply the retry policy to a stored return and name the branch that fired."""
     previous = step["fingerprints"][-1] if step["fingerprints"] else ""
     retry = retry_class(data, step, value)
@@ -701,6 +732,7 @@ def settle_return(data, step, value, fingerprint):
     step["fingerprints"] = step["fingerprints"][-5:]
     # `disposition` names the branch that actually fired, so a `next` block
     # reports this decision instead of modelling the precedence a second time.
+    disposition: str
     if value["status"] in {"completed", "oversized"}:
         step.update(status=value["status"], retry_allowed=False)
         disposition = value["status"]
@@ -746,14 +778,14 @@ def settle_return(data, step, value, fingerprint):
     return disposition
 
 
-def record(args):
+def record(args: argparse.Namespace) -> JsonObject:
     directory, data, plan, leafs = mutating_run(args)
     raw = Path(args.return_file).read_bytes()
     try:
         value = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise Error("invalid step return JSON") from exc
-    sid = value.get("step_id") if isinstance(value, dict) else ""
+    sid: JsonValue = value.get("step_id") if isinstance(value, dict) else ""
     step = data["steps"].get(sid)
     repairable_scope_rejection = step is not None and scope_rejection_state(step)
     if step is None or (step["status"] != "in_progress" and not repairable_scope_rejection):

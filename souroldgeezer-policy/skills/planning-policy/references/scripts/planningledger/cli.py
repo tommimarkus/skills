@@ -24,7 +24,7 @@ __all__ = [
 ]
 
 
-def parse():
+def parse() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root")
     parser.add_argument("--ledger-root")
@@ -152,7 +152,7 @@ def parse():
     return parser
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     args = parse().parse_args(argv)
     try:
         if args.command == "init-v5":

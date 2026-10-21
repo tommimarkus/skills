@@ -4,15 +4,21 @@ host tiers.
 
 from __future__ import annotations
 
+import argparse
 import copy
 import functools
 import json
+from collections.abc import Callable
 from pathlib import Path
+from types import ModuleType
+from typing import cast
 
 from . import plancontract
 from .core import (
     HOST_TIERS_FILE,
     Error,
+    JsonObject,
+    JsonValue,
     UsageError,
     digest,
     ident,
@@ -55,25 +61,25 @@ __all__ = [
 ]
 
 
-def changed_path_allowed(path, write_set):
-    return validator_module().write_set_covers(write_set, path)
+def changed_path_allowed(path: str, write_set: list[str]) -> bool:
+    return bool(validator_module().write_set_covers(write_set, path))
 
 
-def standard_precision(data):
+def standard_precision(data: JsonObject) -> bool:
     """True for a run stamped standard_v1; an unstamped retained run stays strict."""
     return data.get("precision_policy") == "standard_v1"
 
 
-def outside_paths(paths, write_set):
+def outside_paths(paths: list[str], write_set: list[str]) -> list[str]:
     """The returned or committed paths no write_set entry covers, in first-seen order."""
     return [path for path in dict.fromkeys(paths) if not changed_path_allowed(path, write_set)]
 
 
-def leaves_by_id(plan):
+def leaves_by_id(plan: JsonObject) -> dict[str, JsonObject]:
     return {leaf["id"]: leaf for leaf in plan["leaves"]}
 
 
-def valid_amendments(step, approved):
+def valid_amendments(step: JsonObject, approved: JsonObject) -> list[JsonObject]:
     """Return a step's stored amendments, failing closed on any malformed record."""
     value = step.get("amendments", [])
     if not isinstance(value, list) or len(value) > MAX_AMENDMENTS:
@@ -117,7 +123,7 @@ def valid_amendments(step, approved):
     return value
 
 
-def validate_amendment_events(directory, data):
+def validate_amendment_events(directory: Path, data: JsonObject) -> None:
     """Bind each stored amendment to the digest its `amend-v5` event recorded.
 
     An amendment widens what a return may change, so a checkpoint record that no
@@ -128,7 +134,7 @@ def validate_amendment_events(directory, data):
         for sid, step in data.get("steps", {}).items()
         if isinstance(step, dict) and step.get("amendments")
     }
-    recorded = {}
+    recorded: dict[JsonValue, list[JsonValue]] = {}
     path = directory / "events.jsonl"
     if path.is_file() and not path.is_symlink():
         try:
@@ -146,7 +152,7 @@ def validate_amendment_events(directory, data):
         raise Error("blocked:plan_tampered")
 
 
-def effective_leaf(leaf, amendments):
+def effective_leaf(leaf: JsonObject, amendments: list[JsonObject]) -> JsonObject:
     """The approved leaf plus its cumulative amendment overlay."""
     if not amendments:
         return leaf
@@ -163,7 +169,7 @@ def effective_leaf(leaf, amendments):
     return value
 
 
-def effective_leaves(plan, data):
+def effective_leaves(plan: JsonObject, data: JsonObject) -> dict[str, JsonObject]:
     """Every consumer of amendable leaf fields reads through this one overlay."""
     steps = data.get("steps", {})
     return {
@@ -175,7 +181,7 @@ def effective_leaves(plan, data):
     }
 
 
-def checkpoint_binding(data):
+def checkpoint_binding(data: JsonObject) -> JsonObject | None:
     """Rehydrate the complete validator input from bounded per-step bindings."""
     bindings = []
     for step in data.get("steps", {}).values():
@@ -190,15 +196,16 @@ def checkpoint_binding(data):
     }
 
 
-def validator_module():
+def validator_module() -> ModuleType:
     return plancontract
 
 
-def plan_validator():
-    return validator_module().validate
+def plan_validator() -> Callable[..., JsonObject]:
+    validate: Callable[..., JsonObject] = validator_module().validate
+    return validate
 
 
-def read_plan(path):
+def read_plan(path: str) -> JsonObject:
     data = read_json(path, "cannot read plan file")
     result = plan_validator()(data)
     if (
@@ -207,16 +214,17 @@ def read_plan(path):
         or result.get("contract_version") != FORWARD_SCHEMA
     ):
         raise Error("plan is not dispatch-ready")
-    return data
+    # Only an object plan validates, so the check above proved its shape.
+    return cast(JsonObject, data)
 
 
 @functools.cache
-def parse_host_tiers(path):
+def parse_host_tiers(path: str) -> JsonValue:
     """The tier map file parsed once per path; callers go through host_tiers, which copies it."""
     return read_json(Path(path), "cannot read host tier map")
 
 
-def host_tiers():
+def host_tiers() -> JsonValue:
     """The single host tier map: per host, the tier models, skill support, and verifiers.
 
     Every caller gets its own copy, so none can alter the cached parse.
@@ -224,14 +232,16 @@ def host_tiers():
     return copy.deepcopy(parse_host_tiers(str(HOST_TIERS_FILE)))
 
 
-def host_entry(host):
+def host_entry(host: str) -> JsonValue:
     entry = host_tiers().get("hosts", {}).get(host)
     if entry is None:
         raise UsageError(f"unknown host {host}; the tier map names {sorted(host_tiers()['hosts'])}")
     return entry
 
 
-def host_step_binding(leaf, host, entry, tier_name, evidence):
+def host_step_binding(
+    leaf: JsonObject, host: str, entry: JsonObject, tier_name: str, evidence: list[str]
+) -> JsonObject:
     """One step's binding item for a tier of a host's map; a skill need on a skill-less tier is
     unavailable.
     """
@@ -248,7 +258,9 @@ def host_step_binding(leaf, host, entry, tier_name, evidence):
     }
 
 
-def derived_setup(plan, host, evidence_text):
+def derived_setup(
+    plan: JsonObject, host: str, evidence_text: str
+) -> tuple[list[JsonObject], JsonObject]:
     """Derive the assignments and capability binding of a host run from the tier map."""
     entry = host_entry(host)
     evidence = [line.strip() for line in evidence_text.splitlines() if line.strip()]
@@ -275,31 +287,33 @@ def derived_setup(plan, host, evidence_text):
     return assigned, binding
 
 
-def tier_alias(args, data, tier):
+def tier_alias(args: argparse.Namespace, data: JsonObject, tier: str) -> str:
     """A host run's dispatch alias is the map entry for the tier; an explicit value must equal
     it.
     """
+    alias: str = args.model_or_alias
     if args.command != "dispatch" or not data.get("host"):
-        return args.model_or_alias
-    expected = host_entry(data["host"])["tiers"][tier]["model"]
-    if args.model_or_alias and args.model_or_alias != expected:
+        return alias
+    expected: str = host_entry(data["host"])["tiers"][tier]["model"]
+    if alias and alias != expected:
         raise Error(f"model_or_alias must equal the host tier map entry {expected} for tier {tier}")
     return expected
 
 
-def capability_bindings(path, plan):
+def capability_bindings(path: str, plan: JsonObject) -> JsonObject:
     """Load one complete binding and retain assigned-step evidence."""
     return checked_binding(read_json(path, "cannot read capability binding file"), plan)
 
 
-def checked_binding(value, plan):
+def checked_binding(value: JsonValue, plan: JsonObject) -> JsonObject:
     result = plan_validator()(plan, capability_binding=value)
     if not result.get("valid") or not result.get("dispatch_ready"):
         raise Error("blocked:capability_unavailable")
-    return value
+    # Only an object binding is dispatch-ready, so the check above proved its shape.
+    return cast(JsonObject, value)
 
 
-def binding_for_step(binding, sid, assignment):
+def binding_for_step(binding: JsonObject, sid: str, assignment: JsonObject) -> JsonObject:
     matches = [item for item in binding["bindings"] if item["step_id"] == sid]
     if len(matches) != 1:
         raise Error("blocked:capability_unavailable")
@@ -313,7 +327,9 @@ def binding_for_step(binding, sid, assignment):
     }
 
 
-def valid_stored_binding(value, plan_hash, sid, leaf, assignment):
+def valid_stored_binding(
+    value: JsonValue, plan_hash: object, sid: str, leaf: JsonObject, assignment: JsonObject
+) -> bool:
     if (
         not isinstance(value, dict)
         or set(value) != {"schema", "plan_sha256", "bindings"}
@@ -340,11 +356,11 @@ def valid_stored_binding(value, plan_hash, sid, leaf, assignment):
     )
 
 
-def assignments(path, plan):
+def assignments(path: str, plan: JsonObject) -> dict[str, JsonObject]:
     return checked_assignments(read_json(path, "cannot read assignments file"), plan)
 
 
-def checked_assignments(values, plan):
+def checked_assignments(values: JsonValue, plan: JsonObject) -> dict[str, JsonObject]:
     if not isinstance(values, list):
         raise Error("assignments file must be an array")
     leaves = leaves_by_id(plan)

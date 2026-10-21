@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
@@ -13,7 +14,19 @@ from .contract import (
     valid_stored_binding,
     validator_module,
 )
-from .core import LEDGER_SCRIPT, Error, canon, digest, ident, read_json, rel, selected_step, uuid4
+from .core import (
+    LEDGER_SCRIPT,
+    Error,
+    JsonObject,
+    JsonValue,
+    canon,
+    digest,
+    ident,
+    read_json,
+    rel,
+    selected_step,
+    uuid4,
+)
 from .gitops import git_head, repository_top, verify_worktree_identity
 from .returns import (
     advance,
@@ -23,6 +36,7 @@ from .returns import (
     worker_handoff_digest,
 )
 from .schedule import (
+    Batches,
     bounded_action_next,
     checkpoint_next,
     commit_verified,
@@ -68,7 +82,14 @@ __all__ = [
 ]
 
 
-def next_after_transition(args, directory, data, batches, step, plan):
+def next_after_transition(
+    args: argparse.Namespace,
+    directory: Path,
+    data: JsonObject,
+    batches: Batches,
+    step: JsonObject,
+    plan: JsonObject,
+) -> JsonObject:
     scope = transition_scope(args.plan_id, args.run_id)
     sid = step["id"]
     if step["status"] == "ready":
@@ -82,7 +103,7 @@ def next_after_transition(args, directory, data, batches, step, plan):
             }
         )
     if step["status"] == "integrated":
-        value = {"command": land_command(data, sid)}
+        value: JsonObject = {"command": land_command(data, sid)}
         unblocked = [
             candidate["id"]
             for candidate in ordered_steps(data["steps"])
@@ -123,7 +144,13 @@ def next_after_transition(args, directory, data, batches, step, plan):
     return checkpoint_next(directory, data, batches, plan)
 
 
-def unwind(args, data, batches, sid, step):
+def unwind(
+    args: argparse.Namespace,
+    data: JsonObject,
+    batches: Batches,
+    sid: str,
+    step: JsonObject,
+) -> None:
     """Return a never-run batch member to pending after a sibling stopped the batch.
 
     The member never ran, so it must neither burn its attempt nor keep the
@@ -146,7 +173,7 @@ def unwind(args, data, batches, sid, step):
     step["current_assignment"]["agent_id"] = ""
 
 
-def require_verified(data, sid, step):
+def require_verified(data: JsonObject, sid: str, step: JsonObject) -> None:
     if data.get("verify_policy") == "leaf_verify_v1" and not commit_verified(step):
         raise Error(
             f"step {sid} has no pass or inconclusive verification for its returned commit; "
@@ -154,7 +181,16 @@ def require_verified(data, sid, step):
         )
 
 
-def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summary=""):
+def apply_worktree_result(
+    path: str,
+    directory: Path,
+    sid: str,
+    step: JsonObject,
+    leaf: JsonObject,
+    new: str,
+    batches: Batches,
+    summary: str = "",
+) -> None:
     """Validate a helper artifact and move one step to `integrated` or `cleaned`."""
     expected = "completed" if new == "integrated" else "integrated"
     old = step["status"]
@@ -173,7 +209,7 @@ def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summar
         )
 
 
-def transition_step(args):
+def transition_step(args: argparse.Namespace) -> JsonObject:
     directory, data, plan, leafs = mutating_run(args)
     batches = step_batches(plan)
     sid, step = selected_step(data, args.step_id)
@@ -207,7 +243,7 @@ def transition_step(args):
     return result
 
 
-def batch_source_commits(value):
+def batch_source_commits(value: JsonObject) -> dict[str, str]:
     batch = value.get("batch_source_commits")
     if batch is None:
         return {}
@@ -226,7 +262,15 @@ def batch_source_commits(value):
     return batch
 
 
-def worktree_result(path, directory, sid, step, leaf, target, batches):
+def worktree_result(
+    path: str,
+    directory: Path,
+    sid: str,
+    step: JsonObject,
+    leaf: JsonObject,
+    target: str,
+    batches: Batches,
+) -> tuple[JsonObject, str, str]:
     if not path:
         raise Error(f"{target} transition requires --worktree-result")
     source = Path(path)
@@ -285,7 +329,9 @@ def worktree_result(path, directory, sid, step, leaf, target, batches):
     return value, str(destination.relative_to(directory)), digest(value)
 
 
-def worker_prompt(packet, packet_path, member=None):
+def worker_prompt(
+    packet: JsonObject, packet_path: Path, member: tuple[int, int, str] | None = None
+) -> str:
     """Host-neutral worker prompt built only from packet facts.
 
     member is (position, count, batch) for a batch group, else None.
@@ -311,7 +357,9 @@ def worker_prompt(packet, packet_path, member=None):
     return text
 
 
-def store_dispatch_packet(directory, packet, member=None):
+def store_dispatch_packet(
+    directory: Path, packet: JsonObject, member: tuple[int, int, str] | None = None
+) -> JsonObject:
     """Persist one issued packet under the run and return its dispatch entry."""
     path = (directory / "handoffs" / packet["step_id"] / f"{packet['attempt_id']}.json").resolve()
     write(path, packet, MAX_WORKER_HANDOFF)
@@ -319,15 +367,15 @@ def store_dispatch_packet(directory, packet, member=None):
 
 
 def build_worker_handoff(
-    plan,
-    step,
-    plan_id,
-    run_id,
-    retry_remediation=None,
-    registered=False,
-    changeset_base=None,
-    precision=None,
-):
+    plan: JsonObject,
+    step: JsonObject,
+    plan_id: str,
+    run_id: str,
+    retry_remediation: JsonValue = None,
+    registered: bool = False,
+    changeset_base: str | None = None,
+    precision: str | None = None,
+) -> JsonObject:
     """Build one self-contained v5 worker assignment without mutating a ledger."""
     ident(plan_id, "plan id")
     uuid4(run_id, "run id")
@@ -432,13 +480,16 @@ def build_worker_handoff(
     return value
 
 
-def step_handoff(directory, data, plan, step):
+def step_handoff(
+    directory: Path, data: JsonObject, plan: JsonObject, step: JsonObject
+) -> JsonObject:
     remediation = None
     if step.get("retry_remediation_path"):
         remediation = read_json(
             directory / rel(step["retry_remediation_path"], "retry remediation path"),
             "missing retry remediation artifact",
         )
+    policy: JsonValue = data.get("precision_policy")
     return build_worker_handoff(
         plan,
         step,
@@ -449,11 +500,11 @@ def step_handoff(directory, data, plan, step):
         changeset_base=(
             step.get("base_commit", "") if data.get("verify_policy") == "leaf_verify_v1" else None
         ),
-        precision=PRECISION_POLICIES.get(data.get("precision_policy")),
+        precision=PRECISION_POLICIES.get(policy),
     )
 
 
-def handoff(args):
+def handoff(args: argparse.Namespace) -> JsonObject:
     directory, data, plan, _leafs = load_run(args)
     validate_events(directory, data)
     active_run(data)
@@ -465,7 +516,7 @@ def handoff(args):
     }
 
 
-def dispatch(args):
+def dispatch(args: argparse.Namespace) -> JsonObject:
     """Ready and start a leaf, or a whole pending batch, and return its packets."""
     directory, data, plan, leafs = mutating_run(args)
     batches = step_batches(plan)

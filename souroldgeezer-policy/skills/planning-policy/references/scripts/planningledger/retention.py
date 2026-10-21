@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import shutil
+from datetime import datetime
+from pathlib import Path
 
 from . import core
 from .checkpoint import refuse_retired, retired_contract, validate_events, validate_run
 from .core import (
     Error,
+    JsonObject,
     bounded_reason,
     ident,
     parent,
@@ -35,7 +39,7 @@ __all__ = [
 ]
 
 
-def invalid_entry(base, path, code, summary):
+def invalid_entry(base: Path, path: Path, code: str, summary: str) -> JsonObject:
     try:
         relative = str(path.relative_to(base))
     except ValueError:
@@ -47,7 +51,9 @@ def invalid_entry(base, path, code, summary):
     }
 
 
-def unsupported_entry(plan_id, run_id, version, directory):
+def unsupported_entry(
+    plan_id: str, run_id: str, version: int | None, directory: Path
+) -> JsonObject:
     """A retained retired-contract run: listed without validation, never collected."""
     return {
         "plan_id": plan_id,
@@ -59,7 +65,7 @@ def unsupported_entry(plan_id, run_id, version, directory):
     }
 
 
-def classify_run(plan_id, directory, current):
+def classify_run(plan_id: str, directory: Path, current: datetime) -> JsonObject:
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed run checkpoint")
     plan, _ = validate_run(directory, checkpoint, plan_id, directory.name)
@@ -91,8 +97,11 @@ def classify_run(plan_id, directory, current):
     return entry
 
 
-def scan_ledgers(base, plan_filter, current):
-    entries, invalid = [], []
+def scan_ledgers(
+    base: Path, plan_filter: str | None, current: datetime
+) -> tuple[list[JsonObject], list[JsonObject]]:
+    entries: list[JsonObject] = []
+    invalid: list[JsonObject] = []
     if not base.exists():
         return entries, invalid
     if base.is_symlink() or not base.is_dir():
@@ -161,12 +170,12 @@ def scan_ledgers(base, plan_filter, current):
     return entries, invalid
 
 
-def public_entry(entry):
+def public_entry(entry: JsonObject) -> JsonObject:
     return {key: value for key, value in entry.items() if not key.startswith("_")}
 
 
-def bounded_report(action, groups, **facts):
-    result = {"ok": True, "action": action, **facts}
+def bounded_report(action: str, groups: dict[str, list[JsonObject]], **facts: object) -> JsonObject:
+    result: JsonObject = {"ok": True, "action": action, **facts}
     result["counts"] = {name: len(values) for name, values in groups.items()}
     result.update(
         {name: [public_entry(value) for value in values] for name, values in groups.items()}
@@ -184,7 +193,7 @@ def bounded_report(action, groups, **facts):
     return result
 
 
-def remove_entry(entry):
+def remove_entry(entry: JsonObject) -> None:
     path = entry["_path"]
     if path.is_symlink() or not path.is_dir():
         raise Error("refusing changed purge target")
@@ -202,7 +211,9 @@ def remove_entry(entry):
         pass
 
 
-def collect_ledgers(base, plan_filter, current, remove):
+def collect_ledgers(
+    base: Path, plan_filter: str | None, current: datetime, remove: bool
+) -> JsonObject:
     """Collect eligible closed runs; a retained retired-contract run is only counted."""
     scanned, invalid = scan_ledgers(base, plan_filter, current)
     entries = [entry for entry in scanned if not entry["legacy"]]
@@ -224,20 +235,20 @@ def collect_ledgers(base, plan_filter, current, remove):
     )
 
 
-def list_runs(args):
+def list_runs(args: argparse.Namespace) -> JsonObject:
     plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
     entries, invalid = scan_ledgers(root(args), plan_filter, timestamp(core.now()))
     return bounded_report("list", {"runs": entries, "invalid": invalid})
 
 
-def gc(args):
+def gc(args: argparse.Namespace) -> JsonObject:
     if not args.dry_run:
         parent(args.actor)
     plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
     return collect_ledgers(root(args), plan_filter, timestamp(core.now()), remove=not args.dry_run)
 
 
-def purge(args):
+def purge(args: argparse.Namespace) -> JsonObject:
     parent(args.actor)
     plan_id = ident(args.plan_id, "plan id")
     target_run = uuid4(args.run_id)

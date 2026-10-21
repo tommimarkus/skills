@@ -7,8 +7,8 @@ Module map:
 - plancontract: the stdlib-only plan validator and its CLI; imports no other module, and the
   validate_plan_contract.py shim (not the ledger shim) re-exports it.
 - vocabulary: constants, schema ids, return-code families, limits and policies.
-- core: Error, UsageError, canonical encoding and digest, identifiers, time, read_json,
-  and the script path anchors derived from SCRIPTS_DIR.
+- core: the shared JSON type aliases, Error, UsageError, canonical encoding and digest,
+  identifiers, time, read_json, and the script path anchors derived from SCRIPTS_DIR.
 - gitops: the single git helper every git call goes through, plus the worktree-helper
   subprocess call.
 - store: ledger root, run layout, atomic write, event append, safe_run_contents.

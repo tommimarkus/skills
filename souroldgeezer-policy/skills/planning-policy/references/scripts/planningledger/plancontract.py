@@ -13,7 +13,7 @@ import re
 import stat
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard, cast
 
 SIZES = {"small": 1, "medium": 2, "large": 3}
 TIERS = {"mechanical", "standard", "analytical", "deep"}
@@ -106,7 +106,7 @@ def token_range(value: Any) -> dict[str, int] | None:
         return None
     if sorted(value) != ["expected", "high", "low"]:
         return None
-    low, expected, high = (value.get(key) for key in ("low", "expected", "high"))
+    low, expected, high = (value[key] for key in ("low", "expected", "high"))
     for item in (low, expected, high):
         if type(item) is not int or item < 0:
             return None
@@ -507,7 +507,8 @@ def changeset_budget_errors(leaf: dict[str, Any]) -> list[str]:
             f"{prefix}.exempt_paths must be an array of at most {BUDGET_EXEMPT_LIMIT} paths"
         )
         exempt = []
-    write_set = leaf.get("write_set") if isinstance(leaf.get("write_set"), list) else []
+    declared_writes = leaf.get("write_set")
+    write_set = declared_writes if isinstance(declared_writes, list) else []
     for index, path in enumerate(exempt):
         if not safe_repository_path(path):
             errors.append(f"{prefix}.exempt_paths[{index}] must be a safe repository-relative path")
@@ -799,8 +800,10 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         result["retry_multiplication"] = attempt_multiplication(attempts)
         return result
     result["retry_multiplication"] = attempt_multiplication(attempts)
+    # A valid profile left every expected count an int and every maximum known.
+    counts = cast(dict[str, dict[str, int]], attempts)
     dispatch_expected_total = sum(
-        max(attempts[member]["expected"] for member in group) for group in groups
+        max(counts[member]["expected"] for member in group) for group in groups
     )
     repeated_attempts = max(0, dispatch_expected_total - len(groups))
     result["repeated_shared_prefix_proxy"] = canonical_plan_tokens * repeated_attempts
@@ -831,13 +834,17 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         return result
     result["retained_context_range"] = fixed["retained_return_context"]
     result["final_verification_reserve"] = "known"
+    # The check above proved every fixed and worker range known.
+    known_fixed = cast(dict[str, dict[str, int]], fixed)
+    known_workers = cast(dict[str, dict[str, int]], workers)
     totals = {
-        key: sum(fixed[lane][key] for lane in COST_LANES) for key in ("low", "expected", "high")
+        key: sum(known_fixed[lane][key] for lane in COST_LANES)
+        for key in ("low", "expected", "high")
     }
     maximum = dict(totals)
-    for leaf_id, value in workers.items():
-        expected_count = attempts[leaf_id]["expected"]
-        maximum_count = attempts[leaf_id]["maximum"]
+    for leaf_id, value in known_workers.items():
+        expected_count = counts[leaf_id]["expected"]
+        maximum_count = counts[leaf_id]["maximum"]
         for key in totals:
             totals[key] += value[key] * expected_count
             maximum[key] += value[key] * maximum_count
@@ -878,7 +885,7 @@ def valid_branch_name(value: Any) -> bool:
     )
 
 
-def stable_id(value: Any) -> bool:
+def stable_id(value: Any) -> TypeGuard[str]:
     return isinstance(value, str) and len(value) <= 64 and STABLE_ID.fullmatch(value) is not None
 
 
@@ -1103,7 +1110,7 @@ def capability_binding_matches(
             "evidence",
         }:
             return False
-        step_id = item.get("step_id")
+        step_id = item["step_id"]
         if hashable(step_id) in observed or hashable(step_id) not in expected:
             return False
         if not nonempty_string_in_range(item.get("host"), 1, 80):
@@ -1160,7 +1167,7 @@ def series_errors(series: Any) -> list[str]:
         errors.append(f"{prefix} has unknown keys: {sorted(set(series) - SERIES_KEYS)}")
     if not stable_id(series.get("series_id")):
         errors.append(f"{prefix}.series_id must be a stable bounded identifier")
-    slice_value = series.get("slice")
+    slice_value: Any = series.get("slice")
     valid_slice = (
         isinstance(slice_value, int) and not isinstance(slice_value, bool) and slice_value >= 1
     )
@@ -1247,7 +1254,8 @@ def _work_unit_sections(
         if not isinstance(unit, dict):
             errors.append(f"{prefix} must be an object")
             continue
-        unit_id, size = unit.get("id"), unit.get("original_size")
+        unit_id = unit.get("id")
+        size: Any = unit.get("original_size")
         if not stable_id(unit_id):
             errors.append(f"{prefix}.id must be a stable bounded identifier")
         elif unit_id in unit_sizes:
@@ -1448,7 +1456,7 @@ def _leaf_sections(
                 errors.append(f"{prefix}.{field} must be an array")
         _leaf_declaration_errors(prefix, leaf, strict, admission, errors)
         _leaf_contract_errors(prefix, leaf, errors)
-        unit_id = leaf.get("work_unit_id")
+        unit_id: Any = leaf.get("work_unit_id")
         if hashable(unit_id) not in unit_sizes:
             errors.append(f"{prefix}.work_unit_id must name a declared work unit")
         else:

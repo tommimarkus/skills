@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
+from typing import TypeAlias
 
 from . import contract
 from .contract import (
@@ -16,6 +18,8 @@ from .contract import (
 )
 from .core import (
     Error,
+    JsonObject,
+    JsonValue,
     canon,
     dependency_order,
     digest,
@@ -79,7 +83,11 @@ __all__ = [
 ]
 
 
-def retained_pipeline_steps(data):
+# A loaded run: its directory, checkpoint, plan, and amendment-aware effective leaves.
+LoadedRun: TypeAlias = tuple[Path, JsonObject, JsonObject, dict[str, JsonObject]]
+
+
+def retained_pipeline_steps(data: JsonObject) -> list[str]:
     """Steps still carrying state from the removed provisional-start pipeline."""
     return [
         sid
@@ -92,7 +100,7 @@ def retained_pipeline_steps(data):
     ]
 
 
-def require_no_retained_pipeline(data):
+def require_no_retained_pipeline(data: JsonObject) -> None:
     """Refuse to mutate a retained provisional_v1 run whose steps carry stacked state."""
     stacked = retained_pipeline_steps(data)
     if stacked:
@@ -104,7 +112,7 @@ def require_no_retained_pipeline(data):
         )
 
 
-def scope_rejection_state(step):
+def scope_rejection_state(step: JsonObject) -> bool:
     """A step stopped on write_set alone, with no stored return, is repairable."""
     return (
         step["status"] == "oversized"
@@ -114,7 +122,7 @@ def scope_rejection_state(step):
     )
 
 
-def lifecycle(data):
+def lifecycle(data: JsonObject) -> JsonObject:
     """Validate lifecycle fields, reading a checkpoint without them as active, in memory."""
     present = LIFECYCLE_FIELDS.intersection(data)
     if not present:
@@ -141,12 +149,12 @@ def lifecycle(data):
     return data
 
 
-def active_run(data):
+def active_run(data: JsonObject) -> None:
     if lifecycle(data)["run_status"] != "active":
         raise Error("run is closed")
 
 
-def validate_steps(data, leafs):
+def validate_steps(data: JsonObject, leafs: dict[str, JsonObject]) -> None:
     if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
         raise Error("invalid run retry policy")
     if data.get("return_codes") not in {None, REGISTERED_RETURN_CODES}:
@@ -236,7 +244,7 @@ def validate_steps(data, leafs):
     dependency_order(steps)
 
 
-def validate_events(directory, data):
+def validate_events(directory: Path, data: JsonObject) -> None:
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
     previous = 0
     # "restack" is accepted only in the history of a retained provisional_v1 run.
@@ -276,7 +284,7 @@ def validate_events(directory, data):
         raise Error("run event sequence mismatch")
 
 
-def retired_contract(directory, plan_level=False):
+def retired_contract(directory: Path, plan_level: bool = False) -> tuple[bool, int | None]:
     """(retired, version) for a retained ledger directory of a retired contract (1-4).
 
     Version 1 kept checkpoint.json directly in its plan directory, so a plan-level
@@ -298,7 +306,7 @@ def retired_contract(directory, plan_level=False):
     return retired, version if retired else None
 
 
-def refuse_retired(args):
+def refuse_retired(args: argparse.Namespace) -> None:
     """Refuse a command aimed at a retained run of a retired contract, before any load."""
     plan = plan_dir(args)
     retired, version = retired_contract(plan, plan_level=True)
@@ -311,7 +319,9 @@ def refuse_retired(args):
         )
 
 
-def validate_run(directory, data, plan_id, run_id):
+def validate_run(
+    directory: Path, data: JsonObject, plan_id: str, run_id: str
+) -> tuple[JsonObject, dict[str, JsonObject]]:
     """The single run validator for load_run, classify_run and load_predecessor_run.
 
     Everything but the event log: callers read their checkpoint, map errors to
@@ -365,7 +375,9 @@ def validate_run(directory, data, plan_id, run_id):
     return plan, leafs
 
 
-def load_run(args):
+def load_run(
+    args: argparse.Namespace,
+) -> LoadedRun:
     refuse_retired(args)
     parent_directory = plan_dir(args)
     if parent_directory.is_symlink() or not parent_directory.is_dir():
@@ -385,7 +397,9 @@ def load_run(args):
     return directory, data, plan, leafs
 
 
-def mutating_run(args):
+def mutating_run(
+    args: argparse.Namespace,
+) -> LoadedRun:
     parent(args.actor)
     loaded = load_run(args)
     validate_events(loaded[0], loaded[1])
@@ -394,7 +408,7 @@ def mutating_run(args):
     return loaded
 
 
-def valid_remediation(value):
+def valid_remediation(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict) or len(canon(value)) > MAX_REMEDIATION:
         raise Error("retry-remediation-v1 exceeds 4 KiB")
     optional = {"evidence_path", "sha256"}
@@ -432,7 +446,7 @@ def valid_remediation(value):
     return value
 
 
-def valid_series_handoff(value):
+def valid_series_handoff(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict) or len(canon(value)) > MAX_SERIES_HANDOFF:
         raise Error("planning-series-handoff-v1 exceeds 8 KiB")
     if set(value) != SERIES_HANDOFF_FIELDS or value.get("schema") != SERIES_HANDOFF_SCHEMA:
@@ -453,7 +467,7 @@ def valid_series_handoff(value):
     return value
 
 
-def read_series_handoff(path):
+def read_series_handoff(path: str | Path) -> JsonObject:
     try:
         raw = Path(path).read_bytes()
         value = json.loads(raw)
@@ -464,7 +478,7 @@ def read_series_handoff(path):
     return valid_series_handoff(value)
 
 
-def validate_series_handoff(directory, data, plan):
+def validate_series_handoff(directory: Path, data: JsonObject, plan: JsonObject) -> None:
     """Sibling of validate_retry_artifacts: re-verify a stamped handoff artifact.
 
     `load_run` calls this but not `validate_events`, so a plain event-fact record
@@ -499,7 +513,7 @@ def validate_series_handoff(directory, data, plan):
         raise Error("series handoff artifact digest or identity mismatch")
 
 
-def validate_retry_artifacts(directory, data):
+def validate_retry_artifacts(directory: Path, data: JsonObject) -> None:
     for step in data["steps"].values():
         path = step["retry_remediation_path"]
         if not path:

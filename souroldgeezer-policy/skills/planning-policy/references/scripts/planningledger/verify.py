@@ -2,13 +2,26 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import uuid
+from pathlib import Path
 
 from . import contract
 from .checkpoint import load_run, mutating_run, validate_events
 from .contract import standard_precision, validator_module
-from .core import Error, UsageError, canon, digest, ident, read_json, selected_step, uuid4
+from .core import (
+    Error,
+    JsonObject,
+    JsonValue,
+    UsageError,
+    canon,
+    digest,
+    ident,
+    read_json,
+    selected_step,
+    uuid4,
+)
 from .gitops import dirty_paths, git_head, git_output, numstat_rows, repository_top
 from .returns import (
     next_after_return,
@@ -20,6 +33,7 @@ from .returns import (
     valid_worker_handoff,
 )
 from .schedule import (
+    Batches,
     bounded_next,
     checkpoint_next,
     current_return,
@@ -67,7 +81,7 @@ __all__ = [
 ]
 
 
-def unverified_members(data, batches, sid):
+def unverified_members(data: JsonObject, batches: Batches, sid: str) -> list[str]:
     """Completed members of the step's batch with no verdict yet for their returned commit."""
     steps = data["steps"]
     return [
@@ -77,11 +91,18 @@ def unverified_members(data, batches, sid):
     ]
 
 
-def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
+def changeset_verdict(
+    worktree: str,
+    base: str,
+    commit: str,
+    leaf: JsonObject,
+    budget: JsonObject,
+    standard: bool = False,
+) -> JsonObject:
     exempt = budget["exempt_paths"]
     covers = validator_module().write_set_covers
     lines = files = 0
-    outside = []
+    outside: list[str] = []
     for paths, changed in numstat_rows(worktree, base, commit):
         if all(covers(exempt, path) for path in paths):
             continue
@@ -113,7 +134,9 @@ def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
     }
 
 
-def returned_changeset(data, plan, leafs, sid):
+def returned_changeset(
+    data: JsonObject, plan: JsonObject, leafs: dict[str, JsonObject], sid: str
+) -> tuple[JsonObject, str, str, JsonObject]:
     """Measure a step's returned commit: (verdict, base, commit, budget)."""
     step = data["steps"][sid]
     if data.get("verify_policy") != "leaf_verify_v1":
@@ -139,7 +162,7 @@ def returned_changeset(data, plan, leafs, sid):
     return verdict, base, commit, budget
 
 
-def check_changeset(args):
+def check_changeset(args: argparse.Namespace) -> JsonObject:
     """Read-only changeset gate: builder preflight on HEAD, or the parent on a returned commit."""
     if args.handoff_file:
         if not args.worktree:
@@ -169,7 +192,7 @@ def check_changeset(args):
     )
 
 
-def bounded_verify_return_schema():
+def bounded_verify_return_schema() -> JsonObject:
     finding = {
         "type": "object",
         "additionalProperties": False,
@@ -202,7 +225,7 @@ def bounded_verify_return_schema():
     }
 
 
-def valid_verify_return(value):
+def valid_verify_return(value: JsonValue) -> JsonObject:
     """Shape-check one bounded-verify-return-v1 object."""
     if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_RETURN:
         raise Error("bounded-verify-return-v1 exceeds 4 KiB")
@@ -247,11 +270,11 @@ def valid_verify_return(value):
     return value
 
 
-def verify_handoff_digest(value):
+def verify_handoff_digest(value: JsonObject) -> str:
     return digest({key: item for key, item in value.items() if key != "packet_sha256"})
 
 
-def valid_verify_handoff(value):
+def valid_verify_handoff(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_HANDOFF:
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
     if (
@@ -276,7 +299,7 @@ def valid_verify_handoff(value):
     return value
 
 
-def prior_verify(directory, step):
+def prior_verify(directory: Path, step: JsonObject) -> JsonObject | None:
     """The step's earlier rejection, so re-verification checks the delta and each finding."""
     stored = step.get("verify")
     if not isinstance(stored, dict) or stored.get("verdict") != "reject":
@@ -289,7 +312,15 @@ def prior_verify(directory, step):
     }
 
 
-def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
+def verify_handoff_packet(
+    directory: Path,
+    data: JsonObject,
+    plan: JsonObject,
+    leafs: dict[str, JsonObject],
+    sid: str,
+    step: JsonObject,
+    verify_id: str,
+) -> JsonObject:
     """Build one planning-verify-handoff-v1 packet for a completed step, without mutating."""
     verdict, base, commit, budget = returned_changeset(data, plan, leafs, sid)
     if not verdict["ok"]:
@@ -333,7 +364,7 @@ def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
     return value
 
 
-def verify_handoff(args):
+def verify_handoff(args: argparse.Namespace) -> JsonObject:
     """Issue verifier packets for a completed step, or every completed member of its batch."""
     directory, data, plan, leafs = mutating_run(args)
     if data.get("verify_policy") != "leaf_verify_v1":
@@ -366,7 +397,7 @@ def verify_handoff(args):
     }
 
 
-def record_changeset(args):
+def record_changeset(args: argparse.Namespace) -> JsonObject:
     """Record a measured changeset failure on a completed step.
 
     Over budget stops oversized:changeset, never retried. A path outside the
@@ -402,7 +433,7 @@ def record_changeset(args):
     return step_result("record-changeset", args, sid, step, changeset=verdict)
 
 
-def validate_verify_return(args):
+def validate_verify_return(args: argparse.Namespace) -> JsonObject:
     try:
         packet = json.loads(
             read_bounded_input(args.handoff_file, MAX_VERIFY_HANDOFF + 1024, "verify handoff")
@@ -425,7 +456,7 @@ def validate_verify_return(args):
     }
 
 
-def verify_rejection_return(directory, step, verify):
+def verify_rejection_return(directory: Path, step: JsonObject, verify: JsonObject) -> JsonObject:
     """Synthesize the failed:verification return a reject stands for.
 
     The builder's changed paths, acceptance, and commit carry over; the blocker
@@ -463,7 +494,9 @@ def verify_rejection_return(directory, step, verify):
     }
 
 
-def reject_verified_step(directory, data, step, failure):
+def reject_verified_step(
+    directory: Path, data: JsonObject, step: JsonObject, failure: JsonObject
+) -> str:
     """Move a rejected completed step to failed through the one retry predicate."""
     copy = directory / step["return_path"]
     write(copy, failure, MAX_RETURN)
@@ -480,7 +513,7 @@ def reject_verified_step(directory, data, step, failure):
     return settle_return(data, step, failure, return_fingerprint(bare))
 
 
-def record_verify(args):
+def record_verify(args: argparse.Namespace) -> JsonObject:
     """Store a verifier verdict bound to the step's returned commit."""
     directory, data, plan, leafs = mutating_run(args)
     raw = read_bounded_input(args.return_file, MAX_VERIFY_RETURN, "verify return")
@@ -519,13 +552,14 @@ def record_verify(args):
         "sha256": digest(value),
     }
     step["verify_id"] = ""
-    disposition, failure = "", None
+    failure: JsonObject | None = None
+    disposition = ""
     if value["verdict"] == "reject":
         failure = verify_rejection_return(directory, step, value)
         disposition = reject_verified_step(directory, data, step, failure)
     event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
     result = step_result("record-verify", args, sid, step, verdict=value["verdict"])
-    if disposition:
+    if failure is not None:
         result["next"] = next_after_return(
             args, directory, data, batches, sid, step, failure, disposition, plan
         )

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import tempfile
 from pathlib import Path
 
 from . import core, gitops
-from .core import Error, canon, ident, read_json, uuid4
+from .core import Error, JsonObject, JsonValue, canon, ident, read_json, uuid4
 from .vocabulary import (
     MAX_CHECKPOINT,
     MAX_USAGE,
@@ -29,7 +30,7 @@ __all__ = [
 ]
 
 
-def root(args):
+def root(args: argparse.Namespace) -> Path:
     if args.ledger_root:
         path = Path(args.ledger_root)
         if not path.is_absolute():
@@ -42,15 +43,15 @@ def root(args):
     return common / "planning-policy" / "ledgers"
 
 
-def plan_dir(args):
+def plan_dir(args: argparse.Namespace) -> Path:
     return root(args) / ident(args.plan_id, "plan id")
 
 
-def run_dir(args):
+def run_dir(args: argparse.Namespace) -> Path:
     return plan_dir(args) / uuid4(args.run_id)
 
 
-def write(path, value, maximum=MAX_CHECKPOINT):
+def write(path: Path, value: object, maximum: int = MAX_CHECKPOINT) -> None:
     raw = canon(value) + b"\n"
     if len(raw) > maximum:
         raise Error("bounded record exceeds limit")
@@ -67,7 +68,7 @@ def write(path, value, maximum=MAX_CHECKPOINT):
             os.unlink(tmp)
 
 
-def event(directory, data, action, **facts):
+def event(directory: Path, data: JsonObject, action: str, **facts: object) -> None:
     data["event_sequence"] += 1
     data["updated_at"] = core.now()
     write(directory / "checkpoint.json", data)
@@ -88,7 +89,9 @@ def event(directory, data, action, **facts):
         )
 
 
-def initial_event(directory, timestamp, action, plan_id, **facts):
+def initial_event(
+    directory: Path, timestamp: str, action: str, plan_id: str, **facts: object
+) -> None:
     payload = {
         "sequence": 1,
         "at": timestamp,
@@ -100,7 +103,7 @@ def initial_event(directory, timestamp, action, plan_id, **facts):
     (directory / "events.jsonl").write_bytes(canon(payload) + b"\n")
 
 
-def safe_run_contents(directory):
+def safe_run_contents(directory: Path) -> None:
     allowed = {
         "checkpoint.json",
         "events.jsonl",
@@ -197,7 +200,7 @@ def safe_run_contents(directory):
         validate_usage_dir(usage)
 
 
-def validate_usage_dir(usage):
+def validate_usage_dir(usage: Path) -> None:
     if usage.is_symlink() or not usage.is_dir():
         raise Error("unexpected usage contents")
     names = {item.name for item in usage.iterdir()}
@@ -223,7 +226,7 @@ def validate_usage_dir(usage):
             valid_usage_summary(value)
 
 
-def valid_usage_summary(value):
+def valid_usage_summary(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict):
         raise Error("invalid planning-usage-summary-v1")
     if len(canon(value)) > MAX_USAGE:

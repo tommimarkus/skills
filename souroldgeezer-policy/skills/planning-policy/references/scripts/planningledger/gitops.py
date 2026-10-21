@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
 import sys
 from pathlib import Path
 
-from .core import WORKTREE_HELPER, Error
+from .core import WORKTREE_HELPER, Error, JsonObject
 
 __all__ = [
     "git_common_dir",
@@ -23,13 +24,13 @@ __all__ = [
 ]
 
 
-def git(*arguments, cwd=None):
+def git(*arguments: str, cwd: str | Path | None = None) -> subprocess.CompletedProcess[str]:
     """Run git, in `cwd` when given; return the completed process. The only git invocation."""
     command = ["git", *(["-C", str(cwd)] if cwd is not None else []), *arguments]
     return subprocess.run(command, text=True, capture_output=True)
 
 
-def repository_top(args):
+def repository_top(args: argparse.Namespace) -> Path:
     """The checkout relative assignment worktrees resolve against."""
     if args.repo_root:
         return Path(args.repo_root).resolve()
@@ -37,7 +38,7 @@ def repository_top(args):
     return Path(result.stdout.strip() if result.returncode == 0 else Path.cwd()).resolve()
 
 
-def git_common_dir(repo):
+def git_common_dir(repo: Path) -> Path | None:
     """The absolute Git common directory of `repo`, or None when it is not in a repository."""
     result = git("rev-parse", "--git-common-dir", cwd=repo)
     if result.returncode:
@@ -46,7 +47,7 @@ def git_common_dir(repo):
     return (repo / common).resolve() if not common.is_absolute() else common.resolve()
 
 
-def primary_checkout(top):
+def primary_checkout(top: Path) -> Path:
     """The checkout holding the Git common directory, so a derived worktree is never nested."""
     common = git_common_dir(top)
     if common is None:
@@ -54,7 +55,7 @@ def primary_checkout(top):
     return common.parent if common.name == ".git" else top
 
 
-def run_worktree_helper(*arguments):
+def run_worktree_helper(*arguments: str) -> tuple[JsonObject, bool]:
     """Run the Git-policy helper; return its parsed result and whether it succeeded."""
     result = subprocess.run(
         [sys.executable, "-B", str(WORKTREE_HELPER), *arguments],
@@ -70,11 +71,11 @@ def run_worktree_helper(*arguments):
     return value, result.returncode == 0 and value.get("ok") is True
 
 
-def helper_error(value):
+def helper_error(value: JsonObject) -> str:
     return str(value.get("error", "helper failed"))[:240]
 
 
-def registered_worktrees(repo):
+def registered_worktrees(repo: Path) -> dict[Path, str]:
     """Map each registered worktree path of the repository to its branch name."""
     result = git("worktree", "list", "--porcelain", cwd=repo)
     if result.returncode:
@@ -89,7 +90,9 @@ def registered_worktrees(repo):
     return entries
 
 
-def verify_worktree_identity(repo, step, leaf, create_from):
+def verify_worktree_identity(
+    repo: Path, step: JsonObject, leaf: JsonObject, create_from: str
+) -> None:
     """Fail before any state change unless the leaf's worktree carries its branch."""
     path = Path(step["assignment"]["worktree"])
     if not path.is_absolute():
@@ -112,7 +115,7 @@ def verify_worktree_identity(repo, step, leaf, create_from):
         )
 
 
-def git_head(worktree, repo):
+def git_head(worktree: str | Path, repo: Path) -> str:
     path = Path(worktree)
     result = git("rev-parse", "HEAD", cwd=path if path.is_absolute() else repo / path)
     if result.returncode:
@@ -120,14 +123,14 @@ def git_head(worktree, repo):
     return result.stdout.strip()
 
 
-def git_output(worktree, *arguments):
+def git_output(worktree: str | Path, *arguments: str) -> str:
     result = git(*arguments, cwd=worktree)
     if result.returncode:
         raise Error(f"git {arguments[0]} failed in the worktree")
     return result.stdout
 
 
-def numstat_rows(worktree, base, commit):
+def numstat_rows(worktree: str | Path, base: str, commit: str) -> list[tuple[list[str], int]]:
     """Rows of (paths, changed lines); a binary row is zero lines, a rename one row."""
     tokens = git_output(worktree, "diff", "--numstat", "-z", "-M", f"{base}..{commit}").split("\0")
     rows, index = [], 0
@@ -145,7 +148,7 @@ def numstat_rows(worktree, base, commit):
     return rows
 
 
-def dirty_paths(worktree):
+def dirty_paths(worktree: str | Path) -> list[str]:
     entries = git_output(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split(
         "\0"
     )

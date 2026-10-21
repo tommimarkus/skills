@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import tempfile
@@ -29,6 +30,7 @@ from .contract import (
 )
 from .core import (
     Error,
+    JsonObject,
     UsageError,
     approved_parent,
     bounded_reason,
@@ -45,6 +47,7 @@ from .dispatch import apply_worktree_result, next_after_transition, require_veri
 from .gitops import helper_error, primary_checkout, repository_top
 from .retention import collect_ledgers, scan_ledgers
 from .schedule import (
+    Batches,
     batch_settled,
     bounded_action_next,
     bounded_next,
@@ -89,7 +92,7 @@ __all__ = [
 ]
 
 
-def refuse_unowned_pins(args, plan):
+def refuse_unowned_pins(args: argparse.Namespace, plan: JsonObject) -> None:
     """A strict plan must prove no unowned pinning test exists before the run starts."""
     if plan.get("precision") != "strict":
         return
@@ -101,7 +104,7 @@ def refuse_unowned_pins(args, plan):
         raise Error("; ".join(pins[:MAX_CHECK_OUTSIDE])[:480])
 
 
-def init5(args):
+def init5(args: argparse.Namespace) -> JsonObject:
     approved_parent(args)
     plan = read_plan(args.plan_file)
     refuse_unowned_pins(args, plan)
@@ -244,7 +247,7 @@ def init5(args):
     return result
 
 
-def land(args):
+def land(args: argparse.Namespace) -> JsonObject:
     """Integrate and clean a completed leaf, or a settled batch, through the helper."""
     directory, data, plan, leafs = mutating_run(args)
     batches = step_batches(plan)
@@ -359,7 +362,7 @@ def land(args):
     return result
 
 
-def close_run(args):
+def close_run(args: argparse.Namespace) -> JsonObject:
     parent(args.actor)
     directory, data, plan, leafs = load_run(args)
     validate_events(directory, data)
@@ -429,7 +432,7 @@ def close_run(args):
     }
 
 
-def reopen_run(args):
+def reopen_run(args: argparse.Namespace) -> JsonObject:
     parent(args.actor)
     directory, data, plan, leafs = load_run(args)
     validate_events(directory, data)
@@ -487,7 +490,7 @@ def reopen_run(args):
     return result
 
 
-def summary(data, batches):
+def summary(data: JsonObject, batches: Batches) -> JsonObject:
     steps = data["steps"]
     rows = [
         {
@@ -539,7 +542,7 @@ def summary(data, batches):
     return bounded_step_summary(result)
 
 
-def bounded_step_summary(result):
+def bounded_step_summary(result: JsonObject) -> JsonObject:
     result.pop("summary_proxy_tokens", None)
     while proxy_tokens(result) > MAX_TOKENS and result["steps"]:
         result["steps"].pop()
@@ -549,7 +552,7 @@ def bounded_step_summary(result):
     return result
 
 
-def show(args):
+def show(args: argparse.Namespace) -> JsonObject:
     if args.next_only and args.step_id:
         raise Error("show --next-only does not accept --step-id")
     directory, data, plan, leafs = load_run(args)
@@ -621,7 +624,7 @@ def show(args):
     return result
 
 
-def validate(args):
+def validate(args: argparse.Namespace) -> JsonObject:
     directory, data, plan, leafs = load_run(args)
     if args.closeout:
         unfinished = [

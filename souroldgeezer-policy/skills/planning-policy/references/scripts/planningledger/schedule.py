@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import uuid
 from pathlib import Path
+from typing import TypeAlias
 
 from .checkpoint import retained_pipeline_steps, valid_remediation
 from .contract import (
@@ -14,7 +16,7 @@ from .contract import (
     host_step_binding,
     tier_alias,
 )
-from .core import Error, digest, proxy_tokens, read_json, rel
+from .core import Error, JsonObject, JsonValue, digest, proxy_tokens, read_json, rel
 from .store import write
 from .vocabulary import (
     BATCH_ACTIVE_STATES,
@@ -72,7 +74,13 @@ __all__ = [
 ]
 
 
-def bounded_next(value, droppable=(), trimmable=""):
+# Each batched step id mapped to its batch's member ids, as step_batches derives them.
+Batches: TypeAlias = dict[str, list[str]]
+
+
+def bounded_next(
+    value: JsonObject, droppable: tuple[str, ...] = (), trimmable: str = ""
+) -> JsonObject:
     """Bound a `next` block, shedding convenience before the state it reports.
 
     The pre-formatted CLI hint goes first and a listed collection is trimmed
@@ -88,7 +96,7 @@ def bounded_next(value, droppable=(), trimmable=""):
     return value
 
 
-def bounded_action_next(value, trimmable=""):
+def bounded_action_next(value: JsonObject, trimmable: str = "") -> JsonObject:
     """Keep the first legal command while trimming a convenience collection."""
     while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
         value[trimmable].pop()
@@ -101,22 +109,22 @@ def bounded_action_next(value, trimmable=""):
     return value
 
 
-def ordered_steps(steps):
+def ordered_steps(steps: dict[str, JsonObject]) -> list[JsonObject]:
     return sorted(steps.values(), key=lambda value: value["id"])
 
 
-def transition_scope(plan_id, run_id):
+def transition_scope(plan_id: str, run_id: str) -> str:
     return f"--plan-id {plan_id} transition --actor parent --run-id {run_id}"
 
 
-def dispatch_command(plan_id, run_id, step_id):
+def dispatch_command(plan_id: str, run_id: str, step_id: str) -> str:
     return (
         f"--plan-id {plan_id} dispatch --actor parent --run-id {run_id} "
         f"--step-id {step_id} --agent-id <agent-id>"
     )
 
 
-def land_command(data, step_id):
+def land_command(data: JsonObject, step_id: str) -> str:
     """Integrate and clean a step through the composite land."""
     return (
         f"--plan-id {data['plan_id']} land --actor parent --run-id {data['run_id']} "
@@ -124,7 +132,7 @@ def land_command(data, step_id):
     )
 
 
-def verify_commands(data, step_id):
+def verify_commands(data: JsonObject, step_id: str) -> dict[str, str]:
     """The leaf_verify_v1 gate: check-changeset first, then verify-handoff."""
     scope = f"--plan-id {data['plan_id']}"
     return {
@@ -135,7 +143,7 @@ def verify_commands(data, step_id):
     }
 
 
-def dependencies_clean(data, step, batches):
+def dependencies_clean(data: JsonObject, step: JsonObject, batches: Batches) -> bool:
     """Dependencies are satisfied; an external dependency unblocks at `integrated`."""
     members = batches.get(step["id"], ())
     return all(
@@ -145,11 +153,11 @@ def dependencies_clean(data, step, batches):
     )
 
 
-def attempt_available(step):
-    return step["attempt_count"] < step["max_attempts"]
+def attempt_available(step: JsonObject) -> bool:
+    return bool(step["attempt_count"] < step["max_attempts"])
 
 
-def amended_after_return(step):
+def amended_after_return(step: JsonObject) -> bool:
     """True when an amendment was recorded after the current attempt's return."""
     return any(
         item["after_attempt_id"] == step["attempt_id"] and item["return_recorded"]
@@ -157,7 +165,7 @@ def amended_after_return(step):
     )
 
 
-def repair_reopened(step):
+def repair_reopened(step: JsonObject) -> bool:
     """A non-terminal blocked/failed stop whose cause was amended after its return."""
     return (
         step["status"] in {"blocked", "failed"}
@@ -167,15 +175,15 @@ def repair_reopened(step):
     )
 
 
-def retry_open(step):
+def retry_open(step: JsonObject) -> bool:
     return step["retry_allowed"] or repair_reopened(step)
 
 
-def ready_status_legal(step):
+def ready_status_legal(step: JsonObject) -> bool:
     return step["status"] in {"pending", "blocked", "failed"} and retry_open(step)
 
 
-def ready_candidate(data, step, batches):
+def ready_candidate(data: JsonObject, step: JsonObject, batches: Batches) -> bool:
     return (
         ready_status_legal(step)
         and dependencies_clean(data, step, batches)
@@ -183,23 +191,23 @@ def ready_candidate(data, step, batches):
     )
 
 
-def attempt_return_recorded(step):
+def attempt_return_recorded(step: JsonObject) -> bool:
     """True once the step's current attempt has a stored return."""
     return bool(step["attempt_id"]) and step["return_path"] == str(
         Path("returns") / step["id"] / f"{step['attempt_id']}.json"
     )
 
 
-def step_batches(plan):
+def step_batches(plan: JsonObject) -> Batches:
     """Derive each batched leaf's member list from the stored canonical plan."""
-    groups = {}
+    groups: dict[str, list[str]] = {}
     for leaf in plan["leaves"]:
         if leaf.get("batch"):
             groups.setdefault(leaf["batch"], []).append(leaf["id"])
     return {sid: members for members in groups.values() for sid in members}
 
 
-def batch_settled(data, batches, step_id):
+def batch_settled(data: JsonObject, batches: Batches, step_id: str) -> bool:
     """True once no member of the step's batch can still commit to its worktree."""
     return not any(
         data["steps"][member]["status"] in BATCH_ACTIVE_STATES
@@ -211,7 +219,7 @@ def batch_settled(data, batches, step_id):
     )
 
 
-def read_remediation(path):
+def read_remediation(path: str) -> JsonObject:
     try:
         raw = Path(path).read_bytes()
         value = json.loads(raw)
@@ -222,7 +230,7 @@ def read_remediation(path):
     return valid_remediation(value)
 
 
-def current_return(directory, step):
+def current_return(directory: Path, step: JsonObject) -> JsonValue:
     if not step.get("return_path") or not step.get("return_sha256"):
         raise Error("retry requires a current prior return")
     path = directory / rel(step["return_path"], "return path")
@@ -232,17 +240,18 @@ def current_return(directory, step):
     return value
 
 
-def primary_code(value):
+def primary_code(value: JsonObject) -> str:
     """The first blocker code that belongs to the return status's own family."""
-    family = RETURN_CODES.get(value.get("status"), ())
+    status: JsonValue = value.get("status")
+    family = RETURN_CODES.get(status, ())
     for blocker in value.get("blockers") or ():
         code = blocker.get("code") if isinstance(blocker, dict) else None
-        if code in family:
+        if isinstance(code, str) and code in family:
             return code
     return ""
 
 
-def retry_class(data, step, value):
+def retry_class(data: JsonObject, step: JsonObject, value: JsonObject) -> tuple[str, str]:
     """The one retry-eligibility predicate: (kind, outcome), or ("", "").
 
     Reasoning stops (`failed:acceptance`, `failed:verification`,
@@ -260,7 +269,9 @@ def retry_class(data, step, value):
     return "", ""
 
 
-def store_remediation(args, data, directory, step):
+def store_remediation(
+    args: argparse.Namespace, data: JsonObject, directory: Path, step: JsonObject
+) -> tuple[JsonObject, str, str, bool]:
     if not args.retry_remediation_file:
         raise Error("retry requires --retry-remediation-file")
     value = read_remediation(args.retry_remediation_file)
@@ -310,7 +321,14 @@ def store_remediation(args, data, directory, step):
     )
 
 
-def ready(args, directory, data, plan, batches, step):
+def ready(
+    args: argparse.Namespace,
+    directory: Path,
+    data: JsonObject,
+    plan: JsonObject,
+    batches: Batches,
+    step: JsonObject,
+) -> None:
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
         if value and (not isinstance(value, str) or not value.strip() or len(value) > 160):
             raise Error(f"invalid {label}")
@@ -399,7 +417,9 @@ def ready(args, directory, data, plan, batches, step):
     step["reason"] = reason[:480]
 
 
-def retryable_steps(directory, data, batches):
+def retryable_steps(
+    directory: Path, data: JsonObject, batches: Batches
+) -> list[tuple[JsonObject, str, str]]:
     """Return retryable failures using the same stored return predicate as record()."""
     result = []
     for step in ordered_steps(data["steps"]):
@@ -414,26 +434,26 @@ def retryable_steps(directory, data, batches):
     return result
 
 
-def retry_command(plan_id, run_id, step_id):
+def retry_command(plan_id: str, run_id: str, step_id: str) -> str:
     return (
         f"{transition_scope(plan_id, run_id)} --step-id {step_id} --to ready --retry "
         "--retry-remediation-file <retry-remediation-v1.json>"
     )
 
 
-def series_non_final(plan):
+def series_non_final(plan: JsonObject) -> bool:
     """True for a plan whose series slice hands work on (needs a close handoff)."""
-    series = plan.get("series")
+    series: JsonValue = plan.get("series")
     return bool(series) and not series.get("final")
 
 
-def series_final(plan):
+def series_final(plan: JsonObject) -> bool:
     """True for a plan whose series slice is the last (needs end verification)."""
-    series = plan.get("series")
+    series: JsonValue = plan.get("series")
     return bool(series) and bool(series.get("final"))
 
 
-def series_closeout_overlay(plan, block):
+def series_closeout_overlay(plan: JsonObject, block: JsonObject) -> JsonObject:
     """Splice the series-final marker into a closeout-adjacent next block.
 
     Never inlines `end_verification_commands` — a single 480-char command would
@@ -445,7 +465,7 @@ def series_closeout_overlay(plan, block):
     return block
 
 
-def startable_step_ids(data, steps, batches):
+def startable_step_ids(data: JsonObject, steps: list[JsonObject], batches: Batches) -> list[str]:
     """Steps a parent could start now: ready, readiness candidates, or verify-pending."""
     leaf_verify = data.get("verify_policy") == "leaf_verify_v1"
     result = []
@@ -467,7 +487,7 @@ def startable_step_ids(data, steps, batches):
     return result
 
 
-def with_concurrent(data, batches, block):
+def with_concurrent(data: JsonObject, batches: Batches, block: JsonObject) -> JsonObject:
     """List up to four other startable steps beside the one action a block names."""
     if block.get("category") in NON_ACTION_CATEGORIES:
         return block
@@ -490,17 +510,21 @@ def with_concurrent(data, batches, block):
     return block
 
 
-def checkpoint_next(directory, data, batches, plan):
+def checkpoint_next(
+    directory: Path, data: JsonObject, batches: Batches, plan: JsonObject
+) -> JsonObject:
     """The one highest-priority legal action, plus other steps that could start now."""
     return with_concurrent(data, batches, primary_next(directory, data, batches, plan))
 
 
-def verify_issued(step):
+def verify_issued(step: JsonObject) -> bool:
     """True when verify-handoff issued a packet for the step's returned commit."""
     return bool(step.get("verify_id")) and step.get("verify_commit") == step["returned_commit"]
 
 
-def primary_next(directory, data, batches, plan):
+def primary_next(
+    directory: Path, data: JsonObject, batches: Batches, plan: JsonObject
+) -> JsonObject:
     """Select one highest-priority legal action from the checkpoint."""
     if data["run_status"] == "closed":
         return bounded_action_next({"category": "terminal_closed", "outcome": data["outcome"]})
@@ -640,7 +664,7 @@ def primary_next(directory, data, batches, plan):
     )
 
 
-def stored_verdict(step):
+def stored_verdict(step: JsonObject) -> JsonValue:
     """The verdict recorded for the step's current returned commit, or None."""
     stored = step.get("verify")
     if isinstance(stored, dict) and stored.get("commit") == step.get("returned_commit"):
@@ -648,11 +672,11 @@ def stored_verdict(step):
     return None
 
 
-def commit_verified(step):
+def commit_verified(step: JsonObject) -> bool:
     return stored_verdict(step) in VERIFY_PASSING
 
 
-def group_landable(data, batches, sid):
+def group_landable(data: JsonObject, batches: Batches, sid: str) -> bool:
     """Every completed member of the step's batch holds a passing verdict."""
     return all(
         commit_verified(data["steps"][member])

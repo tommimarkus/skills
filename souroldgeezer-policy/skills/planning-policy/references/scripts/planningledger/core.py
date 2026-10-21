@@ -4,11 +4,13 @@ path anchors.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any, TypeAlias
 
 from .vocabulary import ID, MAX_PATH, PROXY_TOKEN_RE, RETENTION_DAYS, SHA
 
@@ -39,6 +41,12 @@ __all__ = [
 ]
 
 
+# The shared JSON shapes. They are annotation-only aliases, so they stay out of __all__
+# and the entry shim never re-exports them.
+JsonValue: TypeAlias = Any  # A decoded JSON value no check has narrowed yet.
+JsonObject: TypeAlias = dict[str, Any]  # A JSON object: a plan, checkpoint, step or record.
+
+
 # Every script path derives from the one directory that holds the entry shim.
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 LEDGER_SCRIPT = SCRIPTS_DIR / "planning_ledger.py"
@@ -52,11 +60,11 @@ class Error(Exception):
     pass
 
 
-def now():
+def now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def timestamp(value, label="timestamp"):
+def timestamp(value: object, label: str = "timestamp") -> datetime:
     if not isinstance(value, str) or not value.endswith("Z"):
         raise Error(f"invalid {label}")
     try:
@@ -68,7 +76,7 @@ def timestamp(value, label="timestamp"):
     return parsed
 
 
-def retained_until(closed_at, outcome):
+def retained_until(closed_at: str, outcome: str) -> str:
     return (
         (timestamp(closed_at, "closed_at") + timedelta(days=RETENTION_DAYS[outcome]))
         .replace(microsecond=0)
@@ -77,42 +85,43 @@ def retained_until(closed_at, outcome):
     )
 
 
-def bounded_reason(value, label, required=False):
+def bounded_reason(value: object, label: str, required: bool = False) -> str:
     if not isinstance(value, str) or len(value) > 480 or (required and not value):
         raise Error(f"{label} requires a bounded reason")
     return value
 
 
-def canon(value):
+def canon(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
 
 
-def digest(value):
+def digest(value: object) -> str:
     return hashlib.sha256(canon(value)).hexdigest()
 
 
-def out(value, code=0):
+def out(value: object, code: int = 0) -> int:
     print(json.dumps(value, sort_keys=True, separators=(",", ":")))
     return code
 
 
-def ident(value, label="id"):
+def ident(value: object, label: str = "id") -> str:
     if not isinstance(value, str) or not ID.fullmatch(value):
         raise Error(f"invalid {label}")
     return value
 
 
-def uuid4(value, label="run id"):
+def uuid4(value: JsonValue, label: str = "run id") -> str:
     try:
         parsed = uuid.UUID(value)
     except (TypeError, ValueError) as exc:
         raise Error(f"{label} must be canonical lowercase UUID4") from exc
-    if parsed.version != 4 or str(parsed) != value:
+    canonical = str(parsed)
+    if parsed.version != 4 or canonical != value:
         raise Error(f"{label} must be canonical lowercase UUID4")
-    return value
+    return canonical
 
 
-def rel(value, label="path", maximum=MAX_PATH):
+def rel(value: object, label: str = "path", maximum: int = MAX_PATH) -> str:
     if (
         not isinstance(value, str)
         or not value
@@ -124,31 +133,31 @@ def rel(value, label="path", maximum=MAX_PATH):
     return value
 
 
-def parent(actor):
+def parent(actor: str) -> None:
     if actor != "parent":
         raise Error("only actor 'parent' may mutate a ledger")
 
 
-def approved_parent(args):
+def approved_parent(args: argparse.Namespace) -> None:
     parent(args.actor)
     if not args.approved:
         raise Error("--approved is required")
 
 
-def selected_step(data, step_id):
+def selected_step(data: JsonObject, step_id: object) -> tuple[str, JsonObject]:
     sid = ident(step_id, "step id")
     if sid not in data["steps"]:
         raise Error("unknown step id")
     return sid, data["steps"][sid]
 
 
-def dependency_order(steps):
+def dependency_order(steps: dict[str, JsonObject]) -> None:
     """Reject unknown or cyclic step dependencies."""
     if any(dep not in steps for step in steps.values() for dep in step["dependencies"]):
         raise Error("unknown dependency")
     visiting, visited = set(), set()
 
-    def visit(step_id):
+    def visit(step_id: str) -> None:
         if step_id in visiting:
             raise Error("dependency cycle")
         if step_id not in visited:
@@ -162,26 +171,26 @@ def dependency_order(steps):
         visit(step_id)
 
 
-def read_json(path, message):
+def read_json(path: str | Path, message: str) -> JsonValue:
     try:
         return json.loads(Path(path).read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise Error(message) from exc
 
 
-def required_file(directory, name, message):
+def required_file(directory: Path, name: str, message: str) -> Path:
     path = directory / name
     if not path.is_file():
         raise Error(message)
     return path
 
 
-def require_sha256(value, message):
+def require_sha256(value: object, message: str) -> None:
     if not isinstance(value, str) or not SHA.fullmatch(value):
         raise Error(message)
 
 
-def proxy_tokens(value):
+def proxy_tokens(value: object) -> int:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
     return len(PROXY_TOKEN_RE.findall(encoded))
 
