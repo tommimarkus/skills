@@ -505,3 +505,23 @@ and slices only when the resulting plan remains oversized. The two advisories
 therefore drive sequential, distinct actions; slicing must not preserve
 decorative leaves across a series. The synthetic case checks merge-first and
 then conditional slicing without making either advisory a validity gate.
+
+## Build-verify loop evidence
+
+The 2026-10-07 between-batch parent review showed that green acceptance does not
+establish a faithful change. It caught a worker that shortened rule-bearing
+prose to fit a load budget (lesson-candidate issue #128) and a leaf that quietly
+dropped behavior an earlier leaf had added, in both cases while the acceptance
+command still passed. That is the gap a fresh read-only verifier, limited to the
+contract and the diff, is meant to close before land.
+
+A calibration over 56 integrated leaves in 21 retained ledger runs sized the
+changeset budget. Small leaves had a median of 14 changed lines, but 14 of 44
+medium and large leaves exceeded 400 changed lines. Size band tracks effort, not
+diff size, so the budget is a separate deterministic axis checked before
+verification, and over-budget work is re-cut rather than retried.
+
+The synthetic `planning-policy-behavior-verify-*` cases cover pass, coverage-gap
+retry, silent removal, over-budget, outside write set, inconclusive, style-only,
+closeout-only, and batch dispatch. They test the documented workflow, not model
+reliability. No third-party text is copied.

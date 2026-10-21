@@ -80,6 +80,15 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-claude-withheld-approval",
             "planning-policy-behavior-execution-shape-overhead-not-inline",
             "planning-policy-behavior-return-code-fallbacks",
+            "planning-policy-behavior-verify-pass-lands",
+            "planning-policy-behavior-verify-coverage-gap-retry",
+            "planning-policy-behavior-verify-silent-removal-reject",
+            "planning-policy-behavior-verify-over-budget-oversized",
+            "planning-policy-behavior-verify-outside-write-set-scope",
+            "planning-policy-behavior-verify-inconclusive-lands",
+            "planning-policy-behavior-verify-style-only-no-block",
+            "planning-policy-behavior-verify-closeout-only-opt-out",
+            "planning-policy-behavior-verify-batch-one-dispatch",
         }
         self.assertTrue(required.issubset(self.behavior))
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]
