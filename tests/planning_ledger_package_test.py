@@ -25,7 +25,10 @@ IMPORT_ORDER = (
 )
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}
 # Extracted so far; each splitting step adds its modules here.
-EXTRACTED = {"vocabulary", "core", "store", "gitops", "contract"}
+EXTRACTED = {
+    "vocabulary", "core", "store", "gitops", "contract",
+    "checkpoint", "legacy", "schedule", "series", "returns",
+}
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {
     "now": "core",
