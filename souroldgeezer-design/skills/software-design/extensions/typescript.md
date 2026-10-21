@@ -1,4 +1,5 @@
 # TypeScript Software Design Extension
+<!-- lean-audit:sync-intentional: per-language source anchors are restated in references/source-grounding.md by the extension family convention; edit both together. -->
 
 Load for JavaScript/TypeScript `package.json`, `tsconfig.json`, project
 references, source/declaration, JSDoc, `checkJs`, or `allowJs`. Own

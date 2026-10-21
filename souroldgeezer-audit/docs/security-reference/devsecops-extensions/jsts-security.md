@@ -142,6 +142,7 @@ prove deployed listener reachability.
 **Severity:** `warn` with visible configuration and exposure evidence.
 
 ### `jsts.HC-12` — Self-contained token validation weakened
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-16, jsts.HC-12 and pys.HC-10; edit all 3 together. -->
 
 **Pattern:** `jsonwebtoken` `jwt.decode()` output drives an access decision instead of `jwt.verify()`; `jwt.verify` is called without an `algorithms` option where key types allow algorithm confusion, allows `none`, or sets `ignoreExpiration: true`; `jose` `decodeJwt` or `decodeProtectedHeader` is used for trust instead of `jwtVerify`, or `jwtVerify` omits issuer or audience where multiple issuers or audiences are accepted. Decoding only parses a token; it proves nothing about who issued it.
 
@@ -150,6 +151,7 @@ prove deployed listener reachability.
 **Severity:** `block` when signature verification, algorithm allowlisting, or trusted-key sourcing is absent or bypassed for a token that gates access; `warn` when only lifetime, issuer, or audience checks are disabled, escalated to `block` when multiple issuers or audiences are accepted.
 
 ### `jsts.HC-13` — Sensitive cookie attributes weakened
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in dns.HC-17, jsts.HC-13 and pys.HC-11; edit all 3 together. -->
 
 **Pattern:** `express-session` or `cookie-session` options with `secure: false` or `httpOnly: false` in production configuration; `res.cookie`, Next.js `cookies().set`, or a raw `Set-Cookie` header carrying a session or authentication token without `httpOnly` and `secure`; or `sameSite: 'none'` without `secure`.
 
@@ -176,6 +178,7 @@ prove deployed listener reachability.
 **Severity:** `block`
 
 ### `jsts.HC-16` — Non-public route, Route Handler, or Server Action lacks authorization enforcement
+<!-- lean-audit:sync-intentional: per-stack packs load independently (Quick audits read only one), so this family's rule and carve-outs are deliberately restated in jsts.HC-16 and pys.HC-14; edit all 2 together. -->
 
 **Pattern:** Express, Fastify, Koa, or Hono routes on non-public endpoints are registered without the project's auth middleware and are not covered by app- or router-level middleware; Next.js Route Handlers or Server Actions (`'use server'`) change state or return non-public data without an in-handler session or authorization check (middleware matcher coverage alone does not count, because Server Actions are directly invocable POST endpoints); or tRPC `publicProcedure` is used for non-public operations. Object-level ownership stays `DSO-SUB-4`.
 
