@@ -23,12 +23,5 @@ integration in this order:
    URL-encoded path form for project paths, the item IID (`issue_iid` or
    `merge_request_iid`), and pagination-aware reads.
 
-A connected server does not establish that every operation is available. If a
-route lacks the needed operation, continue down the order for that operation;
-never treat missing authentication or permission as a capability gap to bypass.
-Before any write, verify the selected route's account, host, project, and write
-authority. Never broaden the user's requested action or target when changing
-routes.
-
-If the selected route points at the wrong account, host, or project, escalate
-the item (issue or PR/MR).
+Apply [provider-lifecycle-core.md § Route selection](provider-lifecycle-core.md#route-selection)
+to this order; the target is the host and project.

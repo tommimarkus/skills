@@ -2,8 +2,20 @@
 
 The provider-agnostic lifecycle-marker mechanics and escalation gates for
 `issue-ops` and `pr-ops`. The provider references and each skill's provider
-extension cite the two sections below and layer their own provider- and
+extension cite the three sections below and layer their own provider- and
 item-specific detail on top.
+
+## Route selection
+
+Select the route separately for each operation, using the provider's ordered
+route list. A connected server does not establish that every operation is
+available. If a route lacks the needed operation, continue down the order for
+that operation; never treat missing authentication or permission as a capability
+gap to bypass. Before any write, verify the selected route's account, target
+(the repository or project, plus the host where the provider has one), and write
+authority. Never broaden the user's requested action or target when changing
+routes. If the selected route points at the wrong account or target, escalate
+the item (issue or PR/MR).
 
 ## Lifecycle marker mechanics
 

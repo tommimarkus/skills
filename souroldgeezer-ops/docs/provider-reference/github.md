@@ -17,12 +17,8 @@ integration in this order:
 3. GitHub REST API when the MCP and `gh` routes are absent or lack that
    operation, after verifying an authorized credential and repository identity.
 
-A connected server does not establish that every operation is available. If a
-route lacks the needed operation, continue down the order for that operation;
-never treat missing authentication or permission as a capability gap to bypass.
-Before any write, verify the selected route's account, repository, and write
-authority. Never broaden the user's requested action or target when changing
-routes.
+Apply [provider-lifecycle-core.md § Route selection](provider-lifecycle-core.md#route-selection)
+to this order.
 
 Issue references in commits and PR text must not trigger provider auto-close
 before issue verification and the required final lifecycle marker are complete.
@@ -31,9 +27,6 @@ after re-reading live state and writing the final marker. If integration has
 already auto-closed it, reconcile the live closed state after verification and
 write the marker as a later event; do not report that the marker preceded
 closure. See [GitHub's closing-keyword behavior](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue).
-
-If the selected route points at the wrong account or repository, escalate the
-item (issue or PR/MR).
 
 ## Lifecycle Marker Mechanics
 
