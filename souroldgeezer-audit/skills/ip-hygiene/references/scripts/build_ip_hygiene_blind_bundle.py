@@ -19,6 +19,11 @@ ALLOWLIST = (
     "souroldgeezer-audit/skills/ip-hygiene/references/drive-by.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/cases.jsonl",
     "souroldgeezer-audit/skills/ip-hygiene/references/licence-assets.md",
+    # Lane procedures SKILL.md stubs load on demand; the evaluator follows
+    # those load cues exactly as a real reviewer does.
+    "souroldgeezer-audit/skills/ip-hygiene/references/procedures/in-depth-review.md",
+    "souroldgeezer-audit/skills/ip-hygiene/references/procedures/prospective-decision.md",
+    "souroldgeezer-audit/skills/ip-hygiene/references/procedures/remediation.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py",
     "souroldgeezer-audit/skills/ip-hygiene/references/source-code.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/trademark.md",

@@ -1,4 +1,5 @@
 import hashlib
+import re
 import json
 import subprocess
 import sys
@@ -185,6 +186,40 @@ class IpHygieneBundleAllowlistCoverageTest(unittest.TestCase):
                     allowlist,
                     f"{reference.name} is neither bundled nor listed in "
                     "DECLARED_EXCLUSIONS with a reason",
+                )
+
+    #: Procedures SKILL.md links for maintainers only, with the reason each stays
+    #: outside the bundle. Every other linked procedure carries lane depth the
+    #: evaluator's workflow loads, so it must be bundled.
+    MAINTAINER_ONLY_PROCEDURES = {
+        # Eval-authoring and scoring method; giving it to the evaluator would leak method.
+        "eval-maintenance.md",
+        # Language-pack authoring guidance, not facts about reviewed material.
+        "extension-authoring.md",
+    }
+
+    def test_every_procedure_linked_from_skill_is_bundled_or_maintainer_only(self) -> None:
+        skill = read("souroldgeezer-audit/skills/ip-hygiene/SKILL.md")
+        linked = sorted(set(re.findall(r"\]\((references/procedures/[^)#\s]+\.md)", skill)))
+        self.assertTrue(linked, "SKILL.md links no references/procedures/*.md")
+        allowlist = self._allowlist()
+        for target in linked:
+            relative = f"souroldgeezer-audit/skills/ip-hygiene/{target}"
+            name = Path(target).name
+            with self.subTest(procedure=name):
+                if name in self.MAINTAINER_ONLY_PROCEDURES:
+                    self.assertNotIn(
+                        relative,
+                        allowlist,
+                        f"{name} is maintainer-only but is bundled",
+                    )
+                    continue
+                self.assertIn(
+                    relative,
+                    allowlist,
+                    f"{name} is linked from SKILL.md but is neither bundled nor "
+                    "declared maintainer-only; the evaluator would follow its load "
+                    "cue into a missing file",
                 )
 
     #: Parent-only scoring material. If any of these ever reaches ALLOWLIST,

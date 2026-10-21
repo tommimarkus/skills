@@ -73,3 +73,8 @@ b = "souroldgeezer-policy/skills/{skill}/SKILL.md"
 [[carve_out]]                                   # policy sibling SKILL.md files share the mandated family scaffolding (Modes/Rules/Ask-vs-continue shape); the shared posture itself is single-sourced in docs/policy-reference/policy-posture-core.md, so the residual parallel is structural, not restated prose
 a = "souroldgeezer-policy/skills/*/SKILL.md"
 b = "souroldgeezer-policy/skills/*/SKILL.md"
+
+[[skill_budget]]                                # reviewed per-file SKILL.md body budget (measured after the in-depth / prospective / remediation lane depth moved to references/procedures/)
+path = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
+lines = 316
+rationale = "Every-lane legal contract that triage and in-depth both need inline: criteria and authority classes, the triage gate, classification decision boundaries, the finding record, counsel escalation and stops, and the disclosure footer. Lane-only depth lives in references/procedures/."

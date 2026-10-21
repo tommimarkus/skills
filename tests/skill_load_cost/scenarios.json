@@ -721,6 +721,7 @@
     "skill": "ip-hygiene",
     "files": [
       "souroldgeezer-audit/skills/ip-hygiene/SKILL.md",
+      "souroldgeezer-audit/skills/ip-hygiene/references/procedures/in-depth-review.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",

@@ -6,6 +6,7 @@ from tests.surface_test_lib import REPO_ROOT, read
 
 
 SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
+IN_DEPTH_PATH = "souroldgeezer-audit/skills/ip-hygiene/references/procedures/in-depth-review.md"
 CORPUS = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus"
 
 
@@ -29,7 +30,8 @@ class IpHygieneTriageGateTest(unittest.TestCase):
         normalized = " ".join(skill.split())
         self.assertIn("Answer all six questions by judgment", normalized)
         self.assertIn("All six no: emit `nothing to check`", normalized)
-        self.assertIn("apply all six triage questions per surface", normalized)
+        in_depth = " ".join(read(IN_DEPTH_PATH).split())
+        self.assertIn("apply all six triage questions per surface", in_depth)
         self.assertIn(
             "Does a touched source file carry, need, lose, or transform a copyright or licence notice, "
             "attribution comment, or generated-code banner?",

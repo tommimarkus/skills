@@ -41,17 +41,25 @@ class IpHygieneLegalContractTest(unittest.TestCase):
 
     def test_in_depth_verdict_remediation_and_assurance_are_bounded(self) -> None:
         skill = read(SKILL)
-        self.assertIn(
-            "in-depth verdict: <blocked | qualified | no-blocker-identified>", skill
-        )
-        self.assertNotIn("in-depth verdict: <clean", skill)
+        # The SKILL.md stub names the exact verdict line; the procedure defines it.
+        for text in (skill, read(f"{REFS}/procedures/in-depth-review.md")):
+            self.assertIn(
+                "in-depth verdict: <blocked | qualified | no-blocker-identified>", text
+            )
+            self.assertNotIn("in-depth verdict: <clean", text)
         self.assertContainsAll(
             skill,
             (
                 "read-only by default",
                 "remediated:",
-                "fresh rerun",
                 "No finding or verdict is legal clearance",
+            ),
+        )
+        self.assertContainsAll(
+            read(f"{REFS}/procedures/remediation.md"),
+            (
+                "remediated:",
+                "fresh rerun",
             ),
         )
 

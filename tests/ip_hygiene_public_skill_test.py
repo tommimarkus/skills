@@ -7,6 +7,7 @@ PUBLIC_SKILL = REPO_ROOT / "souroldgeezer-audit" / "skills" / "ip-hygiene"
 INTERNAL_SKILL = REPO_ROOT / ".claude" / "skills" / "ip-hygiene"
 PUBLIC_SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
 INTERNAL_SKILL_PATH = ".claude/skills/ip-hygiene/SKILL.md"
+REMEDIATION_PATH = "souroldgeezer-audit/skills/ip-hygiene/references/procedures/remediation.md"
 AUDIT_DESCRIPTION = (
     "Rubric-driven audits for DevSecOps posture, test quality, IP hygiene, and "
     "duplication/waste (Lean), with per-stack extensions and evidence-focused "
@@ -47,9 +48,11 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         self.assertIn("checked: <reviewed criterion codes and surfaces>; no IP hygiene changes needed", skill)
         self.assertIn("remediated:", skill)
         self.assertIn("counsel outcome", skill)
+        remediation = read(REMEDIATION_PATH)
+        self.assertIn("remediated:", remediation)
         self.assertIn(
             "deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit",
-            skill,
+            remediation,
         )
 
     def test_public_skill_scope_is_source_code_repo_wide_with_a_stated_future_scope_boundary(self) -> None:

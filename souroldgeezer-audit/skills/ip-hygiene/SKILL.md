@@ -103,13 +103,11 @@ The lanes are prospective decision, limited-assurance triage, and
 reasonable-hygiene in-depth review.
 
 - **Prospective decision** — the user asks whether or how a specified future
-  act can proceed. Test that act against the identified source, audience,
-  distribution form, and authority. Return `prospective decision:
+  act can proceed. It emits one `prospective decision:
   <proceed-with-stated-controls | do-not-proceed | insufficient-evidence |
-  counsel-required>` plus the stated decision controls, supporting evidence,
-  and limits. State the controlling non-publication step for `do-not-proceed`
-  or `counsel-required`; never emit a bare outcome. This is a scoped hygiene
-  decision, not clearance.
+  counsel-required>` line with its decision controls. Before deciding, load
+  [prospective-decision.md](references/procedures/prospective-decision.md) for
+  the outcome contract.
 - **Limited-assurance triage** — a change-scoped or path-scoped review. It does
   not enumerate the whole publication surface. Emit findings, one `triage
   gate:` line, and a limited-assurance footer.
@@ -245,33 +243,17 @@ conservative-policy finding; do not label the legal application as fact.
 
 ## In-Depth Procedure And Verdict
 
-1. Enumerate every in-scope publication surface and the distribution forms it
-   produces. Record exclusions.
-2. Survey risk before catalog work; prioritize public names/branding, bundled
-   or vendored material, notices, generated packages, and copied documentation.
-3. Run the pre-filter over the full enumeration, then apply all six triage
-   questions per surface and all hit criteria.
-4. Corroborate source identity, actual file-level licence, holder policy, and
-   jurisdiction/applicability. Mark static conclusions as inference. At scale,
-   sample and project under audit-craft section 6 and disclose the basis. Before
-   sampling, when the surface is large enough that per-surface evidence may not
-   reach the verdict intact, load
-   [scaled-audit.md](../../docs/audit-reference/scaled-audit.md) (delegation +
-   evidence durability); if evidence starts outgrowing context mid-run, load it
-   then rather than continuing. Triage must not load it.
-5. Emit findings and exactly
-   `in-depth verdict: <blocked | qualified | no-blocker-identified>`:
-   - `blocked` — a substantiated blocking condition or mandatory counsel
-     escalation prevents a repository hygiene decision;
-   - `qualified` — no substantiated block remains, but findings or material
-     evidence/sampling limitations qualify the result;
-   - `no-blocker-identified` — sufficient appropriate evidence over the stated
-     surface identified no blocking criterion. It does not mean clean,
-     non-infringing, compatible, or cleared.
-
-Every in-depth result names the reviewed surface, exclusions, supporting
-evidence, and limits, including an explicit `none` where there are no
-exclusions. A verdict without that boundary evidence is incomplete.
+The in-depth lane enumerates and risk-surveys the stated surface, then emits
+findings, exactly one
+`in-depth verdict: <blocked | qualified | no-blocker-identified>` line with its
+boundary evidence, and the footer. Before in-depth fieldwork, load
+[in-depth-review.md](references/procedures/in-depth-review.md) for its steps,
+verdict definitions, and boundary-evidence rule; triage loads neither it nor
+the scaled-audit reference below. When per-surface evidence may not reach the
+verdict intact, it routes to
+[scaled-audit.md](../../docs/audit-reference/scaled-audit.md) before sampling;
+if evidence starts outgrowing context mid-run, load it then rather than
+continuing.
 
 ## Finding And Remediation Contract
 
@@ -300,16 +282,11 @@ missing load-bearing evidence. Use `not-triggered` when neither that prudent
 referral nor a mandatory trigger is evidenced. A no-finding run emits `nothing to check` or `checked: <reviewed criterion codes and surfaces>; no IP hygiene changes needed`;
 neither is clearance.
 
-Only an explicit fix request authorizes repairs. Keep audit findings unchanged,
-make the requested bounded repair, and add a separate `remediated:` record with
-the finding ID, changed location, action, authority used, and verification. A
-fresh rerun is required for a new gate or verdict. Do not reuse a pre-fix result.
-The former `fixed: <path:line> - <remedy summary> [<severity>|<risk tier>];
-consequence: <effect if unaddressed>` form is retired in favor of `remediated:`.
-
-For an out-of-bound drive-by issue, preserve the compact observation:
-`deferred drive-by observation at <path:line> - <issue>; recommend separate retroactive audit [<severity>|<risk tier>]`,
-and include its full finding data.
+Only an explicit fix request authorizes repairs; each repair leaves the audit
+findings unchanged and adds a separate `remediated:` record. Before repairing,
+load [remediation.md](references/procedures/remediation.md) for that record and
+its rerun rule. An out-of-bound drive-by issue keeps the compact observation in
+[drive-by.md](references/drive-by.md) with its full finding data.
 
 ## Counsel Escalation And Stops
 
