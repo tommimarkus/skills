@@ -4,526 +4,23 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import functools
-import importlib.util
 import json
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import uuid
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-# A v4/v5 checkpoint retains one bounded capability binding per step. Keep the
-# record bounded while leaving the established 40-step summary lane viable.
-MAX_CHECKPOINT = 64 * 1024
-MAX_LEGACY_CHECKPOINT = 16 * 1024
-MAX_RETURN = 8 * 1024
-MAX_WORKER_HANDOFF = 32 * 1024
-MAX_WORKER_HANDOFF_RAW = MAX_WORKER_HANDOFF + 1024
-MAX_REMEDIATION = 4 * 1024
-MAX_SERIES_HANDOFF = 8 * 1024
-MAX_USAGE = 4 * 1024
-MAX_TOKENS = 1200
-MAX_USAGE_TOKENS = 600
-# A `next` block restates what the acting command just decided, so it stays far
-# smaller than a summary: enough for the state and one CLI hint, never a report.
-MAX_NEXT_TOKENS = 120
-MAX_NEXT_ONLY_TOKENS = 240
-ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-SHA = re.compile(r"^[0-9a-f]{64}$")
-SHA40 = re.compile(r"^[0-9a-f]{40}$")
-COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
-PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
-V1_STATES = {
-    "pending",
-    "ready",
-    "in_progress",
-    "completed",
-    "integrated",
-    "blocked",
-    "failed",
-    "superseded",
-    "discarded",
-}
-TRANS = {
-    "pending": {"ready", "superseded", "discarded"},
-    "ready": {"in_progress", "blocked", "superseded", "discarded"},
-    "in_progress": {"completed", "blocked", "failed", "superseded", "discarded"},
-    "blocked": {"ready", "superseded", "discarded"},
-    "failed": {"ready", "superseded", "discarded"},
-    "completed": {"integrated", "discarded"},
-    "integrated": set(),
-    "superseded": set(),
-    "discarded": set(),
-}
-NOTE_TYPES = {"finding", "decision_needed", "residual_risk", "untouched", "verification_limit"}
-# Single source for the bounded-step-return-v1 contract. Every prose restatement
-# of these facts is checked against them by tests/planning_return_contract_parity_test.py.
-RETURN_STATUSES = {"completed", "blocked", "failed", "oversized"}
-MAX_CHANGED_PATHS = 32
-MAX_BLOCKERS = 8
-MAX_NOTES = 8
-MAX_REMAINDER = 8
-MAX_BLOCKER_CODE = 120
-MAX_ACCEPTANCE_SUMMARY = 480
-MAX_NOTE_MESSAGE = 480
-MAX_BLOCKER_SUMMARY = 240
-MAX_REMAINDER_ITEM = 240
-MAX_PATH = 240
-V2_STATES = {
-    "pending",
-    "ready",
-    "in_progress",
-    "completed",
-    "integrated",
-    "cleaned",
-    "blocked",
-    "failed",
-    "oversized",
-    "discarded",
-}
-WORKTREE_RESULT_FIELDS = {
-    "schema",
-    "ok",
-    "action",
-    "repo_root",
-    "target",
-    "branch",
-    "worktree",
-    "source_commit",
-    "rebased_commit",
-    "parent_before",
-    "parent_after",
-}
-# The Git-policy helper always emits `rebased_tree_changed` and adds
-# `batch_source_commits` only for a batch integrate, so both stay optional here:
-# a result recorded before either existed still validates.
-WORKTREE_RESULT_OPTIONAL = {"rebased_tree_changed", "batch_source_commits"}
-# A batch is one dispatch in one shared worktree, so a member's dependency on an
-# earlier member is satisfied by progress rather than by that member's cleanup.
-BATCH_DEPENDENCY_STATES = {"ready", "in_progress", "completed", "cleaned"}
-EXTERNAL_DEPENDENCY_STATES = {"integrated", "cleaned"}
-BATCH_STOPPED_STATES = {"blocked", "failed", "oversized"}
-BATCH_ACTIVE_STATES = {"pending", "ready", "in_progress"}
-CLOSEOUT_FIELDS = {
-    "returned_commit": "",
-    "integrated_commit": "",
-    "integration_result_path": "",
-    "integration_result_sha256": "",
-    "cleanup_result_path": "",
-    "cleanup_result_sha256": "",
-}
-# Execution-metadata amendments: a bounded per-step overlay on the approved leaf.
-AMENDMENT_FIELDS = {
-    "reason",
-    "add_write",
-    "add_read",
-    "after_attempt_id",
-    "after_attempt_count",
-    "return_recorded",
-}
-AMENDMENT_OPTIONAL = {"acceptance_command", "max_attempts"}
-MAX_AMENDMENTS = 4
-MAX_AMENDMENT_PATHS = 8
-MAX_AMENDED_ATTEMPTS = 5
-MAX_AMENDED_COMMAND = 2048
-AMENDABLE_STATES = {"pending", "ready", "blocked", "failed", "oversized"}
-SCOPE_REJECTION_REASON = "oversized: changed path outside write_set"
-TERMINAL_RETRY_REASONS = {
-    "blocked:no_progress",
-    "blocked:retry_exhausted",
-    "blocked:retry_ceiling_reached",
-}
-RETENTION_DAYS = {
-    "completed": 30,
-    "blocked": 90,
-    "abandoned": 7,
-    "discarded": 7,
-    "superseded": 7,
-}
-LIFECYCLE_FIELDS = {"run_status", "outcome", "closed_at", "purge_after"}
-ESCALATING_RETRY_POLICY = "escalating_remediation_v1"
-REGISTERED_RETURN_CODES = "registered_v1"
-# The closed blocker-code vocabulary a registered run enforces, by return status.
-RETURN_CODES = {
-    "blocked": tuple(
-        f"blocked:{name}"
-        for name in (
-            "missing_input",
-            "needs_higher_tier",
-            "model_unavailable",
-            "capability_unavailable",
-            "environment",
-        )
-    ),
-    "failed": ("failed:acceptance", "failed:execution", "failed:verification"),
-    "oversized": ("oversized:scope", "oversized:changeset"),
-}
-# Recorded by the ledger alone (record-verify): a worker return can never carry it.
-VERIFIER_ONLY_CODES = {"failed:verification"}
-# Repairable stops retry at the same tier without spending the same-tier retry.
-REPAIRABLE_CODES = {"blocked:environment"}
-# The stops that need reasoning rather than repair, by (status, code).
-REASONING_STOPS = {
-    ("failed", "failed:acceptance"),
-    ("failed", "failed:verification"),
-    ("blocked", "blocked:needs_higher_tier"),
-}
-VERIFY_POLICIES = {"leaf_verify_v1", "closeout_only"}
-# Retained-run stamp of the removed provisional-start pipeline. Load accepts it;
-# a run whose steps still carry stacked state refuses every mutation.
-RETAINED_PIPELINE_POLICY = "provisional_v1"
-RETAINED_PIPELINE_FIELDS = ("provisional_base", "upstream_stale", "upstream_change", "pending_acceptance")
-RETAINED_PIPELINE_CODE = "blocked:upstream_changed"
-MAX_CONCURRENT = 4
-NON_ACTION_CATEGORIES = {
-    "terminal_closed", "terminal_blocked", "validate_closeout", "contract_migration_required",
-}
-# The stamp maps to the plan's precision word; a run without it keeps the hard scope rejection.
-PRECISION_POLICIES = {"standard_v1": "standard", "strict_v1": "strict"}
-CHANGESET_BUDGET_FIELDS = {"max_changed_lines", "max_files", "exempt_paths", "base_commit"}
-MAX_CHECK_OUTSIDE = 8
-MAX_VERIFY_HANDOFF = 16 * 1024
-MAX_VERIFY_RETURN = 4 * 1024
-VERIFY_VERDICTS = {"pass", "reject", "inconclusive"}
-VERIFY_PASSING = {"pass", "inconclusive"}
-VERIFY_CODES = {
-    "verify:coverage", "verify:decision", "verify:regression", "verify:scope_creep",
-    "verify:acceptance_gap",
-}
-VERIFY_FINDING_FIELDS = {"code", "path", "line", "clause", "summary"}
-VERIFY_HANDOFF_FIELDS = {
-    "schema", "packet_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "attempt_id",
-    "agent_id", "verify_id", "verifier_tier", "task", "boundary", "settled_decisions",
-    "write_set", "acceptance_command", "cohesive_outcome", "acceptance_exit_code",
-    "base_commit", "returned_commit", "budget", "changeset", "prior_verify", "return_schema",
-}
-# Added to a packet only for a run stamped with a precision policy.
-VERIFY_HANDOFF_OPTIONAL = {"outside_write_set", "outside_write_set_count"}
-# The verifier is read-only: mechanical and standard builds get the standard
-# verifier, analytical and deep builds the analytical one.
-VERIFIER_AGENTS = {
-    "mechanical": "plan-verify-standard", "standard": "plan-verify-standard",
-    "analytical": "plan-verify-analytical", "deep": "plan-verify-analytical",
-}
-RUN_SCHEMAS = {2, 3, 4, 5}
-CAPABILITY_SCHEMAS = {4, 5}
-LIVE_NEXT_SCHEMAS = {4, 5}
-FORWARD_SCHEMA = 5
-PORTABLE_TIERS = ("mechanical", "standard", "analytical", "deep")
-RETRY_STATE_FIELDS = {
-    "current_tier",
-    "same_tier_retry_used",
-    "current_assignment",
-    "retry_remediation_path",
-    "retry_remediation_sha256",
-}
-REMEDIATION_FIELDS = {
-    "schema",
-    "step_id",
-    "prior_attempt_id",
-    "prior_return_sha256",
-    "diagnosis",
-    "remediation_action",
-    "executor_mode",
-    "next_agent_id",
-    "next_harness",
-    "target_portable_tier",
-}
-SERIES_HANDOFF_SCHEMA = "planning-series-handoff-v1"
-SERIES_HANDOFF_FIELDS = {
-    "schema",
-    "plan_id",
-    "run_id",
-    "series_id",
-    "slice",
-    "landed",
-    "decisions",
-    "assumptions_to_revalidate",
-    "remaining_scope",
-}
-SERIES_HANDOFF_LIST_FIELDS = (
-    "landed",
-    "decisions",
-    "assumptions_to_revalidate",
-    "remaining_scope",
-)
-USAGE_FIELDS = {
-    "schema",
-    "run_id",
-    "step_id",
-    "attempt_id",
-    "actor",
-    "stage",
-    "harness",
-    "model",
-    "input_tokens",
-    "output_tokens",
-    "total_tokens",
-}
-USAGE_STAGES = {
-    "prepare",
-    "implement",
-    "validate",
-    "integrate",
-    "final_verify",
-    "unknown",
-}
-RAW_USAGE_FIELDS = {
-    "prompt",
-    "completion",
-    "arguments",
-    "results",
-    "raw_log",
-    "messages",
-    "content",
-}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-
-class Error(Exception):
-    pass
-
-
-def now():
-    return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def timestamp(value, label="timestamp"):
-    if not isinstance(value, str) or not value.endswith("Z"):
-        raise Error(f"invalid {label}")
-    try:
-        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
-    except ValueError as exc:
-        raise Error(f"invalid {label}") from exc
-    if parsed.tzinfo is None or parsed.utcoffset() != timedelta(0):
-        raise Error(f"invalid {label}")
-    return parsed
-
-
-def retained_until(closed_at, outcome):
-    return (
-        (timestamp(closed_at, "closed_at") + timedelta(days=RETENTION_DAYS[outcome]))
-        .replace(microsecond=0)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
-
-
-def bounded_reason(value, label, required=False):
-    if not isinstance(value, str) or len(value) > 480 or (required and not value):
-        raise Error(f"{label} requires a bounded reason")
-    return value
-
-
-def canon(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-
-
-def digest(value):
-    return hashlib.sha256(canon(value)).hexdigest()
-
-
-def out(value, code=0):
-    print(json.dumps(value, sort_keys=True, separators=(",", ":")))
-    return code
-
-
-def ident(value, label="id"):
-    if not isinstance(value, str) or not ID.fullmatch(value):
-        raise Error(f"invalid {label}")
-    return value
-
-
-def uuid4(value, label="run id"):
-    try:
-        parsed = uuid.UUID(value)
-    except (TypeError, ValueError) as exc:
-        raise Error(f"{label} must be canonical lowercase UUID4") from exc
-    if parsed.version != 4 or str(parsed) != value:
-        raise Error(f"{label} must be canonical lowercase UUID4")
-    return value
-
-
-def rel(value, label="path", maximum=MAX_PATH):
-    if (
-        not isinstance(value, str)
-        or not value
-        or len(value) > maximum
-        or Path(value).is_absolute()
-        or ".." in Path(value).parts
-    ):
-        raise Error(f"invalid relative {label}")
-    return value
-
-
-def changed_path_allowed(path, write_set):
-    return validator_module().write_set_covers(write_set, path)
-
-
-def standard_precision(data):
-    """True for a run stamped standard_v1; an unstamped retained run stays strict."""
-    return data.get("precision_policy") == "standard_v1"
-
-
-def outside_paths(paths, write_set):
-    """The returned or committed paths no write_set entry covers, in first-seen order."""
-    return [path for path in dict.fromkeys(paths) if not changed_path_allowed(path, write_set)]
-
-
-def root(args):
-    if args.ledger_root:
-        path = Path(args.ledger_root)
-        if not path.is_absolute():
-            raise Error("--ledger-root must be absolute")
-        return path.resolve() / "planning-policy" / "ledgers"
-    repo = Path(args.repo_root or Path.cwd()).resolve()
-    result = subprocess.run(
-        ["git", "-C", str(repo), "rev-parse", "--git-common-dir"], text=True, capture_output=True
-    )
-    if result.returncode:
-        raise Error("not a Git worktree; pass --ledger-root")
-    common = Path(result.stdout.strip())
-    common = (repo / common).resolve() if not common.is_absolute() else common.resolve()
-    return common / "planning-policy" / "ledgers"
-
-
-def repository_top(args):
-    """The checkout relative assignment worktrees resolve against."""
-    if args.repo_root:
-        return Path(args.repo_root).resolve()
-    result = subprocess.run(
-        ["git", "rev-parse", "--show-toplevel"], text=True, capture_output=True
-    )
-    return Path(result.stdout.strip() if result.returncode == 0 else Path.cwd()).resolve()
-
-
-def plan_dir(args):
-    return root(args) / ident(args.plan_id, "plan id")
-
-
-def v2_dir(args):
-    return plan_dir(args) / uuid4(args.run_id)
-
-
-def write(path, value, maximum=MAX_CHECKPOINT):
-    raw = canon(value) + b"\n"
-    if len(raw) > maximum:
-        raise Error("bounded record exceeds limit")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".ledger-")
-    try:
-        with os.fdopen(fd, "wb") as file:
-            file.write(raw)
-            file.flush()
-            os.fsync(file.fileno())
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-
-
-def event(directory, data, action, **facts):
-    data["event_sequence"] += 1
-    data["updated_at"] = now()
-    write(
-        directory / "checkpoint.json",
-        data,
-        MAX_LEGACY_CHECKPOINT if data.get("schema_version") == 1 else MAX_CHECKPOINT,
-    )
-    with (directory / "events.jsonl").open("ab") as file:
-        file.write(
-            canon(
-                {
-                    "sequence": data["event_sequence"],
-                    "at": data["updated_at"],
-                    "actor": "parent",
-                    "action": action,
-                    "plan_id": data["plan_id"],
-                    "run_id": data.get("run_id", ""),
-                    **facts,
-                }
-            )
-            + b"\n"
-        )
-
-
-def parent(actor):
-    if actor != "parent":
-        raise Error("only actor 'parent' may mutate a ledger")
-
-
-def approved_parent(args):
-    parent(args.actor)
-    if not args.approved:
-        raise Error("--approved is required")
-
-
-def initial_event(directory, timestamp, action, plan_id, **facts):
-    payload = {
-        "sequence": 1,
-        "at": timestamp,
-        "actor": "parent",
-        "action": action,
-        "plan_id": plan_id,
-        **facts,
-    }
-    (directory / "events.jsonl").write_bytes(canon(payload) + b"\n")
-
-
-def selected_step(data, step_id):
-    sid = ident(step_id, "step id")
-    if sid not in data["steps"]:
-        raise Error("unknown step id")
-    return sid, data["steps"][sid]
-
-
-def dependency_order(steps):
-    """Reject unknown or cyclic dependencies in either ledger schema."""
-    if any(dep not in steps for step in steps.values() for dep in step["dependencies"]):
-        raise Error("unknown dependency")
-    visiting, visited = set(), set()
-
-    def visit(step_id):
-        if step_id in visiting:
-            raise Error("dependency cycle")
-        if step_id not in visited:
-            visiting.add(step_id)
-            for dependency in steps[step_id]["dependencies"]:
-                visit(dependency)
-            visiting.remove(step_id)
-            visited.add(step_id)
-
-    for step_id in steps:
-        visit(step_id)
-
-
-def read_json(path, message):
-    try:
-        return json.loads(Path(path).read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        raise Error(message) from exc
-
-
-def required_file(directory, name, message):
-    path = directory / name
-    if not path.is_file():
-        raise Error(message)
-    return path
-
-
-def require_sha256(value, message):
-    if not isinstance(value, str) or not SHA.fullmatch(value):
-        raise Error(message)
-
-
-def proxy_tokens(value):
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
-    return len(PROXY_TOKEN_RE.findall(encoded))
+from planningledger import contract, core, gitops
+from planningledger.vocabulary import *  # noqa: F403
+from planningledger.core import *  # noqa: F403
+from planningledger.store import *  # noqa: F403
+from planningledger.gitops import *  # noqa: F403
+from planningledger.contract import *  # noqa: F403
 
 
 def bounded_next(value, droppable=(), trimmable=""):
@@ -545,7 +42,6 @@ def bounded_next(value, droppable=(), trimmable=""):
         value["truncated"] = True
     return value
 
-
 def bounded_action_next(value, trimmable=""):
     """Keep the first legal command while trimming a convenience collection."""
     while (
@@ -562,7 +58,6 @@ def bounded_action_next(value, trimmable=""):
         raise Error("next block exceeds 120 proxy tokens")
     return value
 
-
 def stop_step(step, status, reason, code, summary):
     step.update(
         status=status,
@@ -571,11 +66,9 @@ def stop_step(step, status, reason, code, summary):
         blockers=[{"code": code, "summary": summary}],
     )
 
-
 def reject_return(directory, data, step, sid, reason, code, summary):
     stop_step(step, "oversized", reason, code, summary)
     event(directory, data, "record-return", step_id=sid, status="oversized")
-
 
 def result2(action, args, sid, step, **extra):
     return {
@@ -587,14 +80,11 @@ def result2(action, args, sid, step, **extra):
         **extra,
     }
 
-
 def ordered_steps(steps):
     return sorted(steps.values(), key=lambda value: value["id"])
 
-
 def transition_scope(plan_id, run_id):
     return f"--plan-id {plan_id} transition --actor parent --run-id {run_id}"
-
 
 def dispatch_command(plan_id, run_id, step_id):
     return (
@@ -602,14 +92,12 @@ def dispatch_command(plan_id, run_id, step_id):
         f"--step-id {step_id} --agent-id <agent-id>"
     )
 
-
 def land_command(data, step_id):
     """Integrate and clean a step: composite land in v5, granular transitions before."""
     return (
         f"--plan-id {data['plan_id']} land --actor parent --run-id {data['run_id']} "
         f"--step-id {step_id} --target <target-branch>"
     )
-
 
 def verify_commands(data, step_id):
     """The leaf_verify_v1 gate: check-changeset first, then verify-handoff."""
@@ -622,7 +110,6 @@ def verify_commands(data, step_id):
         ),
     }
 
-
 def integrate_command(data, step_id):
     if data.get("schema") == FORWARD_SCHEMA:
         return land_command(data, step_id)
@@ -631,7 +118,6 @@ def integrate_command(data, step_id):
         "--to integrated --worktree-result <planning-worktree-result-v1.json>"
     )
 
-
 def cleanup_command(data, step_id):
     if data.get("schema") == FORWARD_SCHEMA:
         return land_command(data, step_id)
@@ -639,7 +125,6 @@ def cleanup_command(data, step_id):
         f"{transition_scope(data['plan_id'], data['run_id'])} --step-id {step_id} "
         "--to cleaned --worktree-result <planning-worktree-result-v1.json>"
     )
-
 
 def ready_command(data, step_id):
     """Start a pending step: composite dispatch in v5, granular ready before."""
@@ -650,7 +135,6 @@ def ready_command(data, step_id):
         "--to ready --agent-id <agent-id>"
     )
 
-
 def dependencies_clean(data, step, batches):
     """Dependencies are satisfied; schema-5 externals unblock at `integrated`."""
     members = batches.get(step["id"], ())
@@ -660,7 +144,6 @@ def dependencies_clean(data, step, batches):
         in (BATCH_DEPENDENCY_STATES if dep in members else external)
         for dep in step["dependencies"]
     )
-
 
 def retained_pipeline_steps(data):
     """Steps still carrying state from the removed provisional-start pipeline."""
@@ -673,7 +156,6 @@ def retained_pipeline_steps(data):
         )
     ]
 
-
 def require_no_retained_pipeline(data):
     """Refuse to mutate a retained provisional_v1 run whose steps carry stacked state."""
     stacked = retained_pipeline_steps(data)
@@ -685,10 +167,8 @@ def require_no_retained_pipeline(data):
             "show, list and gc still work"
         )
 
-
 def attempt_available(step):
     return step["attempt_count"] < step["max_attempts"]
-
 
 def amended_after_return(step):
     """True when an amendment was recorded after the current attempt's return."""
@@ -696,7 +176,6 @@ def amended_after_return(step):
         item["after_attempt_id"] == step["attempt_id"] and item["return_recorded"]
         for item in step.get("amendments", ())
     )
-
 
 def repair_reopened(step):
     """A non-terminal blocked/failed stop whose cause was amended after its return."""
@@ -707,14 +186,11 @@ def repair_reopened(step):
         and amended_after_return(step)
     )
 
-
 def retry_open(step):
     return step["retry_allowed"] or repair_reopened(step)
 
-
 def ready_status_legal(step):
     return step["status"] in {"pending", "blocked", "failed"} and retry_open(step)
-
 
 def ready_candidate(data, step, batches):
     return (
@@ -723,123 +199,11 @@ def ready_candidate(data, step, batches):
         and attempt_available(step)
     )
 
-
-def leaves_by_id(plan):
-    return {leaf["id"]: leaf for leaf in plan["leaves"]}
-
-
 def attempt_return_recorded(step):
     """True once the step's current attempt has a stored return."""
     return bool(step["attempt_id"]) and step["return_path"] == str(
         Path("returns") / step["id"] / f"{step['attempt_id']}.json"
     )
-
-
-def valid_amendments(step, approved, schema):
-    """Return a step's stored amendments, failing closed on any malformed record."""
-    value = step.get("amendments", [])
-    if not isinstance(value, list) or len(value) > MAX_AMENDMENTS or (
-        value and schema != FORWARD_SCHEMA
-    ):
-        raise Error("blocked:plan_tampered")
-    attempts = approved["max_attempts"]
-    try:
-        for item in value:
-            if (
-                not isinstance(item, dict)
-                or not AMENDMENT_FIELDS <= set(item) <= AMENDMENT_FIELDS | AMENDMENT_OPTIONAL
-                or not isinstance(item["reason"], str)
-                or not 1 <= len(item["reason"]) <= 480
-                or not isinstance(item["after_attempt_id"], str)
-                or not isinstance(item["after_attempt_count"], int)
-                or isinstance(item["after_attempt_count"], bool)
-                or not isinstance(item["return_recorded"], bool)
-            ):
-                raise Error("invalid amendment")
-            for key in ("add_write", "add_read"):
-                paths = item[key]
-                if not isinstance(paths, list) or len(paths) > MAX_AMENDMENT_PATHS:
-                    raise Error("invalid amendment")
-                for path in paths:
-                    rel(path, "amendment path")
-            if "acceptance_command" in item and (
-                not isinstance(item["acceptance_command"], str)
-                or not 1 <= len(item["acceptance_command"]) <= MAX_AMENDED_COMMAND
-            ):
-                raise Error("invalid amendment")
-            if "max_attempts" in item:
-                number = item["max_attempts"]
-                if (
-                    not isinstance(number, int)
-                    or isinstance(number, bool)
-                    or not attempts < number <= MAX_AMENDED_ATTEMPTS
-                ):
-                    raise Error("invalid amendment")
-                attempts = number
-    except Error as exc:
-        raise Error("blocked:plan_tampered") from exc
-    return value
-
-
-def validate_amendment_events(directory, data):
-    """Bind each stored amendment to the digest its `amend-v5` event recorded.
-
-    An amendment widens what a return may change, so a checkpoint record that no
-    event vouches for, or an event whose record is gone, fails closed.
-    """
-    stored = {
-        sid: [digest(item) for item in step["amendments"]]
-        for sid, step in data.get("steps", {}).items()
-        if isinstance(step, dict) and step.get("amendments")
-    }
-    recorded = {}
-    path = directory / "events.jsonl"
-    if path.is_file() and not path.is_symlink():
-        try:
-            lines = path.read_text().splitlines()
-        except OSError as exc:
-            raise Error("blocked:plan_tampered") from exc
-        for line in lines:
-            try:
-                value = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise Error("blocked:plan_tampered") from exc
-            if isinstance(value, dict) and value.get("action") == "amend-v5":
-                recorded.setdefault(value.get("step_id"), []).append(
-                    value.get("amendment_sha256")
-                )
-    if stored != recorded:
-        raise Error("blocked:plan_tampered")
-
-
-def effective_leaf(leaf, amendments):
-    """The approved leaf plus its cumulative amendment overlay."""
-    if not amendments:
-        return leaf
-    value = dict(leaf)
-    for field, key in (("write_set", "add_write"), ("read_set", "add_read")):
-        paths = list(leaf[field])
-        for item in amendments:
-            paths.extend(path for path in item[key] if path not in paths)
-        value[field] = paths
-    for item in amendments:
-        for field in AMENDMENT_OPTIONAL:
-            if field in item:
-                value[field] = item[field]
-    return value
-
-
-def effective_leaves(plan, data):
-    """Every consumer of amendable leaf fields reads through this one overlay."""
-    steps = data.get("steps", {})
-    return {
-        sid: effective_leaf(
-            leaf,
-            valid_amendments(steps[sid], leaf, data.get("schema")) if sid in steps else [],
-        )
-        for sid, leaf in leaves_by_id(plan).items()
-    }
-
 
 def scope_rejection_state(step):
     """A step stopped on write_set alone, with no stored return, is repairable."""
@@ -850,7 +214,6 @@ def scope_rejection_state(step):
         and not step["return_sha256"]
     )
 
-
 def step_batches(plan):
     """Derive each batched leaf's member list from the stored canonical plan."""
     groups = {}
@@ -858,7 +221,6 @@ def step_batches(plan):
         if leaf.get("batch"):
             groups.setdefault(leaf["batch"], []).append(leaf["id"])
     return {sid: members for members in groups.values() for sid in members}
-
 
 def batch_settled(data, batches, step_id):
     """True once no member of the step's batch can still commit to its worktree."""
@@ -870,22 +232,6 @@ def batch_settled(data, batches, step_id):
         )
         for member in batches.get(step_id, ())
     )
-
-
-def checkpoint_binding(data):
-    """Rehydrate the complete validator input from bounded per-step bindings."""
-    bindings = []
-    for step in data.get("steps", {}).values():
-        value = step.get("capability_binding") if isinstance(step, dict) else None
-        if not isinstance(value, dict) or not isinstance(value.get("bindings"), list):
-            return None
-        bindings.extend(value["bindings"])
-    return {
-        "schema": "planning-capability-binding-v1",
-        "plan_sha256": data.get("plan_hash"),
-        "bindings": bindings,
-    }
-
 
 def lifecycle(data):
     """Validate lifecycle fields, accepting old active v2 checkpoints in memory."""
@@ -913,11 +259,9 @@ def lifecycle(data):
         raise Error("invalid close_reason")
     return data
 
-
 def active_run(data):
     if lifecycle(data)["run_status"] != "active":
         raise Error("run is closed")
-
 
 def validate_steps2(data, leafs):
     if data.get("retry_policy") not in {None, ESCALATING_RETRY_POLICY}:
@@ -1012,7 +356,6 @@ def validate_steps2(data, leafs):
             raise Error("blocked:plan_tampered")
     dependency_order(steps)
 
-
 def validate_events2(directory, data):
     schema = data.get("schema")
     path = required_file(directory, "events.jsonl", "run events.jsonl does not exist")
@@ -1050,7 +393,6 @@ def validate_events2(directory, data):
     if previous != data.get("event_sequence"):
         raise Error("v2 event sequence mismatch")
 
-
 # Legacy state is deliberately byte-compatible; these paths never load a v2 run.
 def parse_v1(raw):
     try:
@@ -1087,7 +429,6 @@ def parse_v1(raw):
         }
     dependency_order(steps)
     return steps
-
 
 def load1(directory):
     if directory.is_symlink() or not directory.is_dir():
@@ -1136,7 +477,6 @@ def load1(directory):
         raise Error("invalid legacy dependencies") from exc
     return data
 
-
 def legacy_fields():
     return {
         "legacy_schema": 1,
@@ -1146,7 +486,6 @@ def legacy_fields():
         "rehydration_incomplete": True,
         "retry_policy": "legacy_unbounded",
     }
-
 
 def validate_events1(directory, data):
     path = required_file(directory, "events.jsonl", "legacy events.jsonl does not exist")
@@ -1166,15 +505,14 @@ def validate_events1(directory, data):
     if previous != data.get("event_sequence"):
         raise Error("legacy event sequence mismatch")
 
-
 def init1(args):
     approved_parent(args)
     directory = plan_dir(args)
     if directory.exists():
         raise Error("ledger already exists; init is not an overwrite operation")
     steps = parse_v1(args.steps_json)
-    collect_ledgers(root(args), None, timestamp(now()), remove=True)
-    created_at = now()
+    collect_ledgers(root(args), None, timestamp(core.now()), remove=True)
+    created_at = core.now()
     data = {
         "schema_version": 1,
         "plan_id": args.plan_id,
@@ -1194,7 +532,6 @@ def init1(args):
         "plan_id": args.plan_id,
         "step_count": len(data["steps"]),
     }
-
 
 def transition1(args):
     parent(args.actor)
@@ -1246,186 +583,14 @@ def transition1(args):
         "attempt": step["attempt"],
     }
 
-
-@functools.cache
-def validator_module():
-    spec = importlib.util.spec_from_file_location(
-        "plan_contract", Path(__file__).with_name("validate_plan_contract.py")
-    )
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader
-    spec.loader.exec_module(module)
-    return module
-
-
-def plan_validator():
-    return validator_module().validate
-
-
-def read_plan(path, contract_version=FORWARD_SCHEMA):
-    data = read_json(path, "cannot read plan file")
-    result = plan_validator()(data)
-    ready_key = "approval_ready" if contract_version == FORWARD_SCHEMA else "resume_ready"
-    if (
-        not result.get("valid")
-        or not result.get(ready_key)
-        or result.get("contract_version") != contract_version
-    ):
-        raise Error("plan is not dispatch-ready")
-    return data
-
-
-def host_tiers():
-    """The single host tier map: per host, the tier models, skill support, and verifiers."""
-    return read_json(Path(__file__).resolve().parent.parent / "host-tiers.json", "cannot read host tier map")
-
-
-def host_entry(host):
-    entry = host_tiers().get("hosts", {}).get(host)
-    if entry is None:
-        raise UsageError(f"unknown host {host}; the tier map names {sorted(host_tiers()['hosts'])}")
-    return entry
-
-
-def host_step_binding(leaf, host, entry, tier_name, evidence):
-    """One step's binding item for a tier of a host's map; a skill need on a skill-less tier is unavailable."""
-    tier = entry["tiers"][tier_name]
-    requirements = leaf["capability_requirements"]
-    if not tier["skill"] and any(item["kind"] == "skill" for item in requirements["additional"]):
-        raise Error("blocked:capability_unavailable")
-    return {
-        "step_id": leaf["id"], "host": host, "executor": tier["model"],
-        "requirements": requirements, "evidence": evidence,
-    }
-
-
-def derived_setup(plan, host, evidence_text):
-    """Derive the assignments and capability binding of a host run from the tier map."""
-    entry = host_entry(host)
-    evidence = [line.strip() for line in evidence_text.splitlines() if line.strip()]
-    if not 1 <= len(evidence) <= 8 or any(len(line) > 240 for line in evidence):
-        raise UsageError("--evidence needs 1 to 8 lines of at most 240 characters")
-    assigned, bound = [], []
-    for leaf in plan["leaves"]:
-        tier = entry["tiers"][leaf["portable_tier"]]
-        bound.append(host_step_binding(leaf, host, entry, leaf["portable_tier"], evidence))
-        assigned.append({
-            "id": leaf["id"], "harness": host, "model_or_alias": tier["model"],
-            "effort": tier["effort"], "worktree": f".worktrees/{leaf['worktree_owner']}",
-        })
-    binding = {"schema": "planning-capability-binding-v1", "plan_sha256": digest(plan), "bindings": bound}
-    return assigned, binding
-
-
-def tier_alias(args, data, tier):
-    """A host run's dispatch alias is the map entry for the tier; an explicit value must equal it."""
-    if args.command != "dispatch" or not data.get("host"):
-        return args.model_or_alias
-    expected = host_entry(data["host"])["tiers"][tier]["model"]
-    if args.model_or_alias and args.model_or_alias != expected:
-        raise Error(f"model_or_alias must equal the host tier map entry {expected} for tier {tier}")
-    return expected
-
-
-def capability_bindings(path, plan):
-    """Load one complete v4/v5 binding and retain assigned-step evidence."""
-    return checked_binding(read_json(path, "cannot read capability binding file"), plan)
-
-
-def checked_binding(value, plan):
-    result = plan_validator()(plan, capability_binding=value)
-    if not result.get("valid") or not result.get("dispatch_ready"):
-        raise Error("blocked:capability_unavailable")
-    return value
-
-
-def binding_for_step(binding, sid, assignment):
-    matches = [item for item in binding["bindings"] if item["step_id"] == sid]
-    if len(matches) != 1:
-        raise Error("blocked:capability_unavailable")
-    item = matches[0]
-    if (
-        item["host"] != assignment["harness"]
-        or item["executor"] != assignment["model_or_alias"]
-    ):
-        raise Error("blocked:capability_unavailable")
-    return {
-        "schema": binding["schema"],
-        "plan_sha256": binding["plan_sha256"],
-        "bindings": [item],
-    }
-
-
-def valid_stored_binding(value, plan_hash, sid, leaf, assignment):
-    if (
-        not isinstance(value, dict)
-        or set(value) != {"schema", "plan_sha256", "bindings"}
-        or value.get("schema") != "planning-capability-binding-v1"
-        or value.get("plan_sha256") != plan_hash
-        or not isinstance(value.get("bindings"), list)
-        or len(value["bindings"]) != 1
-    ):
-        return False
-    item = value["bindings"][0]
-    return (
-        isinstance(item, dict)
-        and set(item) == {"step_id", "host", "executor", "requirements", "evidence"}
-        and item.get("step_id") == sid
-        and item.get("host") == assignment["harness"]
-        and item.get("executor") == assignment["model_or_alias"]
-        and item.get("requirements") == leaf["capability_requirements"]
-        and isinstance(item.get("evidence"), list)
-        and 1 <= len(item["evidence"]) <= 8
-        and all(
-            isinstance(evidence, str) and 1 <= len(evidence.strip()) <= 240
-            for evidence in item["evidence"]
-        )
-    )
-
-
-def assignments(path, plan):
-    return checked_assignments(read_json(path, "cannot read assignments file"), plan)
-
-
-def checked_assignments(values, plan):
-    if not isinstance(values, list):
-        raise Error("assignments file must be an array")
-    leaves = leaves_by_id(plan)
-    result = {}
-    for value in values:
-        if not isinstance(value, dict) or set(value) != {
-            "id",
-            "harness",
-            "model_or_alias",
-            "effort",
-            "worktree",
-        }:
-            raise Error(
-                "assignment fields must be exactly id, harness, model_or_alias, effort, worktree"
-            )
-        sid = ident(value["id"], "assignment id")
-        if sid not in leaves or sid in result:
-            raise Error("assignments must join each leaf exactly once")
-        for key in ("harness", "model_or_alias", "effort", "worktree"):
-            if not isinstance(value[key], str) or not value[key].strip() or len(value[key]) > 160:
-                raise Error(f"invalid assignment {key}")
-        result[sid] = value
-    if set(result) != set(leaves):
-        raise Error("assignments must join each leaf exactly once")
-    return result
-
-
 def init2(args):
     raise Error("blocked:contract_migration_required")
-
 
 def init3(args):
     raise Error("blocked:contract_migration_required")
 
-
 def init4(args):
     raise Error("blocked:contract_migration_required")
-
 
 def validate_run(directory, data, plan_id, run_id):
     """The single run validator for load2, classify_v2 and load_predecessor_run.
@@ -1453,7 +618,7 @@ def validate_run(directory, data, plan_id, run_id):
     plan = read_json(directory / "plan.json", "blocked:plan_tampered")
     if digest(plan) != data.get("plan_hash") or not SHA.fullmatch(data.get("plan_hash", "")):
         raise Error("blocked:plan_tampered")
-    plan_result = plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
+    plan_result = contract.plan_validator()(plan, capability_binding=checkpoint_binding(data), admission=False)
     ready_key = "dispatch_ready" if data["schema"] == FORWARD_SCHEMA else "resume_ready"
     if not plan_result.get(ready_key) or plan_result.get("contract_version") != data["schema"]:
         raise Error("blocked:plan_tampered")
@@ -1474,7 +639,6 @@ def validate_run(directory, data, plan_id, run_id):
     lifecycle(data)
     return plan, leafs
 
-
 def load_predecessor_run(ledger_root, plan_id, run_id):
     """Load and fully re-validate a predecessor run's checkpoint and plan.
 
@@ -1489,7 +653,6 @@ def load_predecessor_run(ledger_root, plan_id, run_id):
     plan, _ = validate_run(directory, checkpoint, plan_id, run_id)
     validate_events2(directory, checkpoint)
     return checkpoint, plan
-
 
 def series_predecessor_disclosure(ledger_root, series):
     """Compute the init-v5 predecessor cross-check for a slice > 1 successor.
@@ -1517,30 +680,16 @@ def series_predecessor_disclosure(ledger_root, series):
         return "mismatch:end_commands"
     return "matched"
 
-
 def refuse_unowned_pins(args, plan, top):
     """A strict plan must prove no unowned pinning test exists before the run starts."""
     if plan.get("precision") != "strict":
         return
     if not args.pin_roots:
         raise UsageError("a strict plan requires --pin-roots")
-    scan = plan_validator()(plan, pin_roots=args.pin_roots, repo_root=top)
+    scan = contract.plan_validator()(plan, pin_roots=args.pin_roots, repo_root=top)
     pins = [item for item in scan.get("errors", []) if item.startswith("PLANSCOPE-UNOWNED-PIN")]
     if pins:
         raise Error("; ".join(pins[:MAX_CHECK_OUTSIDE])[:480])
-
-
-def primary_checkout(top):
-    """The checkout holding the Git common directory, so a derived worktree is never nested."""
-    result = subprocess.run(
-        ["git", "-C", str(top), "rev-parse", "--git-common-dir"], text=True, capture_output=True
-    )
-    if result.returncode:
-        return top
-    common = Path(result.stdout.strip())
-    common = (top / common).resolve() if not common.is_absolute() else common.resolve()
-    return common.parent if common.name == ".git" else top
-
 
 def init5(args):
     approved_parent(args)
@@ -1570,7 +719,7 @@ def init5(args):
         else capability_bindings(args.capability_binding_file, plan)
     )
     ledger_root = root(args)
-    collect_ledgers(ledger_root, None, timestamp(now()), remove=True)
+    collect_ledgers(ledger_root, None, timestamp(core.now()), remove=True)
     series = plan.get("series")
     series_predecessor = (
         series_predecessor_disclosure(ledger_root, series)
@@ -1578,7 +727,7 @@ def init5(args):
         else None
     )
     directory = plan_dir(args)
-    existing, invalid = scan_ledgers(ledger_root, args.plan_id, timestamp(now()))
+    existing, invalid = scan_ledgers(ledger_root, args.plan_id, timestamp(core.now()))
     if invalid:
         raise Error("target plan ledger directory is invalid")
     if any(entry["legacy"] for entry in existing):
@@ -1588,7 +737,7 @@ def init5(args):
     if run.exists():
         raise Error("generated run already exists")
     leaves = leaves_by_id(plan)
-    created_at = now()
+    created_at = core.now()
     steps = {}
     for sid, leaf in leaves.items():
         resolved_binding = binding_for_step(bindings, sid, assigned[sid])
@@ -1677,7 +826,6 @@ def init5(args):
         result["series_predecessor"] = series_predecessor
     return result
 
-
 def load2(args):
     parent_directory = plan_dir(args)
     if parent_directory.is_symlink() or not parent_directory.is_dir():
@@ -1696,7 +844,6 @@ def load2(args):
         raise
     return directory, data, plan, leafs
 
-
 def mutating_run(args):
     parent(args.actor)
     loaded = load2(args)
@@ -1705,12 +852,10 @@ def mutating_run(args):
     require_no_retained_pipeline(loaded[1])
     return loaded
 
-
 def advance(step, old, expected, target, summary):
     if old != expected:
         raise Error(f"only {expected} steps can become {target}")
     step.update(status=target, reason=summary[:480])
-
 
 def valid_remediation(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_REMEDIATION:
@@ -1749,7 +894,6 @@ def valid_remediation(value):
         require_sha256(value["sha256"], "invalid retry remediation evidence sha256")
     return value
 
-
 def read_remediation(path):
     try:
         raw = Path(path).read_bytes()
@@ -1760,7 +904,6 @@ def read_remediation(path):
         raise Error("retry-remediation-v1 exceeds 4 KiB")
     return valid_remediation(value)
 
-
 def current_return(directory, step):
     if not step.get("return_path") or not step.get("return_sha256"):
         raise Error("retry requires a current prior return")
@@ -1770,7 +913,6 @@ def current_return(directory, step):
         raise Error("current prior return digest mismatch")
     return value
 
-
 def primary_code(value):
     """The first blocker code that belongs to the return status's own family."""
     family = RETURN_CODES.get(value.get("status"), ())
@@ -1779,7 +921,6 @@ def primary_code(value):
         if code in family:
             return code
     return ""
-
 
 def retry_class(data, step, value):
     """The one retry-eligibility predicate: (kind, outcome), or ("", "").
@@ -1806,7 +947,6 @@ def retry_class(data, step, value):
         return "repairable", code or status
     return "", ""
 
-
 def needs_higher_tier(step, kind, outcome):
     return kind == "reasoning" and (
         outcome == "blocked:needs_higher_tier"
@@ -1815,7 +955,6 @@ def needs_higher_tier(step, kind, outcome):
             and (step["same_tier_retry_used"] or step["attempt_count"] > 1)
         )
     )
-
 
 def store_remediation(args, data, directory, step):
     if not args.retry_remediation_file:
@@ -1866,7 +1005,6 @@ def store_remediation(args, data, directory, step):
         target == current and kind == "reasoning",
     )
 
-
 def valid_series_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_SERIES_HANDOFF:
         raise Error("planning-series-handoff-v1 exceeds 8 KiB")
@@ -1887,7 +1025,6 @@ def valid_series_handoff(value):
                 raise Error(f"series handoff {field} entries must be bounded non-empty strings")
     return value
 
-
 def read_series_handoff(path):
     try:
         raw = Path(path).read_bytes()
@@ -1897,7 +1034,6 @@ def read_series_handoff(path):
     if len(raw) > MAX_SERIES_HANDOFF:
         raise Error("planning-series-handoff-v1 exceeds 8 KiB")
     return valid_series_handoff(value)
-
 
 def read_series_handoff_content(path):
     """Read the parent-supplied content file for a series close.
@@ -1917,7 +1053,6 @@ def read_series_handoff_content(path):
         raise Error("series handoff content file must carry exactly the four content fields")
     return value
 
-
 def composed_series_handoff(path, data, series):
     return valid_series_handoff(
         {
@@ -1929,7 +1064,6 @@ def composed_series_handoff(path, data, series):
             **read_series_handoff_content(path),
         }
     )
-
 
 def series_close_handoff(args, data, plan):
     """Resolve the series close matrix before `close2` mutates anything.
@@ -1955,7 +1089,6 @@ def series_close_handoff(args, data, plan):
             )
         return None
     return composed_series_handoff(supplied, data, series)
-
 
 def validate_series_handoff(directory, data, plan):
     """Sibling of validate_retry_artifacts: re-verify a stamped handoff artifact.
@@ -1991,7 +1124,6 @@ def validate_series_handoff(directory, data, plan):
     ):
         raise Error("series handoff artifact digest or identity mismatch")
 
-
 def validate_retry_artifacts(directory, data):
     if data.get("retry_policy") != ESCALATING_RETRY_POLICY:
         return
@@ -2013,7 +1145,6 @@ def validate_retry_artifacts(directory, data):
             or digest(value) != step["retry_remediation_sha256"]
         ):
             raise Error("retry remediation artifact digest mismatch")
-
 
 def ready(args, directory, data, plan, batches, step):
     for value, label in ((args.harness, "harness"), (args.model_or_alias, "model_or_alias")):
@@ -2113,7 +1244,6 @@ def ready(args, directory, data, plan, batches, step):
     step["status"] = "ready"
     step["reason"] = reason[:480]
 
-
 def retryable_steps(directory, data, batches):
     """Return retryable failures using the same stored return predicate as record()."""
     result = []
@@ -2128,25 +1258,21 @@ def retryable_steps(directory, data, batches):
             result.append((step, outcome, kind))
     return result
 
-
 def retry_command(plan_id, run_id, step_id):
     return (
         f"{transition_scope(plan_id, run_id)} --step-id {step_id} --to ready --retry "
         "--retry-remediation-file <retry-remediation-v1.json>"
     )
 
-
 def series_non_final(plan):
     """True for a plan whose series slice hands work on (needs a close handoff)."""
     series = plan.get("series")
     return bool(series) and not series.get("final")
 
-
 def series_final(plan):
     """True for a plan whose series slice is the last (needs end verification)."""
     series = plan.get("series")
     return bool(series) and bool(series.get("final"))
-
 
 def series_closeout_overlay(plan, block):
     """Splice the series-final marker into a closeout-adjacent next block.
@@ -2158,7 +1284,6 @@ def series_closeout_overlay(plan, block):
     if series_final(plan):
         block["series_end"] = True
     return block
-
 
 def startable_step_ids(data, steps, batches):
     """Steps a parent could start now: ready, readiness candidates, or verify-pending."""
@@ -2181,7 +1306,6 @@ def startable_step_ids(data, steps, batches):
             result.append(step["id"])
     return result
 
-
 def with_concurrent(data, batches, block):
     """List up to four other startable steps beside the one action a block names."""
     if block.get("category") in NON_ACTION_CATEGORIES:
@@ -2201,16 +1325,13 @@ def with_concurrent(data, batches, block):
         others = others[:-1]
     return block
 
-
 def checkpoint_next(directory, data, batches, plan):
     """The one highest-priority legal action, plus other steps that could start now."""
     return with_concurrent(data, batches, primary_next(directory, data, batches, plan))
 
-
 def verify_issued(step):
     """True when verify-handoff issued a packet for the step's returned commit."""
     return bool(step.get("verify_id")) and step.get("verify_commit") == step["returned_commit"]
-
 
 def primary_next(directory, data, batches, plan):
     """Select one highest-priority legal v4/v5 action from the checkpoint."""
@@ -2352,7 +1473,6 @@ def primary_next(directory, data, batches, plan):
         "blocked_step_ids",
     )
 
-
 def next_after_transition(args, directory, data, batches, step, plan):
     scope = transition_scope(args.plan_id, args.run_id)
     sid = step["id"]
@@ -2410,7 +1530,6 @@ def next_after_transition(args, directory, data, batches, step, plan):
         )
     return checkpoint_next(directory, data, batches, plan)
 
-
 def unwind(args, data, batches, sid, step):
     """Return a never-run batch member to pending after a sibling stopped the batch.
 
@@ -2434,7 +1553,6 @@ def unwind(args, data, batches, sid, step):
     if data.get("retry_policy") == ESCALATING_RETRY_POLICY:
         step["current_assignment"]["agent_id"] = ""
 
-
 def stored_verdict(step):
     """The verdict recorded for the step's current returned commit, or None."""
     stored = step.get("verify")
@@ -2442,10 +1560,8 @@ def stored_verdict(step):
         return stored.get("verdict")
     return None
 
-
 def commit_verified(step):
     return stored_verdict(step) in VERIFY_PASSING
-
 
 def require_verified(data, sid, step):
     if data.get("verify_policy") == "leaf_verify_v1" and not commit_verified(step):
@@ -2453,7 +1569,6 @@ def require_verified(data, sid, step):
             f"step {sid} has no pass or inconclusive verification for its returned commit; "
             "run check-changeset, verify-handoff and record-verify first"
         )
-
 
 def group_landable(data, batches, sid):
     """Every completed member of the step's batch holds a passing verdict."""
@@ -2463,7 +1578,6 @@ def group_landable(data, batches, sid):
         if data["steps"][member]["status"] == "completed"
     )
 
-
 def unverified_members(data, batches, sid):
     """Completed members of the step's batch with no verdict yet for their returned commit."""
     steps = data["steps"]
@@ -2471,7 +1585,6 @@ def unverified_members(data, batches, sid):
         member for member in (batches.get(sid) or (sid,))
         if steps[member]["status"] == "completed" and stored_verdict(steps[member]) is None
     ]
-
 
 def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summary=""):
     """Validate a helper artifact and move one step to `integrated` or `cleaned`."""
@@ -2492,7 +1605,6 @@ def apply_worktree_result(path, directory, sid, step, leaf, new, batches, summar
             cleanup_result_path=result_path,
             cleanup_result_sha256=result_sha,
         )
-
 
 def transition2(args):
     directory, data, plan, leafs = mutating_run(args)
@@ -2531,7 +1643,6 @@ def transition2(args):
         result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
-
 def batch_source_commits(value):
     batch = value.get("batch_source_commits")
     if batch is None:
@@ -2549,7 +1660,6 @@ def batch_source_commits(value):
     ):
         raise Error("invalid planning worktree batch source commits")
     return batch
-
 
 def worktree_result(path, directory, sid, step, leaf, target, batches):
     if not path:
@@ -2609,33 +1719,6 @@ def worktree_result(path, directory, sid, step, leaf, target, batches):
     write(destination, value, 4096)
     return value, str(destination.relative_to(directory)), digest(value)
 
-
-WORKTREE_HELPER = (
-    Path(__file__).resolve().parents[3]
-    / "git-workflow-policy/references/scripts/planning_worktree.py"
-)
-
-
-def run_worktree_helper(*arguments):
-    """Run the Git-policy helper; return its parsed result and whether it succeeded."""
-    result = subprocess.run(
-        [sys.executable, "-B", str(WORKTREE_HELPER), *arguments],
-        text=True,
-        capture_output=True,
-    )
-    try:
-        value = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        value = None
-    if not isinstance(value, dict):
-        value = {"ok": False, "error": (result.stderr or "helper produced no result").strip()[:240]}
-    return value, result.returncode == 0 and value.get("ok") is True
-
-
-def helper_error(value):
-    return str(value.get("error", "helper failed"))[:240]
-
-
 def land(args):
     """Integrate and clean a completed leaf, or a settled batch, through the helper."""
     directory, data, plan, leafs = mutating_run(args)
@@ -2661,7 +1744,7 @@ def land(args):
         if not all(COMMIT.fullmatch(commit) for commit in commits.values()):
             raise Error("completed step has no returned commit to integrate")
         extra = [f"--batch-commit={member}={commits[member]}" for member in landed] if len(group) > 1 else []
-        value, ok = run_worktree_helper(
+        value, ok = gitops.run_worktree_helper(
             "integrate", *base, "--source-commit", commits[landed[-1]], *extra
         )
         if not ok:
@@ -2691,7 +1774,7 @@ def land(args):
     }
     if cleanable:
         recorded = directory / data["steps"][cleanable[0]]["integration_result_path"]
-        value, ok = run_worktree_helper("cleanup", *base, "--integrated-result", str(recorded))
+        value, ok = gitops.run_worktree_helper("cleanup", *base, "--integrated-result", str(recorded))
         if ok:
             with tempfile.TemporaryDirectory() as scratch:
                 artifact = Path(scratch) / "cleanup.json"
@@ -2717,7 +1800,6 @@ def land(args):
     result["next"] = next_after_transition(args, directory, data, batches, step, plan)
     return result
 
-
 def close2(args):
     parent(args.actor)
     directory, data, plan, leafs = load2(args)
@@ -2741,7 +1823,7 @@ def close2(args):
         for step in data["steps"].values():
             if step["status"] in {"pending", "ready"}:
                 step.update(status="discarded", retry_allowed=False, reason="discarded: abandoned")
-    closed_at = now()
+    closed_at = core.now()
     data.update(
         run_status="closed",
         outcome=args.outcome,
@@ -2773,7 +1855,7 @@ def close2(args):
         reason=data["close_reason"],
         **facts,
     )
-    gc_result = collect_ledgers(root(args), None, timestamp(now()), remove=True)
+    gc_result = collect_ledgers(root(args), None, timestamp(core.now()), remove=True)
     return {
         "ok": True,
         "action": "close",
@@ -2787,7 +1869,6 @@ def close2(args):
         "gc_invalid_count": gc_result["counts"]["invalid"],
     }
 
-
 def reopen2(args):
     parent(args.actor)
     directory, data, plan, leafs = load2(args)
@@ -2795,7 +1876,7 @@ def reopen2(args):
     if data["run_status"] != "closed" or data["outcome"] != "blocked":
         raise Error("only a retained blocked run may reopen")
     require_no_retained_pipeline(data)
-    if timestamp(now()) >= timestamp(data["purge_after"], "purge_after"):
+    if timestamp(core.now()) >= timestamp(data["purge_after"], "purge_after"):
         raise Error("blocked run is no longer retained")
     if (
         data.get("schema") in LIVE_NEXT_SCHEMAS
@@ -2861,7 +1942,6 @@ def reopen2(args):
         )
     return result
 
-
 def valid_return(value, data, step, leaf, registered=None, standard=False):
     if registered is None:
         registered = data.get("return_codes") == REGISTERED_RETURN_CODES
@@ -2900,7 +1980,7 @@ def valid_return(value, data, step, leaf, registered=None, standard=False):
         raise Error("invalid changed_paths")
     for path in paths:
         rel(path, "changed path")
-        if not standard and not changed_path_allowed(path, leaf["write_set"]):
+        if not standard and not contract.changed_path_allowed(path, leaf["write_set"]):
             raise Error("changed path outside write_set")
     accept = value["acceptance"]
     if (
@@ -2992,7 +2072,6 @@ def valid_return(value, data, step, leaf, registered=None, standard=False):
         raise Error("oversized return requires unstarted_remainder")
     return value
 
-
 def bounded_return_schema(registered=False):
     """Return structural output guidance; valid_return owns semantic checks."""
     evidence = {
@@ -3064,25 +2143,11 @@ def bounded_return_schema(registered=False):
         schema["properties"]["blockers"]["items"]["properties"]["code"]["enum"] = codes
     return schema
 
-
-WORKER_HANDOFF_FIELDS = {
-    "schema", "contract_version", "handoff_sha256", "plan_id", "run_id", "plan_sha256", "step_id", "agent_id",
-    "attempt_id", "plan_context", "leaf", "work_unit", "worktree", "portable_tier", "host",
-    "executor", "capability_binding", "retry_remediation", "return_schema",
-}
-
-
-# Added to a dispatch entry beside the packet; never part of the packet's digest.
-DISPATCH_ENTRY_FIELDS = {"packet_path", "prompt"}
-MAX_WORKER_PROMPT = 1200
-
-
 def worker_handoff_digest(value):
     return digest({
         key: item for key, item in value.items()
         if key != "handoff_sha256" and key not in DISPATCH_ENTRY_FIELDS
     })
-
 
 def worker_prompt(packet, packet_path, member=None):
     """Host-neutral worker prompt built only from packet facts.
@@ -3109,13 +2174,11 @@ def worker_prompt(packet, packet_path, member=None):
         raise Error("worker prompt exceeds 1200 characters")
     return text
 
-
 def store_dispatch_packet(directory, packet, member=None):
     """Persist one issued packet under the run and return its dispatch entry."""
     path = (directory / "handoffs" / packet["step_id"] / f"{packet['attempt_id']}.json").resolve()
     write(path, packet, MAX_WORKER_HANDOFF)
     return {**packet, "packet_path": str(path), "prompt": worker_prompt(packet, path, member)}
-
 
 def worker_handoff_context(plan):
     if not isinstance(plan, dict):
@@ -3136,7 +2199,6 @@ def worker_handoff_context(plan):
     ):
         raise Error("invalid worker handoff plan context")
     return context
-
 
 def build_worker_handoff(
     plan, step, plan_id, run_id, retry_remediation=None, registered=False, changeset_base=None,
@@ -3235,7 +2297,6 @@ def build_worker_handoff(
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
     return value
 
-
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
@@ -3308,7 +2369,6 @@ def valid_worker_handoff(value):
         raise Error("invalid worker handoff return schema")
     return value
 
-
 def step_handoff(directory, data, plan, step):
     remediation = None
     if step.get("retry_remediation_path"):
@@ -3325,7 +2385,6 @@ def step_handoff(directory, data, plan, step):
         precision=PRECISION_POLICIES.get(data.get("precision_policy")),
     )
 
-
 def handoff(args):
     directory, data, plan, _leafs = load2(args)
     validate_events2(directory, data)
@@ -3336,66 +2395,6 @@ def handoff(args):
         "action": "handoff",
         "handoff": step_handoff(directory, data, plan, step),
     }
-
-
-def registered_worktrees(repo):
-    """Map each registered worktree path of the repository to its branch name."""
-    result = subprocess.run(
-        ["git", "-C", str(repo), "worktree", "list", "--porcelain"],
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode:
-        raise Error("cannot list git worktrees")
-    entries, path = {}, None
-    for line in result.stdout.splitlines():
-        if line.startswith("worktree "):
-            path = Path(line[len("worktree "):]).resolve()
-            entries[path] = ""
-        elif line.startswith("branch ") and path is not None:
-            entries[path] = line[len("branch "):].removeprefix("refs/heads/")
-    return entries
-
-
-def verify_worktree_identity(repo, step, leaf, create_from):
-    """Fail before any state change unless the leaf's worktree carries its branch."""
-    path = Path(step["assignment"]["worktree"])
-    if not path.is_absolute():
-        path = repo / path
-    owner = leaf["worktree_owner"]
-    if not path.exists() and not path.is_symlink() and create_from:
-        created = subprocess.run(
-            ["git", "-C", str(repo), "worktree", "add", "-b", owner, str(path), create_from],
-            text=True,
-            capture_output=True,
-        )
-        if created.returncode:
-            raise Error(f"cannot create worktree {path}: {created.stderr.strip()[:200]}")
-    registry = registered_worktrees(repo)
-    if path.resolve() not in registry:
-        raise Error(
-            f"worktree {path} is not a registered worktree of {repo}"
-            + ("" if create_from else "; pass --create-from TARGET to create it")
-        )
-    actual = registry[path.resolve()]
-    if actual != owner:
-        raise Error(
-            f"worktree {path} has branch {actual or 'detached'}, "
-            f"expected worktree_owner {owner}"
-        )
-
-
-def git_head(worktree, repo):
-    path = Path(worktree)
-    result = subprocess.run(
-        ["git", "-C", str(path if path.is_absolute() else repo / path), "rev-parse", "HEAD"],
-        text=True,
-        capture_output=True,
-    )
-    if result.returncode:
-        raise Error("cannot read worktree HEAD")
-    return result.stdout.strip()
-
 
 def dispatch(args):
     """Ready and start a leaf, or a whole pending batch, and return its packets."""
@@ -3470,7 +2469,6 @@ def dispatch(args):
         ),
     }
 
-
 def validate_return(args):
     try:
         handoff_raw = read_bounded_input(args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff")
@@ -3511,51 +2509,6 @@ def validate_return(args):
         "return_sha256": digest(return_value),
     }
 
-
-class UsageError(Error):
-    """A malformed or inapplicable invocation, reported with exit status 2."""
-
-
-def git_output(worktree, *arguments):
-    result = subprocess.run(
-        ["git", "-C", str(worktree), *arguments], text=True, capture_output=True
-    )
-    if result.returncode:
-        raise Error(f"git {arguments[0]} failed in the worktree")
-    return result.stdout
-
-
-def numstat_rows(worktree, base, commit):
-    """Rows of (paths, changed lines); a binary row is zero lines, a rename one row."""
-    tokens = git_output(worktree, "diff", "--numstat", "-z", "-M", f"{base}..{commit}").split("\0")
-    rows, index = [], 0
-    while index < len(tokens):
-        head = tokens[index]
-        index += 1
-        if not head:
-            continue
-        added, deleted, path = head.split("\t", 2)
-        paths = [path]
-        if not path:
-            paths = [tokens[index + 1], tokens[index]]
-            index += 2
-        rows.append((paths, 0 if added == "-" else int(added) + int(deleted)))
-    return rows
-
-
-def dirty_paths(worktree):
-    entries = git_output(worktree, "status", "--porcelain", "-z", "--untracked-files=all").split("\0")
-    paths, index = [], 0
-    while index < len(entries):
-        entry = entries[index]
-        index += 1
-        if len(entry) > 3:
-            paths.append(entry[3:])
-            if entry[0] in "RC":
-                index += 1
-    return paths
-
-
 def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
     exempt = budget["exempt_paths"]
     covers = validator_module().write_set_covers
@@ -3568,7 +2521,7 @@ def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
         files += 1
         outside.extend(
             path for path in paths
-            if path not in outside and not changed_path_allowed(path, leaf["write_set"])
+            if path not in outside and not contract.changed_path_allowed(path, leaf["write_set"])
         )
     # Uncommitted work is outside what the measured commit records, so it fails
     # the same way a path outside the write set does.
@@ -3590,7 +2543,6 @@ def changeset_verdict(worktree, base, commit, leaf, budget, standard=False):
         "outside_count": len(listed),
     }
 
-
 def returned_changeset(data, plan, leafs, sid):
     """Measure a step's returned commit: (verdict, base, commit, budget)."""
     step = data["steps"][sid]
@@ -3611,7 +2563,6 @@ def returned_changeset(data, plan, leafs, sid):
         standard=standard_precision(data),
     )
     return verdict, base, commit, budget
-
 
 def check_changeset(args):
     """Read-only changeset gate: builder preflight on HEAD, or the parent on a returned commit."""
@@ -3640,7 +2591,6 @@ def check_changeset(args):
         worktree, base, commit, leaf, budget, standard=packet.get("precision") == "standard"
     )
 
-
 def bounded_verify_return_schema():
     finding = {
         "type": "object", "additionalProperties": False, "required": sorted(VERIFY_FINDING_FIELDS),
@@ -3668,7 +2618,6 @@ def bounded_verify_return_schema():
             },
         },
     }
-
 
 def valid_verify_return(value):
     """Shape-check one bounded-verify-return-v1 object."""
@@ -3710,10 +2659,8 @@ def valid_verify_return(value):
         raise Error("a reject carries a finding and a pass carries none")
     return value
 
-
 def verify_handoff_digest(value):
     return digest({key: item for key, item in value.items() if key != "packet_sha256"})
-
 
 def valid_verify_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_HANDOFF:
@@ -3734,7 +2681,6 @@ def valid_verify_handoff(value):
         raise Error("invalid prior_verify")
     return value
 
-
 def prior_verify(directory, step):
     """The step's earlier rejection, so re-verification checks the delta and each finding."""
     stored = step.get("verify")
@@ -3746,7 +2692,6 @@ def prior_verify(directory, step):
         "rejected_commit": stored["commit"],
         "findings": findings,
     }
-
 
 def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
     """Build one planning-verify-handoff-v1 packet for a completed step, without mutating."""
@@ -3789,7 +2734,6 @@ def verify_handoff_packet(directory, data, plan, leafs, sid, step, verify_id):
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
     return value
 
-
 def verify_handoff(args):
     """Issue verifier packets for a completed step, or every completed member of its batch."""
     directory, data, plan, leafs = mutating_run(args)
@@ -3820,7 +2764,6 @@ def verify_handoff(args):
         "handoffs": packets,
     }
 
-
 def record_changeset(args):
     """Record a measured changeset failure on a completed step.
 
@@ -3849,7 +2792,6 @@ def record_changeset(args):
     event(directory, data, "record-changeset", step_id=sid)
     return result2("record-changeset", args, sid, step, changeset=verdict)
 
-
 def validate_verify_return(args):
     try:
         packet = json.loads(read_bounded_input(args.handoff_file, MAX_VERIFY_HANDOFF + 1024, "verify handoff"))
@@ -3869,7 +2811,6 @@ def validate_verify_return(args):
         "packet_sha256": packet["packet_sha256"],
         "return_sha256": digest(value),
     }
-
 
 def verify_rejection_return(directory, step, verify):
     """Synthesize the failed:verification return a reject stands for.
@@ -3904,7 +2845,6 @@ def verify_rejection_return(directory, step, verify):
         "commit_hash": step["returned_commit"],
     }
 
-
 def reject_verified_step(directory, data, step, failure):
     """Move a rejected completed step to failed through the one retry predicate."""
     copy = directory / step["return_path"]
@@ -3918,7 +2858,6 @@ def reject_verified_step(directory, data, step, failure):
     # Each verify return has its own digest, so fingerprint the codes alone.
     bare = dict(failure, blockers=[{key: failure["blockers"][0][key] for key in ("code", "summary")}])
     return settle_return(data, step, failure, return_fingerprint(bare))
-
 
 def record_verify(args):
     """Store a verifier verdict bound to the step's returned commit."""
@@ -3970,7 +2909,6 @@ def record_verify(args):
             result["next"] = checkpoint_next(directory, data, batches, plan)
     return result
 
-
 def read_bounded_input(path, maximum, label):
     """Read at most one byte beyond a fixed input bound before JSON parsing."""
     try:
@@ -3981,7 +2919,6 @@ def read_bounded_input(path, maximum, label):
     if len(raw) > maximum:
         raise Error(f"{label} exceeds byte limit")
     return raw
-
 
 def next_after_return(args, directory, data, batches, sid, step, value, disposition, plan):
     """Report the retry decision `record` just made under the escalating policy."""
@@ -4016,7 +2953,6 @@ def next_after_return(args, directory, data, batches, sid, step, value, disposit
             return bounded_action_next(block, "outside_paths")
         block["command"] = integrate_command(data, sid)
     return bounded_next(block, droppable=("command",), trimmable="outside_paths")
-
 
 def amend(args):
     """Parent-only execution-metadata amendment; plan.json and plan_hash never change."""
@@ -4069,7 +3005,7 @@ def amend(args):
     approved = leaves_by_id(plan)[sid]
     valid_amendments({"amendments": amendments}, approved, data["schema"])
     candidate = {**leafs, sid: effective_leaf(current, [amendment])}
-    admitted = plan_validator()(
+    admitted = contract.plan_validator()(
         {**plan, "leaves": [candidate[leaf["id"]] for leaf in plan["leaves"]]},
         capability_binding=None,
         admission=True,
@@ -4098,7 +3034,6 @@ def amend(args):
         amendment_count=len(amendments), amendment_sha256=digest(amendment), next=following,
     )
 
-
 def return_fingerprint(value):
     return digest(
         {
@@ -4113,7 +3048,6 @@ def return_fingerprint(value):
             )
         }
     )
-
 
 def settle_return(data, step, value, fingerprint):
     """Apply the retry policy to a stored return and name the branch that fired."""
@@ -4170,7 +3104,6 @@ def settle_return(data, step, value, fingerprint):
     }:
         step["blockers"] = value["blockers"]
     return disposition
-
 
 def record(args):
     directory, data, plan, leafs = mutating_run(args)
@@ -4247,7 +3180,6 @@ def record(args):
         )
     return result
 
-
 def invalid_entry(base, path, code, summary):
     try:
         relative = str(path.relative_to(base))
@@ -4258,130 +3190,6 @@ def invalid_entry(base, path, code, summary):
         "code": code,
         "summary": summary[:480],
     }
-
-
-def safe_run_contents(directory):
-    allowed = {
-        "checkpoint.json",
-        "events.jsonl",
-        "plan.json",
-        "returns",
-        "retry-remediations",
-        "verifies",
-        "worktree-results",
-        "handoffs",
-        "usage",
-        "series-handoff.json",
-    }
-    children = list(directory.iterdir())
-    if any(child.is_symlink() for child in children):
-        raise Error("symlink in run directory")
-    names = {child.name for child in children}
-    if not {"checkpoint.json", "events.jsonl", "plan.json"}.issubset(names):
-        raise Error("missing required v2 contents")
-    if names - allowed:
-        raise Error("unexpected v2 contents")
-    for name in ("checkpoint.json", "events.jsonl", "plan.json"):
-        if not (directory / name).is_file():
-            raise Error("unexpected v2 contents")
-    handoff = directory / "series-handoff.json"
-    if handoff.exists() and (handoff.is_symlink() or not handoff.is_file()):
-        raise Error("unexpected series-handoff.json contents")
-    returns = directory / "returns"
-    if returns.exists():
-        if returns.is_symlink() or not returns.is_dir():
-            raise Error("unexpected returns contents")
-        for step_dir in returns.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected returns contents")
-            ident(step_dir.name, "return step id")
-            for returned in step_dir.iterdir():
-                if returned.is_symlink() or not returned.is_file() or returned.suffix != ".json":
-                    raise Error("unexpected returns contents")
-                uuid4(returned.stem, "return attempt id")
-    verifies = directory / "verifies"
-    if verifies.exists():
-        if verifies.is_symlink() or not verifies.is_dir():
-            raise Error("unexpected verifies contents")
-        for step_dir in verifies.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected verifies contents")
-            ident(step_dir.name, "verify step id")
-            for stored in step_dir.iterdir():
-                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
-                    raise Error("unexpected verifies contents")
-                uuid4(stored.stem, "verify id")
-    stored_packets = directory / "handoffs"
-    if stored_packets.exists():
-        if stored_packets.is_symlink() or not stored_packets.is_dir():
-            raise Error("unexpected handoffs contents")
-        for step_dir in stored_packets.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected handoffs contents")
-            ident(step_dir.name, "handoff step id")
-            for stored in step_dir.iterdir():
-                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
-                    raise Error("unexpected handoffs contents")
-                uuid4(stored.stem, "handoff attempt id")
-    results = directory / "worktree-results"
-    if results.exists():
-        if results.is_symlink() or not results.is_dir():
-            raise Error("unexpected worktree-results contents")
-        for step_dir in results.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected worktree-results contents")
-            ident(step_dir.name, "worktree-result step id")
-            names = {item.name for item in step_dir.iterdir()}
-            if names - {"integrated.json", "cleaned.json"} or any(
-                item.is_symlink() or not item.is_file() for item in step_dir.iterdir()
-            ):
-                raise Error("unexpected worktree-results contents")
-    remediations = directory / "retry-remediations"
-    if remediations.exists():
-        if remediations.is_symlink() or not remediations.is_dir():
-            raise Error("unexpected retry-remediations contents")
-        for step_dir in remediations.iterdir():
-            if step_dir.is_symlink() or not step_dir.is_dir():
-                raise Error("unexpected retry-remediations contents")
-            ident(step_dir.name, "retry-remediation step id")
-            for remediation in step_dir.iterdir():
-                if (
-                    remediation.is_symlink()
-                    or not remediation.is_file()
-                    or remediation.suffix != ".json"
-                ):
-                    raise Error("unexpected retry-remediations contents")
-                uuid4(remediation.stem, "retry-remediation attempt id")
-    usage = directory / "usage"
-    if usage.exists():
-        validate_usage_dir(usage)
-
-
-def validate_usage_dir(usage):
-    if usage.is_symlink() or not usage.is_dir():
-        raise Error("unexpected usage contents")
-    names = {item.name for item in usage.iterdir()}
-    if names - {"trace.json", "records"} or "trace.json" not in names:
-        raise Error("unexpected usage contents")
-    metadata = read_json(usage / "trace.json", "invalid usage trace")
-    if (
-        set(metadata) != {"schema", "initialized_at", "closed_at"}
-        or metadata.get("schema") != "planning-usage-trace-v1"
-        or not isinstance(metadata.get("initialized_at"), str)
-        or not isinstance(metadata.get("closed_at"), str)
-    ):
-        raise Error("invalid usage trace")
-    records = usage / "records"
-    if records.exists():
-        if records.is_symlink() or not records.is_dir():
-            raise Error("unexpected usage contents")
-        for record in records.iterdir():
-            if record.is_symlink() or not record.is_file() or record.suffix != ".json":
-                raise Error("unexpected usage contents")
-            uuid4(record.stem, "usage record id")
-            value = read_json(record, "invalid usage record")
-            valid_usage_summary(value)
-
 
 def classify_legacy(directory, current):
     data = load1(directory)
@@ -4423,7 +3231,6 @@ def classify_legacy(directory, current):
     )
     return entry
 
-
 def classify_v2(plan_id, directory, current):
     safe_run_contents(directory)
     checkpoint = read_json(directory / "checkpoint.json", "malformed v2 checkpoint")
@@ -4454,7 +3261,6 @@ def classify_v2(plan_id, directory, current):
             "eligible" if current >= timestamp(checkpoint["purge_after"], "purge_after") else "kept"
         )
     return entry
-
 
 def scan_ledgers(base, plan_filter, current):
     entries, invalid = [], []
@@ -4539,10 +3345,8 @@ def scan_ledgers(base, plan_filter, current):
                 invalid.append(invalid_entry(base, run, code, message))
     return entries, invalid
 
-
 def public_entry(entry):
     return {key: value for key, value in entry.items() if not key.startswith("_")}
-
 
 def bounded_report(action, groups, **facts):
     result = {"ok": True, "action": action, **facts}
@@ -4561,7 +3365,6 @@ def bounded_report(action, groups, **facts):
         result["omitted_count"] += 1
     result["summary_proxy_tokens"] = proxy_tokens(result)
     return result
-
 
 def remove_entry(entry):
     path = entry["_path"]
@@ -4588,7 +3391,6 @@ def remove_entry(entry):
         except OSError:
             pass
 
-
 def collect_ledgers(base, plan_filter, current, remove):
     entries, invalid = scan_ledgers(base, plan_filter, current)
     kept = [entry for entry in entries if entry["retention_state"] != "eligible"]
@@ -4607,19 +3409,16 @@ def collect_ledgers(base, plan_filter, current, remove):
         dry_run=not remove,
     )
 
-
 def list_runs(args):
     plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
-    entries, invalid = scan_ledgers(root(args), plan_filter, timestamp(now()))
+    entries, invalid = scan_ledgers(root(args), plan_filter, timestamp(core.now()))
     return bounded_report("list", {"runs": entries, "invalid": invalid})
-
 
 def gc(args):
     if not args.dry_run:
         parent(args.actor)
     plan_filter = ident(args.plan_id, "plan id") if args.plan_id else None
-    return collect_ledgers(root(args), plan_filter, timestamp(now()), remove=not args.dry_run)
-
+    return collect_ledgers(root(args), plan_filter, timestamp(core.now()), remove=not args.dry_run)
 
 def purge(args):
     parent(args.actor)
@@ -4631,7 +3430,7 @@ def purge(args):
     else:
         bounded_reason(args.reason, "purge")
     target_run = "" if args.legacy else uuid4(args.run_id)
-    entries, invalid = scan_ledgers(root(args), plan_id, timestamp(now()))
+    entries, invalid = scan_ledgers(root(args), plan_id, timestamp(core.now()))
     matches = [
         entry
         for entry in entries
@@ -4643,7 +3442,7 @@ def purge(args):
     if len(matches) != 1 or matches[0]["run_status"] != "closed":
         raise Error("purge target must be exactly one closed run")
     entry = matches[0]
-    early = timestamp(now()) < timestamp(entry["purge_after"], "purge_after")
+    early = timestamp(core.now()) < timestamp(entry["purge_after"], "purge_after")
     if early and not args.before_retention:
         raise Error("retention period has not elapsed; use --before-retention with --reason")
     remove_entry(entry)
@@ -4657,7 +3456,6 @@ def purge(args):
         "early": early,
         "reason": args.reason,
     }
-
 
 def summary(data, batches):
     steps = data["steps"]
@@ -4720,7 +3518,6 @@ def summary(data, batches):
     }
     return bounded_step_summary(result)
 
-
 def bounded_step_summary(result):
     result.pop("summary_proxy_tokens", None)
     while proxy_tokens(result) > MAX_TOKENS and result["steps"]:
@@ -4729,7 +3526,6 @@ def bounded_step_summary(result):
         result["omitted_count"] += 1
     result["summary_proxy_tokens"] = proxy_tokens(result)
     return result
-
 
 def show(args):
     if args.next_only:
@@ -4832,32 +3628,8 @@ def show(args):
         return bounded_step_summary(result)
     return result
 
-
-def valid_usage_summary(value):
-    if not isinstance(value, dict):
-        raise Error("invalid planning-usage-summary-v1")
-    if len(canon(value)) > MAX_USAGE:
-        raise Error("planning-usage-summary-v1 exceeds 4 KiB")
-    if set(value) & RAW_USAGE_FIELDS:
-        raise Error("raw-content fields are forbidden in planning-usage-summary-v1")
-    if set(value) != USAGE_FIELDS or value.get("schema") != "planning-usage-summary-v1":
-        raise Error("invalid planning-usage-summary-v1 fields")
-    for key in ("run_id", "step_id", "attempt_id", "actor", "harness", "model"):
-        if not isinstance(value.get(key), str) or not value[key] or len(value[key]) > 160:
-            raise Error(f"invalid usage {key}")
-    if value.get("stage") not in USAGE_STAGES:
-        raise Error("invalid usage stage")
-    counters = [value.get(key) for key in ("input_tokens", "output_tokens", "total_tokens")]
-    if any(not isinstance(item, int) or isinstance(item, bool) or item < 0 for item in counters):
-        raise Error("invalid usage token counters")
-    if value["input_tokens"] + value["output_tokens"] != value["total_tokens"]:
-        raise Error("usage total_tokens must equal input_tokens plus output_tokens")
-    return value
-
-
 def usage_path(directory):
     return directory / "usage"
-
 
 def trace_run(args, require_usage=True, require_open=False):
     parent(args.actor)
@@ -4872,7 +3644,6 @@ def trace_run(args, require_usage=True, require_open=False):
         raise Error("usage trace is closed")
     return directory, data, plan, leafs, usage, metadata
 
-
 def trace_result(action, data, **facts):
     return {
         "ok": True,
@@ -4882,7 +3653,6 @@ def trace_result(action, data, **facts):
         **facts,
     }
 
-
 def trace_init(args):
     directory, data, _plan, _leafs, usage, _metadata = trace_run(args, require_usage=False)
     active_run(data)
@@ -4890,11 +3660,10 @@ def trace_init(args):
         raise Error("tracing is already initialized")
     write(
         usage / "trace.json",
-        {"schema": "planning-usage-trace-v1", "initialized_at": now(), "closed_at": ""},
+        {"schema": "planning-usage-trace-v1", "initialized_at": core.now(), "closed_at": ""},
         MAX_USAGE,
     )
     return trace_result("trace-init", data)
-
 
 def trace_record(args):
     directory, data, _plan, _leafs, _usage, _metadata = trace_run(args, require_open=True)
@@ -4929,7 +3698,6 @@ def trace_record(args):
         record_sha256=digest(value),
     )
 
-
 def trace_show(args):
     _directory, data, plan, _leafs, usage, _metadata = trace_run(args)
     records_dir = usage / "records"
@@ -4953,7 +3721,7 @@ def trace_show(args):
         provenance.add((value["harness"], value["model"]))
         for key in totals:
             totals[key] += value[key]
-    forecast = plan_validator()(plan)["cost_advisory"]
+    forecast = contract.plan_validator()(plan)["cost_advisory"]
     comparison = "indeterminate:forecast"
     findings = []
     declared = plan.get("execution_cost", {}).get("declared_model_tokens", {})
@@ -5006,15 +3774,13 @@ def trace_show(args):
     result["summary_proxy_tokens"] = proxy_tokens(result)
     return result
 
-
 def trace_close(args):
     _directory, data, _plan, _leafs, usage, metadata = trace_run(args)
     if metadata.get("closed_at"):
         raise Error("usage trace is already closed")
-    metadata["closed_at"] = now()
+    metadata["closed_at"] = core.now()
     write(usage / "trace.json", metadata, MAX_USAGE)
     return trace_result("trace-close", data)
-
 
 def validate(args):
     if not args.run_id:
@@ -5073,7 +3839,6 @@ def validate(args):
             series_closeout_overlay(plan, {"command": command})
         )
     return result
-
 
 def parse():
     parser = argparse.ArgumentParser()
@@ -5225,7 +3990,6 @@ def parse():
     purging.add_argument("--reason", default="")
     return parser
 
-
 def main(argv=None):
     args = parse().parse_args(argv)
     try:
@@ -5293,7 +4057,6 @@ def main(argv=None):
         return out({"ok": False, "error": str(exc)}, 3)
     except OSError as exc:
         return out({"ok": False, "error": f"I/O failure: {exc}"}, 4)
-
 
 if __name__ == "__main__":
     sys.exit(main())

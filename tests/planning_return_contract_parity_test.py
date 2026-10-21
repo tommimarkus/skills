@@ -304,6 +304,7 @@ class ReferencedReturnCodeParityTest(unittest.TestCase):
     CODE = re.compile(r"\b(?:blocked|failed|oversized):[a-z][a-z0-9_]*")
     EMITTER_SCRIPTS = (
         SCRIPT,
+        *sorted((SCRIPT.parent / "planningledger").glob("*.py")),
         SKILL / "references/scripts/validate_plan_contract.py",
         SKILL / "references/scripts/persist_plan.py",
         REPO_ROOT / "scripts/planning_policy_forward_eval.py",

@@ -5,6 +5,7 @@ import io
 import json
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
@@ -16,6 +17,7 @@ SPEC = importlib.util.spec_from_file_location("ledger", SCRIPT)
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
+from planningledger import contract  # noqa: E402
 
 
 class PlanningLedgerTest(unittest.TestCase):
@@ -1013,7 +1015,7 @@ class PlanningLedgerTest(unittest.TestCase):
         step = self.start(run)
         returned = self.returned(step, changed=["tests/test_editor_locations_http.py"])
 
-        with patch.object(ledger, "changed_path_allowed", return_value=False):
+        with patch.object(contract, "changed_path_allowed", return_value=False):
             self.assertEqual(3, self.record(run, returned)[0])
         rejected = self.checkpoint(run)["steps"]["step0"]
         self.assertEqual("oversized", rejected["status"])
@@ -1272,7 +1274,7 @@ class PlanningLedgerTest(unittest.TestCase):
 
     def test_uuid_collision_refuses_second_init_v2(self):
         fixed = ledger.uuid.UUID("12345678-1234-4234-8234-123456789abc")
-        with patch.object(ledger.uuid, "uuid4", return_value=fixed):
+        with patch.object(uuid, "uuid4", return_value=fixed):
             self.init2()
             selected_plan = self.plan()
             code, _ = self.call(

@@ -16,6 +16,7 @@ SPEC = importlib.util.spec_from_file_location("planning_ledger_series", SCRIPT)
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
+from planningledger import core  # noqa: E402
 
 
 class PlanningLedgerSeriesTest(unittest.TestCase):
@@ -186,7 +187,7 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
         checkpoint["series_handoff_path"] = "series-handoff.json"
         checkpoint["series_handoff_sha256"] = ledger.digest(handoff_value)
         checkpoint["event_sequence"] += 1
-        checkpoint["updated_at"] = ledger.now()
+        checkpoint["updated_at"] = core.now()
         (directory / "checkpoint.json").write_text(
             json.dumps(checkpoint, sort_keys=True, separators=(",", ":")) + "\n"
         )

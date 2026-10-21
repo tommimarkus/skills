@@ -22,6 +22,7 @@ SPEC = importlib.util.spec_from_file_location("planning_policy_worker_handoff_le
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(ledger)
+from planningledger import contract  # noqa: E402
 
 
 def canonical_sha256(value: object) -> str:
@@ -97,12 +98,12 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
         self.plan["leaves"][0]["acceptance_command"] = "true"
         self.plan_file.write_text(json.dumps(self.plan), encoding="utf-8")
         self.binding_file.write_text(json.dumps(binding(self.plan)), encoding="utf-8")
-        validator = ledger.plan_validator()
+        validator = contract.plan_validator()
         self.assertFalse(validator(self.plan)["approval_ready"])
         # Model a run admitted by the previous release, then resume normally.
         def prior_admission(plan, capability_binding=None, **kwargs):
             return validator(plan, capability_binding, admission=False)
-        with patch.object(ledger, "plan_validator", return_value=prior_admission):
+        with patch.object(contract, "plan_validator", return_value=prior_admission):
             run_id = self.started_run()
         packet = self.handoff(run_id)
         self.assertEqual("true", packet["leaf"]["acceptance_command"])

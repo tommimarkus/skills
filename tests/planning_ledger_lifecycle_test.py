@@ -16,6 +16,7 @@ SPEC = importlib.util.spec_from_file_location("planning_ledger_lifecycle", SCRIP
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
+from planningledger import core  # noqa: E402
 
 
 class PlanningLedgerLifecycleTest(unittest.TestCase):
@@ -870,7 +871,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         )
 
     def test_gc_retention_boundary_and_active_protection(self):
-        with patch.object(ledger, "now", return_value="2026-01-01T00:00:00Z"):
+        with patch.object(core, "now", return_value="2026-01-01T00:00:00Z"):
             active = self.init2("active")
             closed = self.init2("done")
             self.integrate_all("done", closed)
@@ -887,11 +888,11 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                     "completed",
                 )[0],
             )
-        with patch.object(ledger, "now", return_value="2026-01-30T23:59:59Z"):
+        with patch.object(core, "now", return_value="2026-01-30T23:59:59Z"):
             code, before = self.call("--ledger-root", str(self.root), "gc", "--actor", "parent")
             self.assertEqual(0, code, before)
             self.assertEqual(0, before["counts"]["removed"])
-        with patch.object(ledger, "now", return_value="2026-01-31T00:00:00Z"):
+        with patch.object(core, "now", return_value="2026-01-31T00:00:00Z"):
             code, dry = self.call("--ledger-root", str(self.root), "gc", "--dry-run")
             self.assertEqual(0, code, dry)
             self.assertEqual(1, dry["counts"]["eligible"])
@@ -904,7 +905,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertFalse((base / "done" / closed).exists())
 
     def test_early_purge_requires_explicit_flag_and_reason(self):
-        with patch.object(ledger, "now", return_value="2026-02-01T00:00:00Z"):
+        with patch.object(core, "now", return_value="2026-02-01T00:00:00Z"):
             run_id = self.init2("early")
             self.integrate_all("early", run_id)
             self.assertEqual(
@@ -980,7 +981,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
             "planning-policy-medium-majority-20260809": 7,
             "software-design-fragility-20260809": 3,
         }
-        with patch.object(ledger, "now", return_value="2026-08-09T16:00:00Z"):
+        with patch.object(core, "now", return_value="2026-08-09T16:00:00Z"):
             for plan_id, count in shapes.items():
                 self.complete_v1(plan_id, count)
             base = self.root / "planning-policy/ledgers"
@@ -1006,7 +1007,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_legacy_short_retention_and_ambiguous_terminal_state_are_conservative(self):
-        with patch.object(ledger, "now", return_value="2026-03-01T00:00:00Z"):
+        with patch.object(core, "now", return_value="2026-03-01T00:00:00Z"):
             self.assertEqual(
                 0,
                 self.call(
@@ -1072,7 +1073,7 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
                     "discarded",
                 )[0],
             )
-        with patch.object(ledger, "now", return_value="2026-03-08T00:00:00Z"):
+        with patch.object(core, "now", return_value="2026-03-08T00:00:00Z"):
             code, report = self.call("--ledger-root", str(self.root), "gc", "--actor", "parent")
         self.assertEqual(0, code, report)
         self.assertEqual(1, report["counts"]["removed"])

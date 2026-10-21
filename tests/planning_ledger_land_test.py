@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from tests import planning_ledger_dispatch_test as base
+from planningledger import gitops  # noqa: E402
 
 ledger = base.ledger
 git = base.git
@@ -147,14 +148,14 @@ class LandCommandTest(base.DispatchHarness):
         self.init([leaf("alpha", "leaf-alpha"), leaf("beta", "leaf-beta", ["alpha"])])
         _code, started = self.dispatch("alpha", "--create-from", "main")
         self.finish(started["handoffs"][0], "src/alpha")
-        real = ledger.run_worktree_helper
+        real = gitops.run_worktree_helper
 
         def failing_cleanup(*arguments):
             if arguments[0] == "cleanup":
                 return {"ok": False, "error": "cleanup refused"}, False
             return real(*arguments)
 
-        with patch.object(ledger, "run_worktree_helper", side_effect=failing_cleanup):
+        with patch.object(gitops, "run_worktree_helper", side_effect=failing_cleanup):
             code, landed = self.land("alpha")
         self.assertEqual(0, code, landed)
         self.assertTrue(landed["ok"])
@@ -176,9 +177,9 @@ class LandCommandTest(base.DispatchHarness):
         self.init([leaf("alpha", "leaf-alpha")])
         _code, started = self.dispatch("alpha", "--create-from", "main")
         self.finish(started["handoffs"][0], "src/alpha")
-        real = ledger.run_worktree_helper
+        real = gitops.run_worktree_helper
         with patch.object(
-            ledger,
+            gitops,
             "run_worktree_helper",
             side_effect=lambda *a: ({"ok": False, "error": "no"}, False)
             if a[0] == "cleanup"
