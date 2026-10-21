@@ -2909,8 +2909,40 @@ WORKER_HANDOFF_FIELDS = {
 }
 
 
+# Added to a dispatch entry beside the packet; never part of the packet's digest.
+DISPATCH_ENTRY_FIELDS = {"packet_path", "prompt"}
+MAX_WORKER_PROMPT = 1200
+
+
 def worker_handoff_digest(value):
-    return digest({key: item for key, item in value.items() if key != "handoff_sha256"})
+    return digest({
+        key: item for key, item in value.items()
+        if key != "handoff_sha256" and key not in DISPATCH_ENTRY_FIELDS
+    })
+
+
+def worker_prompt(packet, packet_path):
+    """Host-neutral worker prompt built only from packet facts."""
+    script = Path(__file__).resolve()
+    text = (
+        f"You are the {packet['portable_tier']} builder for step {packet['step_id']} "
+        f"(attempt {packet['attempt_id']}).\n"
+        f"Read your assignment packet in full: {packet_path}\n"
+        f"Work only in the worktree: {packet['worktree']}\n"
+        f"Before returning, validate your return read-only by piping it to: "
+        f"python3 -B {script} validate-return --handoff-file {packet_path} --return-file -\n"
+        "Your final message is exactly the bounded-step-return-v1 JSON object and nothing else."
+    )
+    if len(text) > MAX_WORKER_PROMPT:
+        raise Error("worker prompt exceeds 1200 characters")
+    return text
+
+
+def store_dispatch_packet(directory, packet):
+    """Persist one issued packet under the run and return its dispatch entry."""
+    path = (directory / "handoffs" / packet["step_id"] / f"{packet['attempt_id']}.json").resolve()
+    write(path, packet, MAX_WORKER_HANDOFF)
+    return {**packet, "packet_path": str(path), "prompt": worker_prompt(packet, path)}
 
 
 def worker_handoff_context(plan):
@@ -3035,7 +3067,7 @@ def build_worker_handoff(
 def valid_worker_handoff(value):
     if not isinstance(value, dict) or len(canon(value)) > MAX_WORKER_HANDOFF:
         raise Error("planning-worker-handoff-v1 exceeds 32 KiB")
-    if (set(value) - {"amendments", "changeset_budget", "precision"} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
+    if (set(value) - {"amendments", "changeset_budget", "precision", *DISPATCH_ENTRY_FIELDS} != WORKER_HANDOFF_FIELDS or value.get("schema") != "planning-worker-handoff-v1"
             or value.get("contract_version") != FORWARD_SCHEMA):
         raise Error("invalid planning-worker-handoff-v1 schema")
     if not isinstance(value.get("handoff_sha256"), str) or not SHA.fullmatch(value["handoff_sha256"]):
@@ -3230,6 +3262,7 @@ def dispatch(args):
         for member in group[1:]:
             data["steps"][member].setdefault("base_commit", "")
     packets = [step_handoff(directory, data, plan, data["steps"][member]) for member in group]
+    entries = [store_dispatch_packet(directory, packet) for packet in packets]
     for member, old, attempt_id in moves:
         for before, after in ((old, "ready"), ("ready", "in_progress")):
             event(
@@ -3249,7 +3282,7 @@ def dispatch(args):
         "step_id": sid,
         "status": first["status"],
         "step_ids": group,
-        "handoffs": packets,
+        "handoffs": entries,
         "next": bounded_action_next(
             {
                 "await_step_id": first["id"],
@@ -3263,7 +3296,13 @@ def dispatch(args):
 def validate_return(args):
     try:
         handoff_raw = read_bounded_input(args.handoff_file, MAX_WORKER_HANDOFF_RAW, "worker handoff")
-        return_raw = read_bounded_input(args.return_file, MAX_RETURN, "step return")
+        return_raw = (
+            sys.stdin.buffer.read(MAX_RETURN + 1)
+            if args.return_file == "-"
+            else read_bounded_input(args.return_file, MAX_RETURN, "step return")
+        )
+        if len(return_raw) > MAX_RETURN:
+            raise Error("step return exceeds byte limit")
         handoff_value = json.loads(handoff_raw)
         return_value = json.loads(return_raw)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -4047,6 +4086,7 @@ def safe_run_contents(directory):
         "retry-remediations",
         "verifies",
         "worktree-results",
+        "handoffs",
         "usage",
         "series-handoff.json",
     }
@@ -4088,6 +4128,18 @@ def safe_run_contents(directory):
                 if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
                     raise Error("unexpected verifies contents")
                 uuid4(stored.stem, "verify id")
+    stored_packets = directory / "handoffs"
+    if stored_packets.exists():
+        if stored_packets.is_symlink() or not stored_packets.is_dir():
+            raise Error("unexpected handoffs contents")
+        for step_dir in stored_packets.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected handoffs contents")
+            ident(step_dir.name, "handoff step id")
+            for stored in step_dir.iterdir():
+                if stored.is_symlink() or not stored.is_file() or stored.suffix != ".json":
+                    raise Error("unexpected handoffs contents")
+                uuid4(stored.stem, "handoff attempt id")
     results = directory / "worktree-results"
     if results.exists():
         if results.is_symlink() or not results.is_dir():

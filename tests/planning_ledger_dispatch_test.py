@@ -6,6 +6,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 SCRIPTS = (
@@ -30,6 +31,11 @@ def git(cwd, *args):
     return subprocess.run(
         ["git", "-C", str(cwd), *args], check=True, text=True, capture_output=True
     )
+
+
+def bare(entry):
+    """A dispatch entry without the fields it carries beside the packet."""
+    return {key: value for key, value in entry.items() if key not in ledger.DISPATCH_ENTRY_FIELDS}
 
 
 def leaf(sid, owner, dependencies=(), batch=None):
@@ -199,7 +205,46 @@ class DispatchCommandTest(DispatchHarness):
         self.assertEqual("alpha", result["next"]["await_step_id"])
         # The granular packet command agrees with the composite result.
         code, granular = self.call("handoff", "--run-id", self.run_id, "--step-id", "alpha")
-        self.assertEqual(packet, granular["handoff"])
+        self.assertEqual(bare(packet), granular["handoff"])
+
+    def test_dispatch_stores_the_packet_and_returns_a_bounded_prompt(self):
+        self.init([leaf("alpha", "leaf-alpha")])
+        code, result = self.dispatch("alpha", "--create-from", "main")
+        self.assertEqual(0, code, result)
+        (entry,) = result["handoffs"]
+        path = Path(entry["packet_path"])
+        self.assertTrue(path.is_absolute())
+        self.assertEqual(
+            f"handoffs/alpha/{entry['attempt_id']}.json",
+            str(path.relative_to(self.checkpoint_path().parent)),
+        )
+        self.assertEqual(bare(entry), json.loads(path.read_text()))
+        prompt = entry["prompt"]
+        self.assertLessEqual(len(prompt), 1200)
+        for fact in (str(path), entry["worktree"], "validate-return", "--return-file -", "exactly"):
+            self.assertIn(fact, prompt)
+        # The stored layout is admitted by later commands, and the entry still validates as a packet.
+        self.assertEqual(0, self.call("show", "--run-id", self.run_id)[0])
+        self.assertEqual(entry["handoff_sha256"], ledger.valid_worker_handoff(entry)["handoff_sha256"])
+
+    def test_validate_return_reads_the_return_from_stdin(self):
+        self.init([leaf("alpha", "leaf-alpha")])
+        _code, result = self.dispatch("alpha", "--create-from", "main")
+        (entry,) = result["handoffs"]
+        value = {
+            "schema": "bounded-step-return-v1", "step_id": "alpha", "attempt_id": entry["attempt_id"],
+            "agent_id": entry["agent_id"], "status": "blocked", "changed_paths": [],
+            "acceptance": {"command": "uv run test", "exit_code": None, "summary": "stopped"},
+            "blockers": [{"code": "blocked:missing_input", "summary": "missing"}], "notes": [],
+            "unstarted_remainder": [], "commit_hash": "",
+        }
+        for raw, expected in ((json.dumps(value), 0), (" " * (8 * 1024 + 1), 3)):
+            stdin = io.TextIOWrapper(io.BytesIO(raw.encode()))
+            with unittest.mock.patch("sys.stdin", stdin):
+                code, output = self.call(
+                    "validate-return", "--handoff-file", entry["packet_path"], "--return-file", "-"
+                )
+            self.assertEqual(expected, code, output)
 
     def test_branch_mismatch_names_both_and_leaves_state_unchanged(self):
         self.init([leaf("alpha", "leaf-alpha")])

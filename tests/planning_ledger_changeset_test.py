@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from tests.planning_ledger_dispatch_test import DispatchHarness, batch_leaves, git, leaf
+from tests.planning_ledger_dispatch_test import DispatchHarness, bare, batch_leaves, git, leaf
 
 
 class ChangesetHarness(DispatchHarness):
@@ -80,7 +80,7 @@ class VerifyPolicyAndPacketTest(ChangesetHarness):
             packet["changeset_budget"],
         )
         code, granular = self.call("handoff", "--run-id", self.run_id, "--step-id", "alpha")
-        self.assertEqual(packet, granular["handoff"])
+        self.assertEqual(bare(packet), granular["handoff"])
 
     def test_retry_dispatch_keeps_the_first_base_commit(self):
         packet = self.started()
