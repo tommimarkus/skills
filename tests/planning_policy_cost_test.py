@@ -99,7 +99,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # section (+196 measured claude; slack 5 kept).
         # verify-loop contract docs: verifier procedure, Verify footer/option and
         # adapter dispatch (+314 measured claude; slack 5 kept).
-        self.assertLessEqual(claude["load_total"], 7827)  # plan-contract precision (+100 measured; slack 5)
+        self.assertLessEqual(claude["load_total"], 7859)  # plan-contract precision+chain advisory (+137 measured; slack 5)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -113,7 +113,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # for the same shared plan-series pointers.
         # verify-loop contract docs: same shared additions plus codex verifier dispatch
         # (+287 measured; slack 5 kept).
-        self.assertLessEqual(codex["load_total"], 7794)  # plan-contract precision (+100 measured; slack 5)
+        self.assertLessEqual(codex["load_total"], 7826)  # plan-contract precision+chain advisory (+137 measured; slack 5)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -147,7 +147,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         series = self.measure("planning-policy-series-successor")
         # verify-loop contract docs: SKILL.md pointer and core-workflow verifier
         # paragraph (+206 measured; slack 5 kept).
-        self.assertLessEqual(series["load_total"], 7596)  # plan-contract precision (+100 measured; slack 5)
+        self.assertLessEqual(series["load_total"], 7628)  # plan-contract precision+chain advisory (+137 measured; slack 5)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -171,7 +171,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval and a rejected ExitPlanMode was mistaken for approval.
         # verify-loop contract docs: same shared core-workflow/SKILL.md additions (+287
         # measured; slack 5 kept).
-        self.assertLessEqual(result["load_total"], 8893)  # plan-contract precision (+100 measured; slack 5)
+        self.assertLessEqual(result["load_total"], 8925)  # plan-contract precision+chain advisory (+137 measured; slack 5)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

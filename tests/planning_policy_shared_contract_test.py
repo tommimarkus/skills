@@ -681,14 +681,40 @@ class SharedContractTest(unittest.TestCase):
         )
         self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
 
-    def test_unbatched_chain_not_flagged_across_worktree_owners(self):
+    def chain_codes(self, *leaves):
+        units = [{"id": "u1", "original_size": "medium"}]
+        return MODULE.validate({"work_units": units, "leaves": list(leaves)})["cost_advisory"]
+
+    def test_unbatched_chain_flags_distinct_owner_pure_chain_only(self):
         first = leaf("one", "u1", "mechanical")
         second = leaf("two", "u1", "mechanical", dependencies=["one"])
         second["worktree_owner"] = "task/other"
-        result = MODULE.validate(
-            {"work_units": [{"id": "u1", "original_size": "medium"}], "leaves": [first, second]}
-        )
-        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", result["cost_advisory"]["codes"])
+        self.assertIn("PLANCOST-UNBATCHED-CHAIN", self.chain_codes(first, second)["codes"])
+        # The predecessor has two dependents, so it is not a pure chain.
+        third = leaf("three", "u1", "mechanical", dependencies=["one"])
+        third["worktree_owner"] = "task/third"
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", self.chain_codes(first, second, third)["codes"])
+        # The dependent has two dependencies, so it is not a pure chain.
+        other = leaf("other", "u1", "mechanical")
+        other["worktree_owner"] = "task/side"
+        join = leaf("join", "u1", "mechanical", dependencies=["one", "other"])
+        join["worktree_owner"] = "task/join"
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", self.chain_codes(first, other, join)["codes"])
+        # A batched member is never part of a pure chain.
+        first["batch"] = "batch-a"
+        self.assertNotIn("PLANCOST-UNBATCHED-CHAIN", self.chain_codes(first, second)["codes"])
+
+    def test_advisory_reports_critical_path_and_width(self):
+        one = leaf("one", "u1")
+        two = leaf("two", "u1", dependencies=["one"])
+        three = leaf("three", "u1", dependencies=["one"])
+        four = leaf("four", "u1", dependencies=["two", "three"])
+        advisory = self.chain_codes(one, two, three, four)
+        self.assertEqual((3, 2), (advisory["critical_path"], advisory["max_parallel_width"]))
+        two["batch"] = three["batch"] = "b"
+        advisory = self.chain_codes(one, two, three, four)
+        self.assertEqual((3, 1), (advisory["critical_path"], advisory["max_parallel_width"]))
+        self.assertEqual((0, 0), tuple(self.chain_codes()[k] for k in ("critical_path", "max_parallel_width")))
 
     def test_plan_scale_fires_over_twelve_leaves_and_not_at_twelve(self):
         def build(count):

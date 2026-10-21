@@ -155,6 +155,48 @@ def dispatch_groups(leaves: list[dict[str, Any]]) -> list[list[str]]:
     return groups
 
 
+def is_pure_chain_pair(parent: dict[str, Any], entry: dict[str, Any], leaves: list[dict[str, Any]]) -> bool:
+    """A distinct-owner unbatched pair where the dependent has one dependency and the predecessor one dependent."""
+    if stable_id(parent.get("batch")) or stable_id(entry.get("batch")):
+        return False
+    if entry.get("dependencies") != [parent.get("id")]:
+        return False
+    dependents = [
+        other
+        for other in leaves
+        if isinstance(other, dict)
+        and isinstance(other.get("dependencies"), list)
+        and parent.get("id") in other["dependencies"]
+    ]
+    return len(dependents) == 1
+
+
+def dispatch_depths(leaves: list[dict[str, Any]]) -> list[int]:
+    """Depth of each dispatch group: 1 plus the deepest group it depends on."""
+    groups = dispatch_groups(leaves)
+    group_of = {member: index for index, group in enumerate(groups) for member in group}
+    by_id = {entry["id"]: entry for entry in leaves if isinstance(entry, dict) and stable_id(entry.get("id"))}
+    upstream: list[set[int]] = []
+    for index, group in enumerate(groups):
+        found: set[int] = set()
+        for member in group:
+            dependencies = by_id[member].get("dependencies")
+            for dependency in dependencies if isinstance(dependencies, list) else []:
+                if isinstance(dependency, str) and group_of.get(dependency, index) != index:
+                    found.add(group_of[dependency])
+        upstream.append(found)
+    depths: dict[int, int] = {}
+
+    def depth(index: int, visiting: frozenset[int]) -> int:
+        if index not in depths:
+            depths[index] = 1 + max(
+                (depth(parent, visiting | {index}) for parent in upstream[index] - visiting), default=0
+            )
+        return depths[index]
+
+    return [depth(index, frozenset()) for index in range(len(groups))]
+
+
 def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
     """Report a dependency-consecutive same-owner batchable pair left out of a shared batch."""
     by_id = {
@@ -175,6 +217,8 @@ def has_unbatched_chain(leaves: list[dict[str, Any]]) -> bool:
             if not isinstance(parent, dict) or parent.get("portable_tier") not in BATCHABLE_TIERS:
                 continue
             if parent.get("worktree_owner") != owner:
+                if is_pure_chain_pair(parent, entry, leaves):
+                    return True
                 continue
             if stable_id(batch) and batch == parent.get("batch"):
                 continue
@@ -490,6 +534,7 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         if stable_id(leaf.get("id")):
             handoff_by_id[leaf["id"]] = handoff
     groups = dispatch_groups(leaves)
+    depths = dispatch_depths(leaves)
     dispatch_handoffs = [sum(handoff_by_id[member] for member in group) for group in groups]
     stable = {
         "canonical_plan": canonical_plan_tokens,
@@ -522,6 +567,8 @@ def cost_advisory(plan: dict[str, Any], leaves: list[dict[str, Any]]) -> dict[st
         "final_verification_reserve": "indeterminate",
         "tracing": "off",
         "tier_mix": tier_mix(leaves),
+        "critical_path": max(depths, default=0),
+        "max_parallel_width": max((depths.count(level) for level in set(depths)), default=0),
         "verify_dispatches": 0 if plan.get("verification") == "closeout-only" else len(groups),
     }
     candidates = microleaf_candidates(leaves)

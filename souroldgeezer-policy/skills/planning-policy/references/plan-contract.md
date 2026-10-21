@@ -113,12 +113,13 @@ The same validator call emits an at-most-600-proxy-token
 multiplication, complete declared totals/retained context, and verification
 reserve. Stable codes cover missing/invalid/unknown data, dominant prefix,
 retries, unbounded verification, comparable observed drift, tier
-over-assignment, an unbatched chained same-owner mechanical/standard pair
-(`PLANCOST-UNBATCHED-CHAIN`), microleaf risk (`PLANCOST-MICROLEAF-RISK`: a
+over-assignment, an unbatched chained mechanical/standard pair, same-owner or a distinct-owner
+pure chain (one dependency, one dependent) (`PLANCOST-UNBATCHED-CHAIN`), microleaf risk (`PLANCOST-MICROLEAF-RISK`: a
 split lacks a permitted evidence-backed decomposition rationale), and plan scale (`PLANCOST-PLAN-SCALE`: more than
 12 leaves or 20 declared work-unit weight — slice into successive plans,
 advisory only); `tier_mix` reports per-tier counts, mechanical share, and
-over-assigned count. Every finding
+over-assigned count; `critical_path` and `max_parallel_width` count dispatch-group
+depth and the widest level. Every finding
 is advisory. Merge microleaf candidates before
 series slicing. After an oversized return, derive the re-cut from the original
 cohesive outcomes, not a list of remainder items. Successive-plan composition and
