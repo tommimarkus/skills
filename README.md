@@ -29,6 +29,12 @@ worker packets include shared decisions and a return schema, with local return
 validation before parent ingestion; composite `dispatch` and `land` commands
 start and close out a leaf or batch; existing runs remain resumable. See the
 [worker handoff procedure](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
+New runs also check each delegated leaf before it lands: a deterministic
+changeset budget the builder preflights, then a fresh read-only verifier that
+returns pass, reject, or inconclusive. A reject retries through the existing
+policy. Plans can opt out with `verification: closeout-only`, and the footer
+reports a `Verify:` line. See the
+[verifier procedure](souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md).
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or
