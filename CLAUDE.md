@@ -433,234 +433,28 @@ Two agent classes live under `<plugin>/agents/`.
 
 ### Planning-policy execution contract (Claude Code)
 
-Refine plan prose for a fresh parent at Claude `opus/high`, Codex `sol/high`,
-or comparable capability on another host, following
-[orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
-This writing target carries decisions across a context reset; it does not set
-runtime models or change subagent tier selection.
+The contract lives in the skill, not here. Load it through the
+[SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which
+routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/references/plan-contract.md),
+[ledger contract](souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md),
+[approval](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md),
+[worker](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md) and
+[verify](souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md) handoffs,
+[plan series](souroldgeezer-policy/skills/planning-policy/references/plan-series.md),
+[usage tracing](souroldgeezer-policy/skills/planning-policy/references/usage-tracing.md), and
+[ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
+New executable plans use `contract_version: 5`, started from
+[plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
+versions 1–4 are resume-compatible only.
 
-Generated worker transport uses `planning-worker-handoff-v1`: read-only
-`planning_ledger.py handoff` carries shared approved decisions, the exact leaf
-and work unit, current assignment and binding, and return schema. Workers use
-read-only `validate-return` before parent ingestion; `record-return` still owns
-current-attempt validation. New v5 admission rejects unsafe/nonstring IO paths,
-placeholder decisions, known no-op acceptance, and unordered shared owners or
-overlapping writes across work units. Retained ledgers preserve prior admission
-behavior. See [worker handoff](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
-
-
-Executable approval transport uses `planning-approval-handoff-v1`: a canonical
-`plan_sha256` plus exactly one absolute persistent `plan_path` or complete inline
-v5 `plan`. Before approval, emit and resolve the envelope and include it inside
-the host-carried plan; resolve again before capability binding and dispatch.
-Prefer the primary checkout's ignored `.planning-policy/plans` when saving is
-explicitly permitted, or use an explicitly supplied durable root; retain the
-older `<git-common-dir>/planning-policy/plans/<sha256>/plan.json` only for
-reference/recovery. Use `python3 -B ${CLAUDE_SKILL_DIR}/references/scripts/persist_plan.py
---plan-root ABSOLUTE_ROOT PLAN`. The writer validates and atomically publishes
-canonical bytes without overwrite; the validator/resolver helper remains
-read-only. Use inline JSON without probing when writes or an eligible root are unavailable.
-Parent recovery may inspect only the bounded same-task evidence described in
-[approval handoff](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md);
-workers still stop for missing assignment fields. Prose summaries never replace
-canonical execution JSON.
-
-The shared plan contract is runtime-neutral: new executable plans use
-`contract_version: 5`. Start them from
-[references/templates/plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
-the discriminator is `contract_version`, never `version`. Versions 1–4 are
-resume-compatible only: new `init-v4` is refused as
-`blocked:contract_migration_required`, while existing v4 records remain
-resumable and mutable; they cannot initialize new work.
-Each leaf has stable IDs and
-dependencies, task/boundary, named read/write sets, settled decisions, size,
-portable tier, worktree owner, one acceptance command scoped to its write set,
-bounded return, stop
-conditions, a stable work unit, and exact `capability_requirements`: baseline
-`plan-step-base-v1` plus bounded additional requirements. Missing load-bearing information stops as
-`blocked:missing_input`; no agent fills it by searching or invention. The
-assigned work unit owns its `cohesive_outcome` and `decomposition` evidence:
-`shape: single` has only `shape`; `parallel` has
-`basis: parallel_independence` plus `rationale`; and `checkpointed` has
-`basis: failure_isolation` or `rollback_boundary` plus `rationale`. Original
-work units carry one weight (`small=1`, `medium=2`, `large=3`) and the plan needs
-`standard_ready_ratio >= 0.60`, except for an analytical-heavy exception that
-the user explicitly approves and the plan records. After approach convergence,
-the parent enumerates shared call sites, guidance, named reads/writes, and
-existing scoped acceptance once. It records bounded worker judgment separately
-from required missing input; size follows those bounded reads and acceptance,
-and large names a concrete irreducible reason. Two checks alone never require
-two leaves. Selective audit routing is
-exceptional: it needs one owner, a bounded question/evidence surface, and proof
-that targeted inspection or focused tests cannot resolve it. The parent owns
-integration and end-to-end verification. A valid decision-complete v5 plan is
-approval-ready without host selection; it becomes dispatch-ready only with an
-exact `planning-capability-binding-v1` joining its digest, every leaf,
-host/executor, requirements, and bounded evidence. Missing/mismatched capability
-is `blocked:capability_unavailable`, never a silent substitution or downgrade.
-
-For approved plans with at least two delegated steps, exactly one parent writes
-the durable ledger at
-`<git-common-dir>/planning-policy/ledgers/<plan-id>/<run-id>/`, with lowercase
-UUID4 `run-id`. It assigns every declared step once and issues one current
-opaque attempt ID. Concurrent agents require independent ready steps and
-separate worktrees/write paths. Finite `max_attempts` (1–5) stops unchanged
-progress as `blocked:no_progress`, exhaustion as terminal
-`blocked:retry_exhausted`, and boundary expansion as terminal `oversized`.
-Each v5 plan has bounded advisory `planning-execution-cost-v1` data, and the
-same validator call emits `planning-cost-advisory-v1` within 600 proxy tokens.
-Unknown model-token estimates stay unknown; proxy, declared-model-token, and
-provider-measured lanes never mix. Three advisory codes flag planning-cost signals:
-`PLANCOST-UNBATCHED-CHAIN` (an unbatched dependency-consecutive same-owner
-mechanical/standard pair, or a pure distinct-owner chain; it reports critical path
-and width), `PLANCOST-PLAN-SCALE` (more than 12 leaves or 20
-declared work-unit weight), and `PLANCOST-MICROLEAF-RISK` (merge candidates
-into their work unit's cohesive outcome unless its v5 decomposition evidence
-justifies the split). Groom microleaves first; if the plan remains over the
-scale signal, slice it into successive plans. Grooming acts on all three signals
-before approval, never as a validity gate. The human plan renders compact **Execution
-economics** with `tracing: off`; cost findings never govern execution.
-
-Plans declare `precision`: `standard` (default) lets `write_set` name areas,
-makes `read_set` optional, and records a change outside the write set for the
-verifier to judge; `strict` requires exact paths and a non-empty `read_set`,
-blocks on an unowned pinning test, and hard-stops on an out-of-set change. The
-ledger stamps `precision_policy` per run; a retained unstamped run keeps the hard
-rejection. `validate --pin-roots` scans for tests pinning a leaf's write paths
-that no leaf owns (`PLANSCOPE-UNOWNED-PIN`: advisory standard, blocking strict).
-`init-v5 --host H --evidence TEXT` derives assignments and the capability
-binding from `references/host-tiers.json`, and `dispatch` stores each packet and
-returns a generated worker prompt that the parent passes to the tier agent
-unchanged.
-
-A leaf may declare a `batch`: 2 to 8 chained mechanical/standard leaves sharing
-one worktree owner dispatch once, in leaves-array order, in that one shared
-worktree, with one bounded return per member. An in-batch dependency on an
-earlier-listed member satisfies readiness at `ready`/`in_progress`/`completed`;
-an external dependency needs `integrated` or `cleaned` (a v5 run; earlier
-versions need `cleaned`). When a member stops, `transition --to pending` unwinds
-its never-run followers — refunding the attempt and clearing agent/attempt
-identity — the stopped member remediates in the same worktree, and unwound
-followers redispatch as singles. The batch integrates once, via the helper's
-`--batch-commit` entries, only once every member is `completed` or terminal.
-
-The parent starts a leaf, or a whole batch, with the composite `dispatch`: it
-checks that the assigned worktree is registered on the leaf's `worktree_owner`
-(its git branch name) before any state change, creating it with `--create-from`,
-then readies, starts, and returns one worker packet per member. The granular
-`transition` and `handoff` commands remain for recovery.
-
-The ledger is the sole retry-policy owner. New v5 runs stamp
-`retry_policy: escalating_remediation_v1`; policy-less v2/v3 and v1 preserve old
-behavior, and `portable_tier` is initial only. One predicate classifies a return
-by its first blocker in its status family. Reasoning stops are eligible:
-one same-tier retry follows only `failed:acceptance`, while
-`blocked:needs_higher_tier` escalates immediately; later retries use higher
-mapped tiers through `deep` and `max_attempts`. Repairable stops
-(`blocked:environment`, or another blocked/failed stop amended after its
-return) retry at the same tier without spending that retry or escalating. Each
-retry persists bounded `retry-remediation-v1` identity/digest/worktree/boundary/
-assignment checks. Terminal precedence is repeated result, ineligible outcome,
-exhaustion (`blocked:retry_exhausted`), then tier ceiling. Every successful v5
-lifecycle result carries a live `next` block of at most 120 proxy tokens. After
-a long pause or context compaction, read-only `show --next-only` returns one
-highest-priority action in an at-most-240-token envelope. Full `show` remains
-the diagnostic fallback; load the ledger runtime reference only for errors,
-legacy resumption, diagnosis, retention operations, or ledger authoring/audit.
-Between active returns, wait for a host notification; never busy-poll or start
-an autonomous lifecycle loop.
-
-The parent may `amend` an active v5 step's execution metadata only: add
-write/read paths, replace `acceptance_command`, or raise `max_attempts` (at most
-5). The bounded per-step overlay and its `amend-v5` event leave `plan.json`, the
-plan hash, and capability bindings unchanged, and one effective leaf feeds
-return validation, packets, and step validation. Task, boundary, decisions,
-dependencies, tier, and owner still need a new approved plan.
-
-Successful v2/v3/v4/v5 steps continue `completed` → `integrated` → `cleaned`.
-The parent ingests bounded `planning-worktree-result-v1` evidence from the
-Git-policy helper: rebase the exact returned branch onto the current parent,
-fast-forward-only merge, then prove merged ancestry and clean up without force.
-Cleanup retries safely after partial removal by revalidating recorded identity,
-branch state, and target ancestry. Routine integration never cherry-picks.
-In v5 the parent's `land` runs the helper's integrate then cleanup and records
-both; a cleanup failure leaves the step `integrated`, and a batch lands once.
-Dependencies become ready once their prerequisites are `integrated` (v5; earlier
-versions need `cleaned`), and their worktrees start at the then-current parent
-tip. `validate --closeout` requires every successful step to be cleaned. A
-terminal non-completed leaf — `oversized`, or an unretryable `blocked`/`failed`
-— still owns a worktree and is disposed in the same closeout: its committed
-partial work is integrated or discarded, never left uncommitted. Final
-verification runs once, at closeout, never per integration cycle; a
-per-integration `rebased_tree_changed: false` keeps a leaf's recorded
-acceptance, while `true` re-runs only that leaf's scoped acceptance, never the
-full suite.
-
-New v5 runs gate land on a fresh read-only verification of each completed leaf
-unless the plan sets `verification: closeout-only` (`init-v5` stamps
-`verify_policy`; retained runs without it behave as before). Builders preflight
-`check-changeset` against a budget (small 150 lines / 6 files; medium and large
-400 / 15; tests count; a leaf `changeset_budget` may raise up to 2x or exempt
-write-set paths, each with a reason). The parent records a failed gate with
-`record-changeset`: `oversized:changeset` is never retried and is re-cut, while
-`outside_write_set` keeps the repairable scope rejection. `verify-handoff` emits
-`planning-verify-handoff-v1` (one dispatch per batch, never builder notes);
-`record-verify` stores pass, reject, or inconclusive bound to the commit, and
-`land` needs pass or inconclusive. A reject is the ledger-synthesized
-`failed:verification`, a reasoning stop (one same-tier retry, then higher
-tiers); style alone never blocks, and inconclusive lands as a disclosed
-verification limit. Footer: `Verify: <per-leaf (N verified, M rejected) |
-closeout-only (opt-out) | unavailable (reason)>`. Detail lives in the
-planning-policy references.
-
-Use bounded lifecycle, checkpoint, and retry returns; do not retain raw agent
-logs. Every delegated handoff is one at-most-8-KiB
-`bounded-step-return-v1` JSON object with its step/agent/attempt identity and
-no `run_id`. The ledger stores a canonical approved-plan SHA-256 hash;
-`blocked:plan_tampered` prevents dispatch or retry on a mismatch. Bounded
-`show` rehydrates one step or a truncated run summary, never raw history.
-Version-1 ledgers remain readable and mutable in place with
-`retry_policy: legacy_unbounded` until every version-1 ledger is terminal.
-Version-1 keeps its terminal `integrated` state and does not gain `cleaned`.
-Current planning-policy cannot approve or dispatch an unversioned version-1
-plan as new work; new documentation uses `init-v5`. Versions 1–4 remain
-resume-compatible only. Remove legacy support only
-in a later explicit breaking release after no version-1 ledger is nonterminal.
-Claude uses only portable aliases — `haiku`/`low`, `sonnet`/`medium`,
-`opus`/`high`, `opus`/`xhigh` — for mechanical, standard, analytical, and deep
-work respectively. These are aliases, not claims about a resolved version. If
-an alias or effort is unavailable, return `blocked:model_unavailable` with the
-requested tier, alias, and effort; never silently downgrade. The fresh-context
-comparison is opt-in (`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`)
-and records bounded summaries only.
-
-Tracing is explicit per v3/v4/v5 run (`trace-init`, `trace-record`, `trace-show`,
-`trace-close`). Normal planning/execution writes no trace state and inspects no
-telemetry. Opt-in records store counters and harness/model provenance only,
-outside the checkpoint, and follow retention/purge safeguards.
-
-The parent closes a version-2/3/4/5 run with `completed`, `blocked`, or `abandoned`
-outcome, and reopens only a retained blocked run with retryable work. Use `list`
-for bounded discovery and `gc --dry-run` before retention cleanup: completed
-runs retain 30 days, blocked runs 90 days, abandoned runs 7 days. Active,
-invalid, and ambiguous records remain preserved. `purge --actor parent` removes
-one exact closed target only; before retention expires it also requires
-`--before-retention` and a bounded reason. There is no bulk deletion.
-
-A v5 plan may carry an optional top-level `series` block for slicing an
-oversized plan into successive plans: `series_id`, `slice`, `final`,
-`end_verification_commands` declared once at slice 1 and copied verbatim
-forward, and, at slice > 1, required copied-evidence `predecessor` identity.
-`close --series-handoff-file <path>` is required on a completed close of a
-non-final slice, forbidden on a non-series plan and on the final slice, and
-optional at `blocked`/`abandoned`; the ledger composes the bounded handoff
-artifact from its own run identity. `init-v5` for a slice > 1 successor
-splices a `series_predecessor` disclosure (`matched`, a `mismatch:<field>`,
-or `unresolvable`) without ever failing the successor's own init on the
-predecessor's account. A series-final plan's closeout carries the compact
-`series_end: true` marker; the parent still runs `end_verification_commands`
-itself, exactly like final verification today. Absent `series`, behavior is
-byte-identical to today's.
+Claude host adapter ([claude-code.md](souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md)):
+portable aliases only — `haiku`/`low`, `sonnet`/`medium`, `opus`/`high`,
+`opus`/`xhigh` for mechanical, standard, analytical, and deep work. They are
+aliases, not claims about a resolved version; if one is unavailable, return
+`blocked:model_unavailable` and never silently downgrade. Plan prose is written
+for a fresh parent per [orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
+The opt-in fresh-context comparison is
+`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`.
 
 ## Published skills index
 

@@ -23,6 +23,7 @@
    Use the returned exact `plan`; recovery grants
    neither dispatch readiness nor additional authority. Preparatory persistence
    is not implementation and changes no sandbox or Plan mode permissions.
+   Prose summaries never replace the canonical execution JSON.
 
 Claude commands:
 

@@ -6,7 +6,9 @@ Runtime-neutral fields; adapters add host syntax.
 
 Start every new plan from the canonical
 [plan-v5.json](templates/plan-v5.json) scaffold and fill
-its blank load-bearing values before approval. Use `contract_version` first; `version` is always invalid.
+its blank load-bearing values before approval. New executable plans use
+`contract_version: 5`; use `contract_version` first, since `version` is always
+invalid (the discriminator is never `version`).
 
 Version 5 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.

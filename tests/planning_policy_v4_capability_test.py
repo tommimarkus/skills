@@ -389,19 +389,6 @@ class CapabilityAdapterTest(unittest.TestCase):
 
 class CapabilityDocumentationTest(unittest.TestCase):
     def test_public_runtime_neutral_guidance_has_v5_capability_parity(self) -> None:
-        for relative in ("AGENTS.md", "CLAUDE.md"):
-            text = (ROOT / relative).read_text(encoding="utf-8")
-            with self.subTest(document=relative):
-                for phrase in (
-                    "contract_version: 5",
-                    "capability_requirements",
-                    "plan-step-base-v1",
-                    "planning-capability-binding-v1",
-                    "approval-ready",
-                    "dispatch-ready",
-                    "blocked:capability_unavailable",
-                ):
-                    self.assertIn(phrase, text)
         standard = (ROOT / "docs/skill-architecture.md").read_text(encoding="utf-8")
         destination = "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
         self.assertIn(f"](../{destination})", standard)

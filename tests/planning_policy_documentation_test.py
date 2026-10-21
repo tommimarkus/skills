@@ -3,8 +3,14 @@
 from pathlib import Path
 import unittest
 
+from tests.surface_test_lib import load_script_module
+
 
 ROOT = Path(__file__).resolve().parents[1]
+ledger = load_script_module(
+    "planning_policy_documentation_ledger",
+    ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts/planning_ledger.py",
+)
 
 
 class PlanningPolicyDocumentationTest(unittest.TestCase):
@@ -46,10 +52,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "souroldgeezer-policy/skills/planning-policy/references/source-grounding.md"
         )
         standard = self.text("docs/skill-architecture.md")
-        for path in ("CLAUDE.md", "AGENTS.md"):
-            public = self.text(path)
-            self.assertIn("show --next-only", public)
-            self.assertIn("120", public)
+        self.assertIn("show --next-only", ledger)
+        self.assertIn("120 proxy tokens", contract)
         self.assertIn("live `next` results", entry)
         self.assertIn("errors, legacy resumption, diagnosis, retention operations", entry)
         self.assertIn("240 proxy tokens", contract)
@@ -126,50 +130,82 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         for phrase in (
             "haiku`/`low", "sonnet`/`medium", "opus`/`high", "opus`/`xhigh",
             "not claims about a resolved version", "blocked:model_unavailable",
-            "never silently downgrade", "Missing load-bearing information stops",
-            "contract_version: 5", "<plan-id>/<run-id>",
-            "planning-execution-cost-v1", "planning-cost-advisory-v1",
-            "Execution\neconomics", "tracing: off", "trace-init", "trace-close",
-            "bounded-step-return-v1", "blocked:plan_tampered",
-            "Version-1 ledgers remain readable and mutable",
-            "retry_policy: legacy_unbounded",
-            "`completed` → `integrated` → `cleaned`",
-            "planning-worktree-result-v1", "validate --closeout",
-            "Routine integration never cherry-picks",
-            "retry_policy: escalating_remediation_v1", "portable_tier` is initial only",
-            "retry-remediation-v1", "blocked:needs_higher_tier",
+            "never silently downgrade", "contract_version: 5",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, claude)
 
-    def test_codex_guidance_has_exact_mapping_and_parent_boundary(self) -> None:
+    def test_codex_guidance_has_exact_mapping(self) -> None:
         agents = self.text("AGENTS.md")
         for phrase in (
             "gpt-5.6-luna`/`low", "gpt-5.6-terra`/`medium",
             "gpt-5.6-sol`/`high", "gpt-5.6-sol`/`xhigh",
             "blocked:model_unavailable", "never silently downgrade",
-            "only the parent may", "bounded checkpoint and lifecycle/retry returns",
-            "contract_version: 5", "<plan-id>/<run-id>",
-            "planning-execution-cost-v1", "planning-cost-advisory-v1",
-            "Execution economics", "tracing: off", "trace-init", "trace-close",
-            "bounded-step-return-v1", "blocked:plan_tampered",
-            "Version-1 ledgers remain readable and mutable",
-            "retry_policy: legacy_unbounded",
-            "`completed` → `integrated` → `cleaned`",
-            "planning-worktree-result-v1", "validate --closeout",
-            "Routine integration never cherry-picks",
+            "contract_version: 5",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, agents)
         self.assertNotIn("Copilot execution mapping", agents)
 
+    def test_execution_rules_live_in_their_owning_references(self) -> None:
+        root = "souroldgeezer-policy/skills/planning-policy/"
+        owners = {
+            "references/plan-contract.md": (
+                "planning-execution-cost-v1", "planning-cost-advisory-v1",
+                "bounded-step-return-v1", "contract_version: 5", "never `version`",
+            ),
+            "references/core-workflow.md": (
+                "tracing: off", "bounded checkpoints", "only the parent creates",
+                "`completed` → `integrated` → `cleaned`", "cherry-pick",
+            ),
+            "references/ledger-contract.md": (
+                "<plan-id>/<run-id>", "planning-worktree-result-v1",
+                "validate --closeout", "blocked:plan_tampered",
+                "retry_policy: escalating_remediation_v1", "retry-remediation-v1",
+                "blocked:needs_higher_tier", "`portable_tier` is the initial tier only",
+                "amend-v5", "new approved plan",
+            ),
+            "references/ledger-compatibility.md": ("retry_policy: legacy_unbounded",),
+            "references/usage-tracing.md": ("trace-init", "trace-close"),
+            "references/approval-handoff.md": (
+                "Prose summaries never replace the canonical execution JSON",
+                "blocked:plan_tampered",
+            ),
+            "references/plan-series.md": (
+                "series_id", "copied verbatim", "series_predecessor",
+                "unresolvable", "series_end:", "behaves exactly as documented",
+            ),
+            "extensions/claude-code.md": ("busy-poll", "blocked:model_unavailable"),
+            "extensions/codex.md": ("busy-poll", "blocked:model_unavailable"),
+        }
+        for destination, facts in owners.items():
+            text = " ".join(self.text(root + destination).split())
+            for fact in facts:
+                with self.subTest(destination=destination, fact=fact):
+                    self.assertIn(fact, text)
+
+    def test_repo_guidance_planning_sections_stay_pointers(self) -> None:
+        # Same counter as the cost test: one token per word or punctuation mark.
+        counter = ledger.PROXY_TOKEN_RE
+        for path, heading in (
+            ("CLAUDE.md", "### Planning-policy execution contract (Claude Code)"),
+            ("AGENTS.md", "### Planning-policy execution contract (Codex)"),
+        ):
+            text = self.text(path)
+            start = text.index(heading)
+            end = text.index("\n## ", start)
+            section = text[start:end]
+            with self.subTest(path=path):
+                self.assertLessEqual(len(counter.findall(section)), 600)
+                for pointer in (
+                    "planning-policy/SKILL.md", "references/plan-contract.md",
+                    "references/ledger-contract.md", "templates/plan-v5.json",
+                    "planning_policy_forward_eval.py", "resume-compatible only",
+                ):
+                    self.assertIn(pointer, section)
+
     def test_amend_splits_execution_metadata_from_scope(self) -> None:
         root = "souroldgeezer-policy/skills/planning-policy/"
-        for path in ("CLAUDE.md", "AGENTS.md"):
-            text = " ".join(self.text(path).split())
-            self.assertIn("`amend` an active v5 step's execution metadata only", text)
-            self.assertIn("amend-v5", text)
-            self.assertIn("new approved plan", text)
         ledger = " ".join(self.text(root + "references/ledger-contract.md").split())
         for fact in ("amend --actor parent", "`amend-v5` event", "effective leaf", "at most 4"):
             self.assertIn(fact, ledger)
@@ -182,12 +218,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
 
     def test_repairable_retry_class_is_documented_everywhere(self) -> None:
         root = "souroldgeezer-policy/skills/planning-policy/"
-        for path in ("CLAUDE.md", "AGENTS.md"):
-            text = " ".join(self.text(path).split())
-            self.assertIn("Repairable stops (`blocked:environment`", text)
-            self.assertIn("without spending that retry or escalating", text)
         ledger = " ".join(self.text(root + "references/ledger-contract.md").split())
-        for fact in ("retry_class", "Repairable stops are `blocked:environment`", "first blocker whose code belongs to its status family"):
+        for fact in (
+            "retry_class", "Repairable stops are `blocked:environment`",
+            "first blocker whose code belongs to its status family",
+            "the retry does not set `same-tier-used`, is never forced upward",
+        ):
             self.assertIn(fact, ledger)
         for adapter in ("claude-code", "codex"):
             text = " ".join(self.text(root + f"extensions/{adapter}.md").split())
@@ -234,16 +270,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             self.assertIn(principle, standard)
 
     def test_series_summary_is_public_and_orientation_named(self) -> None:
-        claude = self.text("CLAUDE.md")
-        agents = self.text("AGENTS.md")
         standard = self.text("docs/skill-architecture.md")
-        for text in (claude, agents):
-            self.assertIn("series_id", text)
-            self.assertIn("copied verbatim", text)
-            self.assertIn("series_predecessor", text)
-            self.assertIn("unresolvable", text)
-            self.assertIn("series_end: true", text)
-            self.assertIn("byte-identical", text)
         self.assertIn(
             "](../souroldgeezer-policy/skills/planning-policy/references/plan-series.md)",
             standard,
@@ -281,30 +308,26 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 self.assertNotIn(retired, core.lower())
 
     def test_v5_authors_are_directed_to_the_canonical_scaffold(self) -> None:
+        root = "souroldgeezer-policy/skills/planning-policy/"
         for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
                 self.assertIn("references/templates/plan-v5.json", self.text(relative))
-
-    def test_public_guidance_names_the_v5_scaffold_and_rejects_the_alias(self) -> None:
-        for relative in ("AGENTS.md", "CLAUDE.md"):
-            with self.subTest(relative=relative):
-                text = self.text(relative)
-                self.assertIn("references/templates/plan-v5.json", text)
-                self.assertIn("never `version`", text)
+        contract = self.text(root + "references/plan-contract.md")
+        self.assertIn("templates/plan-v5.json", contract)
+        self.assertIn("never `version`", contract)
 
     def test_v5_handoffs_carry_cohesive_outcome_and_decomposition_evidence(self) -> None:
         for relative in ("AGENTS.md", "CLAUDE.md"):
             with self.subTest(relative=relative):
-                text = self.text(relative)
-                self.assertIn("cohesive_outcome", text)
-                self.assertIn("decomposition", text)
-                self.assertIn("work unit", text)
-                self.assertIn("resume-compatible only", text)
-                self.assertIn("init-v5", text)
+                self.assertIn("resume-compatible only", self.text(relative))
+                self.assertNotIn("intermediate_states", self.text(relative))
+        for adapter in ("claude-code", "codex"):
+            text = self.text(
+                f"souroldgeezer-policy/skills/planning-policy/extensions/{adapter}.md"
+            )
+            with self.subTest(adapter=adapter):
+                self.assertIn("existing v4 records remain", " ".join(text.split()))
                 self.assertIn("init-v4", text)
-                self.assertIn("blocked:contract_migration_required", text)
-                self.assertIn("existing v4 records remain", text)
-                self.assertNotIn("intermediate_states", text)
         contract = self.text(
             "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md"
         )

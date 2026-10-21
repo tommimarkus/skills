@@ -458,8 +458,9 @@ its status family (v2–v4 runs keep the exactly-one-blocker rule) and serves
 Reasoning stops are an exact `failed:acceptance` and
 `blocked:needs_higher_tier`. A `failed:acceptance` gets at most one same-tier
 retry total, and only after bounded remediation. A `blocked:needs_higher_tier`
-escalates immediately. Later reasoning retries use a higher mapped tier, may
-skip tiers, and stop at `deep` and `max_attempts`.
+escalates immediately. `portable_tier` is the initial tier only; later
+reasoning retries use a higher mapped tier, may skip tiers, and stop at `deep`
+and `max_attempts`.
 
 Repairable stops are `blocked:environment` at any time, and any other `blocked`
 or `failed` stop whose step has an amendment recorded after that attempt's
