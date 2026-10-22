@@ -608,14 +608,25 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
         self.assertNotIn("amendments", plain["handoff"])
 
     def test_tampered_amendments_fail_closed(self):
+        # Restamp the amend-v5 event with the tampered record's digest, so the
+        # event-digest binding passes and amendment path validation alone refuses.
         run_id = self.init2("tamper")
         self.assertEqual(0, self.amend("tamper", run_id, "step0", "--add-read", "docs")[0])
-        path = self.root / "planning-policy/ledgers/tamper" / run_id / "checkpoint.json"
+        directory = self.root / "planning-policy/ledgers/tamper" / run_id
+        path = directory / "checkpoint.json"
         value = json.loads(path.read_text())
-        value["steps"]["step0"]["amendments"][0]["add_write"] = ["../escape"]
+        record = value["steps"]["step0"]["amendments"][0]
+        record["add_write"] = ["../escape"]
         path.write_text(json.dumps(value))
-        code, _ = self.call(*self.common("tamper"), "show", "--run-id", run_id)
+        events_path = directory / "events.jsonl"
+        events = [json.loads(line) for line in events_path.read_text().splitlines()]
+        for event in events:
+            if event["action"] == "amend-v5":
+                event["amendment_sha256"] = ledger.digest(record)
+        events_path.write_text("".join(json.dumps(event) + "\n" for event in events))
+        code, result = self.call(*self.common("tamper"), "show", "--run-id", run_id)
         self.assertEqual(3, code)
+        self.assertEqual("blocked:plan_tampered", result["error"])
 
     def test_retry_remediation_is_bounded_and_exact(self):
         run_id = self.init2("bounded", max_attempts=3)

@@ -135,7 +135,10 @@ class PlanningLedgerPackageTest(unittest.TestCase):
         self.assertEqual([], [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))])
         for name in sorted(EXTRACTED):
             self.assertIn(f"- {name}:", doc)
-        self.assertIn("vocabulary < core < gitops < {store, contract}", doc)
+        chain = " < ".join(
+            group[0] if len(group) == 1 else "{" + ", ".join(group) + "}" for group in IMPORT_ORDER
+        )
+        self.assertIn(chain, " ".join(doc.split()))
 
     def test_help_runs_through_the_shim(self):
         result = subprocess.run(

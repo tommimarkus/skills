@@ -199,7 +199,25 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
 
     def test_series_handoff_round_trips_through_show(self):
         run_id = self.init4(series=self.default_series())
-        self.stamp("plan", run_id, self.handoff("plan", run_id))
+        content = self.content()
+        code, result = self.close(
+            "plan", run_id, "blocked", self.content_file("round-trip", content)
+        )
+        self.assertEqual(0, code, result)
+        composed = {
+            "schema": "planning-series-handoff-v1",
+            "plan_id": "plan",
+            "run_id": run_id,
+            "series_id": "plan-series",
+            "slice": 1,
+            **content,
+        }
+        # The artifact show re-validates is exactly what close composed, and the
+        # checkpoint stamp binds that same content.
+        self.assertEqual(composed, json.loads(self.artifact_path("plan", run_id).read_text()))
+        self.assertEqual(
+            ledger.digest(composed), self.checkpoint("plan", run_id)["series_handoff_sha256"]
+        )
         code, result = self.show("plan", run_id)
         self.assertEqual(0, code, result)
 

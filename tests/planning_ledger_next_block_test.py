@@ -476,10 +476,54 @@ class NextOnlyRehydrationTest(LedgerHarness):
         self.assertEqual(0, code)
         self.start("active", "agent-active")
 
-        # Schema 5 puts cleanup behind every dispatch-side action.
-        self.assertCategory("integrate_completed")
+        # Schema 5 puts cleanup behind every dispatch-side action, so the chain
+        # walks integrate, remediate, dispatch, await, then cleanup and closeout.
+        block = self.assertCategory("integrate_completed")
+        self.assertEqual(["integrate"], block["step_ids"])
+        self.assertIn(" land --actor parent ", block["command"])
+        self.assertIn("--step-id integrate --target", block["command"])
         self.worktree_transition("integrate", "integrated")
-        self.assertCategory("remediate_failure")
+
+        block = self.assertCategory("remediate_failure")
+        self.assertEqual(["retry"], block["retryable_step_ids"])
+        self.assertIn("--step-id retry --to ready --retry", block["command"])
+        self.assertIn("--retry-remediation-file", block["command"])
+        self.retry("standard", "agent-retry-2", sid="retry")
+
+        block = self.assertCategory("ready_pending")
+        self.assertEqual(["pending"], block["ready_step_ids"])
+        self.assertIn(" dispatch --actor parent ", block["command"])
+        self.assertIn("--step-id pending ", block["command"])
+        code, _ = self.transition("pending", "ready", "--agent-id", "agent-pending")
+        self.assertEqual(0, code)
+
+        block = self.assertCategory("dispatch_ready")
+        self.assertEqual(["pending", "ready"], block["ready_step_ids"])
+        self.assertTrue(block["command"].endswith("--step-id pending --to in_progress"))
+        for sid in ("pending", "ready"):
+            code, _ = self.transition(sid, "in_progress")
+            self.assertEqual(0, code)
+
+        block = self.assertCategory("await_return")
+        # Steps are ordered by id, so the first in-progress step is `active`.
+        self.assertEqual("active", block["await_step_id"])
+        self.assertEqual("agent-active", block["agent_id"])
+        self.assertEqual(self.checkpoint()["steps"]["active"]["attempt_id"], block["attempt_id"])
+        for sid in ("retry", "pending", "ready", "active"):
+            self.give("completed", sid=sid)
+            self.worktree_transition(sid, "integrated")
+
+        block = self.assertCategory("cleanup_integrated")
+        self.assertEqual(
+            ["active", "clean", "integrate", "pending", "ready", "retry"], block["step_ids"]
+        )
+        self.assertIn("--step-id active --target", block["command"])
+        for sid in ("clean", "integrate", "retry", "pending", "ready", "active"):
+            self.worktree_transition(sid, "cleaned")
+
+        block = self.assertCategory("validate_closeout")
+        self.assertIn(" validate --run-id ", block["command"])
+        self.assertTrue(block["command"].endswith("--closeout"))
 
     def test_cleanup_waits_behind_ready_dispatch_and_await_then_leads_to_closeout(self):
         self.init([leaf("clean", []), leaf("pending", []), leaf("ready", []), leaf("active", [])])
