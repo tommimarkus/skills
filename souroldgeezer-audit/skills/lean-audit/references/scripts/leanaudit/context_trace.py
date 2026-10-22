@@ -289,6 +289,20 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
         or _int_value(input_details, "cache_write_tokens", "cacheWriteTokens")
         or _int_value(attrs, "gen_ai.usage.cache_write.input_tokens")
     )
+    adapter = _adapter(record, usage, attrs, native_codex=native_status == "recognized")
+    if any(
+        field in usage
+        for field in (
+            "cache_read_input_tokens",
+            "cache_creation_input_tokens",
+            "cacheReadInputTokens",
+            "cacheCreationInputTokens",
+        )
+    ):
+        # Provider input_tokens excludes cache reads and writes; normalize to
+        # logical input before computing a total. Other adapters already include them.
+        input_tokens += _int_value(usage, "cache_read_input_tokens", "cacheReadInputTokens")
+        input_tokens += _int_value(usage, "cache_creation_input_tokens", "cacheCreationInputTokens")
     reasoning = (
         _int_value(usage, "reasoning_tokens", "reasoningTokens", "reasoning_output_tokens")
         or _int_value(output_details, "reasoning_tokens", "reasoningTokens")
@@ -320,12 +334,7 @@ def _one_event(record: dict[str, Any], index: int) -> UsageEvent | None:
     event_id = _text_value(record, "id", "event_id", "span_id", "ordinal", default=str(index))
     return UsageEvent(
         event_id=event_id,
-        adapter=_adapter(
-            record,
-            usage,
-            attrs,
-            native_codex=native_status == "recognized",
-        ),
+        adapter=adapter,
         stage=stage,
         actor=actor,
         visibility=_visibility(record, attrs),

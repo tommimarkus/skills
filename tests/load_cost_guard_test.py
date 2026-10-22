@@ -2,7 +2,7 @@
 import contextlib, io, json, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
-from tests.surface_test_lib import load_leanaudit_module
+from tests.surface_test_lib import load_leanaudit_module, run_git
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = (
@@ -320,27 +320,40 @@ class MainIntegrationTest(unittest.TestCase):
     # -- Stop-mode: fidelity block when code is removed from disk --
 
     def test_stop_mode_fidelity_block(self):
-        """Stop event with session-changed file dropping a baseline code → block."""
+        """Editing or deleting a referenced file cannot bypass the baseline floor."""
+        for change in ("edit", "delete", "staged-delete"):
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                skill_dir = self._mk_skill(root, "lean-skill")
+                _init_git_repo(root)
+                target = skill_dir / "c.md"
+                if change == "edit":
+                    target.write_text("## Sec\n(code removed)\n", encoding="utf-8")
+                else:
+                    target.unlink()
+                    if change == "staged-delete":
+                        run_git(root, "add", "--", "lean-skill/c.md")
+
+                payload = {"hook_event_name": "Stop", "cwd": str(root)}
+                out, lines = self._run_guard_and_parse(
+                    payload,
+                    exit_msg="guard must exit 0 even on block",
+                    lines_msg="expected block output")
+
+                self.assertEqual(out["decision"], "block", lines)
+                self.assertIn("LA-PUC-1", out["reason"])
+
+    def test_stop_mode_unrelated_deletion_is_silent(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
-            skill_dir = self._mk_skill(root, "lean-skill")
-
-            # Commit the initial state so git diff HEAD can see the change
+            self._mk_skill(root)
+            unrelated = root / "notes.md"
+            unrelated.write_text("# Notes\n", encoding="utf-8")
             _init_git_repo(root)
-
-            # Now remove LA-PUC-1 from c.md on disk (not committed)
-            (skill_dir / "c.md").write_text("## Sec\n(code removed)\n")
-
-            # Stop payload — no tool_input.file_path
-            payload = {"cwd": str(root)}
-            out, lines = self._run_guard_and_parse(
-                payload,
-                exit_msg="guard must exit 0 even on block",
-                lines_msg="expected block output")
-
-            self.assertEqual(out["decision"], "block",
-                             f"expected Stop-mode block decision, got: {lines}")
-            self.assertIn("fidelity", out["reason"].lower())
+            unrelated.unlink()
+            code, lines = _run_guard({"hook_event_name": "Stop", "cwd": str(root)})
+            self.assertEqual(code, 0)
+            self.assertEqual(lines, [])
 
     # -- Stop-mode: fail-open when no git repo --
 

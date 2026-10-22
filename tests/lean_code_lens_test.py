@@ -477,6 +477,46 @@ class MarkerSuppressionScopeTest(unittest.TestCase):
         self.assertEqual(scan_files({"a.py": wrapped, "b.py": logic_body("handle")}), [])
         self.assertEqual(scan_files({"a.py": logic_body("handle"), "b.py": wrapped}), [])
 
+    def test_intentional_copy_cannot_mask_unmarked_pair(self):
+        body = logic_body("process")
+        paths = {"a.py", "b.py", "c.py"}
+        for marked in sorted(paths):
+            with self.subTest(marked=marked):
+                found = scan_files({
+                    path: marker(":begin") + body + marker(":end") if path == marked else body
+                    for path in paths
+                })
+                self.assertTrue(any(
+                    c.severity == "block" and {c.path, c.matched_path} == paths - {marked}
+                    for c in found
+                ), found)
+                self.assertTrue(all(marked not in (c.path, c.matched_path) for c in found))
+                self.assertTrue(all("\0" not in c.action for c in found))
+
+    def test_unmarked_spans_are_not_joined_across_an_intentional_region(self):
+        before, after = words(25, "before"), words(25, "after")
+        found = scan_files({
+            "a.py": (before + "\n" + marker(":begin") + words(25, "excluded")
+                     + "\n" + marker(":end") + after + "\n"),
+            "b.py": before + "\n" + after + "\n",
+        })
+        self.assertFalse(any(c.severity == "block" for c in found), found)
+
+    def test_suppressed_seed_does_not_hide_partly_marked_copies(self):
+        body = logic_body("process")
+        lines = body.splitlines(keepends=True)
+        partial = "".join(lines[:4]) + marker(":begin") + lines[4] + marker(":end")
+        partial += "".join(lines[5:])
+        found = scan_files({
+            "a.py": marker(":begin") + body + marker(":end"),
+            "b.py": partial,
+            "c.py": partial,
+        })
+        self.assertTrue(any(
+            c.severity == "block" and {c.path, c.matched_path} == {"b.py", "c.py"}
+            for c in found
+        ), found)
+
     def test_clone_only_partly_inside_a_region_is_not_suppressed(self):
         # Containment, not overlap: a one-line marked touch must not kill the clone.
         body = logic_body("handle")

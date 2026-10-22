@@ -1470,6 +1470,8 @@ def _leaf_sections(
     return leaf_ids, unit_leaves, dependencies, leaf_records, batches
 
 
+# Validation families share typed collection traversal, not their validation rules.
+# lean-audit:dup-intentional:begin
 def _batch_errors(
     batches: dict[str, list[str]],
     leaf_records: dict[str, tuple[int, dict[str, Any]]],
@@ -1477,6 +1479,7 @@ def _batch_errors(
     errors: list[str],
 ) -> None:
     for batch_id, members in batches.items():
+        # lean-audit:dup-intentional:end
         if not 2 <= len(members) <= 8:
             errors.append(
                 f"batch {batch_id} has {len(members)} members; batches must have 2 to 8 members"

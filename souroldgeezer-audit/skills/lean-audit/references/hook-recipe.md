@@ -151,6 +151,7 @@ When the guard denies an edit, do one of:
 ## Enable in Claude Code — Stop hook (default)
 
 At session end the guard runs over all skill closure files changed in the session.
+Deleted references still select their owning skill for baseline and dangling-link checks.
 This is the **recommended** enablement form — it adds no per-edit latency, and the
 on-disk closure at Stop time IS the post-edit state, so cost measurement is accurate.
 

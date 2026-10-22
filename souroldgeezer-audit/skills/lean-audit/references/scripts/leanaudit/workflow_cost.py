@@ -123,6 +123,8 @@ _NO_PROGRESS_RE = re.compile(
     re.I,
 )
 _STOP_RE = re.compile(r"\b(?:stop|halt|exit|escalat(?:e|es|ed|ion)|replan)\b", re.I)
+# Declarative field-to-regex catalog; repeated tuple syntax carries no shared routine.
+# lean-audit:dup-intentional:begin
 _CHECKPOINT_FIELDS = (
     ("objective-or-scope", re.compile(r"\b(?:objective|scope)\b", re.I)),
     ("approved-decisions", re.compile(r"\bapproved (?:plan|decisions?)\b", re.I)),
@@ -142,6 +144,7 @@ _CHECKPOINT_FIELDS = (
     ("bounded", re.compile(r"\b(?:bounded|size cap|token cap|line cap)\b", re.I)),
     ("summary-contract", re.compile(r"\b(?:summary|schema|return contract)\b", re.I)),
 )
+# lean-audit:dup-intentional:end
 _ENUMERATED_SWEEP_RE = re.compile(
     r"\b(?:enumerated|fixed) (?:matrix|sweep|list|set)\b|"
     r"\b(?:matrix|sweep) of \d+ (?:cases?|options?|configurations?|parameters?)\b",

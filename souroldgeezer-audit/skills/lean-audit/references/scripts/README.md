@@ -178,7 +178,7 @@ Two scopes, both implemented in `leanaudit/clones.py`:
 | Scope | Form | Where it is applied |
 |---|---|---|
 | Whole file | `<comment> lean-audit:dup-intentional — <rationale>` | `read_sources` drops the file from the corpus |
-| Region | `<comment> lean-audit:dup-intentional:begin` … `:end` | `scan_dir` post-filters the clone list |
+| Region | `<comment> lean-audit:dup-intentional:begin` … `:end` | `scan_dir` excludes declared pairs during candidate selection |
 
 The region form exists so a **logic module** can declare one intentional clone
 without blanketing the file (repo policy puts the whole-file marker on
@@ -198,9 +198,10 @@ boilerplate/data only). Its rules, all pinned by tests:
 
 Region suppression is deliberately **not** in `read_sources`: that function is a
 published re-export ([§ shim → package contract](#the-shim--package-contract)),
-so narrowing its return would be a breaking change. Keep new suppression scopes
-in the `scan_dir` post-filter, which already holds both the raw source text and
-the clone list.
+so narrowing its return would be a breaking change. `scan_dir` passes the full
+streams and region spans to candidate selection. Suppressed matches do not
+advance past an undeclared copy or discard alternative representatives. The
+original token stream and line numbers preserve partial-overlap detection.
 
 ## The two guard hooks
 
@@ -231,6 +232,9 @@ duplicate that here. What a maintainer needs to know about the code:
   blocks. Neutral/reducing pending edits stay silent even when a committed
   snapshot has pre-existing drift. Stop mode retains the committed-snapshot
   on-disk comparison, also advisory-only.
+- Ownership resolution includes referenced missing targets, so deleting a
+  closure file still selects its skill for the Stop fidelity check. The measured
+  closure continues to contain only reachable existing files.
 
 If you add or change a hook event a guard handles, add an integration test that
 drives its `main()` over a real payload for that event — helper-function unit

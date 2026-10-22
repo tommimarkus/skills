@@ -47,8 +47,11 @@ def post_edit_content(tool_name: str, tool_input: dict[str, Any], current: str) 
 
 
 def _owning_skill_md(path: Path, repo_root: Path) -> Path | None:
+    # Include a referenced missing target when deciding ownership, so deleting a
+    # closure file cannot make its owning skill disappear from the Stop check.
+    target = path.resolve()
     for skill_md in repo_root.glob("**/SKILL.md"):
-        if path.resolve() in set(slc.resolve_closure(skill_md)):
+        if target in slc.resolve_closure_with_overrides(skill_md, {target: ""}):
             return skill_md
     return None
 

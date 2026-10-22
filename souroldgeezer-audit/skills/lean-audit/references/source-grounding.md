@@ -63,12 +63,17 @@ schemas, or code are copied into this skill.
   documented by the
   [OpenAI Responses API](https://developers.openai.com/api/reference/resources/responses/methods/create),
   [Anthropic tool-use overview](https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview),
+  [Anthropic prompt-cache accounting](https://platform.claude.com/docs/en/build-with-claude/prompt-caching),
   [Claude Code monitoring guide](https://code.claude.com/docs/en/monitoring-usage),
   [Codex manual](https://developers.openai.com/codex/codex-manual.md), and
   [OpenTelemetry GenAI attributes](https://opentelemetry.io/docs/specs/semconv/registry/attributes-gen-ai/).
   No vendor prose, schemas, raw traces, prompts, arguments, results, or
   third-party fixtures are bundled; trace fixtures and evals are synthetic and
   metadata-only.
+- Clone suppression and deleted-reference guard regressions use synthetic
+  source copies and temporary skill repositories. Cache-accounting regressions
+  use invented token counts and check both normalized totals and calibration
+  findings; no provider response body is copied.
 - Workflow catalog declarations: the exact
   `<!-- lean-audit:workflow-intentional — rationale -->` marker and its
   outside-fenced-code recognition rule are repo-authored to prevent the local

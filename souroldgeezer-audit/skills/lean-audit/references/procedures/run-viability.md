@@ -327,6 +327,9 @@ Trace handling is metadata-only:
 - distinguish `visibility: model` from `visibility: out-of-band`; unknown stays
   unknown rather than model-visible or free;
 - count reasoning, cache reads/writes, and tool-result observations separately;
+- normalize provider input accounting before summing totals: Anthropic's
+  `input_tokens` excludes cache reads and writes, so add those input categories;
+  OpenAI input already includes its cached subset, so do not add it again;
 - retain event ID, stage, actor, and adapter only for correlation.
 
 Every trace summary includes `coverage`: source-record count, recognized usage

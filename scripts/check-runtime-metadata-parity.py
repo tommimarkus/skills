@@ -466,6 +466,8 @@ def server_string_fields(
     return fields
 
 
+# Host validators share signatures and loop setup; their runtime rules differ.
+# lean-audit:dup-intentional:begin
 def check_codex_mcp_server_block(
     repo: Path,
     path: Path,
@@ -481,6 +483,7 @@ def check_codex_mcp_server_block(
     """
     for name, server in valid_mcp_servers(repo, path, servers, findings):
         field = f"mcpServers.{name}"
+        # lean-audit:dup-intentional:end
 
         args = server.get("args", [])
         for value_field, value in server_string_fields(field, server, include_command=True):
@@ -551,6 +554,8 @@ def check_codex_mcp_server_block(
                 )
 
 
+# Same public signature and loop setup as the other host validators above.
+# lean-audit:dup-intentional:begin
 def check_copilot_mcp_server_block(
     repo: Path,
     path: Path,
@@ -561,6 +566,7 @@ def check_copilot_mcp_server_block(
     """Check Copilot's file-backed MCP config and plugin substitutions."""
     for name, server in valid_mcp_servers(repo, path, servers, findings):
         field = f"mcpServers.{name}"
+        # lean-audit:dup-intentional:end
         command = normalize_text(server.get("command"))
         root_token = "${PLUGIN_ROOT}"
         if not command.startswith(root_token):

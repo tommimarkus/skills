@@ -341,6 +341,14 @@ def _dedupe(clones: list[Clone]) -> list[Clone]:
 
 
 def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> list[Clone]:
+    return _find_clones(streams, min_tokens, {})
+
+
+def _find_clones(
+    streams: dict[str, list[tuple[str, int]]],
+    min_tokens: int,
+    regions: dict[str, _LineSpans],
+) -> list[Clone]:
     if min_tokens < 1:
         raise ValueError("min_tokens must be >= 1")
     k = min_tokens
@@ -355,15 +363,22 @@ def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> l
             meta.append((path, li))
     n = len(seq)
     clones: list[Clone] = []
-    seen: dict[tuple[str, ...], int] = {}
+    seen: dict[tuple[str, ...], list[int]] = {}
     i = 0
+    skip_until = 0
     while i + k <= n:
         if meta[i][0] != meta[i + k - 1][0]:  # seed window straddles a file boundary — skip
             i += 1
             continue
         gram = tuple(seq[i : i + k])
-        if gram in seen:
-            j = seen[gram]
+        # Index seeds even inside an already-reported target. A later shorter
+        # copy may need that representative when an earlier one is suppressed.
+        candidates = seen.setdefault(gram, [])
+        if i < skip_until:
+            candidates.append(i)
+            i += 1
+            continue
+        for j in candidates:
             length = k
             while (
                 i + length < n
@@ -379,35 +394,35 @@ def find_clones(streams: dict[str, list[tuple[str, int]]], min_tokens: int) -> l
             if not overlap:
                 window_tokens = seq[i : i + length]  # matched window's token texts
                 if not _identifier_diverse(window_tokens):
-                    i += 1  # declarative literal/punctuation shape, not copied logic
-                    continue
+                    break  # declarative literal/punctuation shape, not copied logic
                 j0, j1 = per_file[pj][lj][1], per_file[pj][lj + length - 1][1]
                 i0, i1 = per_file[pi][li][1], per_file[pi][li + length - 1][1]
                 severity = "block" if length >= 2 * min_tokens else "info"
                 code = "LA-CODE-DUP-1" if severity == "block" else "LA-CODE-DUP-2"
-                clones.append(
-                    Clone(
-                        code=code,
-                        severity=severity,
-                        path=pj,
-                        lines=f"{j0}-{j1}",
-                        matched_path=pi,
-                        matched_lines=f"{i0}-{i1}",
-                        tokens=length,
-                        action=(
-                            f"Clone of {pj}:{j0}-{j1} ({length} tokens) — extract "
-                            f"shared code, or declare it intentional in a line "
-                            f"comment in either file: wrap just this span in "
-                            f"`{INTENTIONAL_MARKER}:begin` / "
-                            f"`{INTENTIONAL_MARKER}:end` (preferred), or put a bare "
-                            f"`{INTENTIONAL_MARKER} — <rationale>` comment anywhere "
-                            f"in the file to exempt the whole file."
-                        ),
-                    )
+                clone = Clone(
+                    code=code,
+                    severity=severity,
+                    path=pj,
+                    lines=f"{j0}-{j1}",
+                    matched_path=pi,
+                    matched_lines=f"{i0}-{i1}",
+                    tokens=length,
+                    action=(
+                        f"Clone of {pj}:{j0}-{j1} ({length} tokens) — extract "
+                        f"shared code, or declare it intentional in a line "
+                        f"comment in either file: wrap just this span in "
+                        f"`{INTENTIONAL_MARKER}:begin` / "
+                        f"`{INTENTIONAL_MARKER}:end` (preferred), or put a bare "
+                        f"`{INTENTIONAL_MARKER} — <rationale>` comment anywhere "
+                        f"in the file to exempt the whole file."
+                    ),
                 )
-                i += length
-                continue
-        seen.setdefault(gram, i)
+                if _region_suppressed(clone, regions):
+                    continue
+                clones.append(clone)
+                skip_until = i + length
+                break
+        candidates.append(i)
         i += 1
     return _dedupe(clones)
 
@@ -496,10 +511,7 @@ def scan_dir(root: Path, min_tokens: int, registry: Path | None) -> list[Clone]:
         profile = profile_for(Path(rel).suffix)
         streams[rel] = strip_and_tokenize(text, profile)
         regions[rel] = _marked_regions(text, profile)
-    # Region suppression is a POST-filter, not a read_sources filter: read_sources is
-    # a published re-export (see the scripts/README shim contract), so narrowing what
-    # it returns would be a breaking change; dropping clones here is additive.
-    return [c for c in find_clones(streams, min_tokens) if not _region_suppressed(c, regions)]
+    return _find_clones(streams, min_tokens, regions)
 
 
 # The two engines preserve parallel, engine-specific emitters instead of a generic CLI layer.

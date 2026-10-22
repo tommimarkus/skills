@@ -837,8 +837,9 @@ class TraceAdapterTest(unittest.TestCase):
         events = mod.normalize_trace_records(records)
         self.assertEqual([event.adapter for event in events], ["openai", "anthropic", "otel"])
         summary = mod.summarize_trace(events)
-        self.assertEqual(summary["input_tokens"], 240)
+        self.assertEqual(summary["input_tokens"], 280)
         self.assertEqual(summary["output_tokens"], 60)
+        self.assertEqual(summary["total_tokens"], 340)
         self.assertEqual(summary["cached_input_tokens"], 70)
         self.assertEqual(summary["reasoning_tokens"], 5)
 
@@ -870,6 +871,22 @@ class TraceAdapterTest(unittest.TestCase):
         self.assertEqual([event.adapter for event in events], ["codex", "claude-code"])
         self.assertEqual(sum(event.total_tokens for event in events), 68)
         self.assertEqual(events[1].tool_result_tokens, 12)
+
+    def test_provider_cache_accounting_survives_telemetry_wrapping(self) -> None:
+        mod = load_workflow_cost()
+        for read_key, write_key in (
+            ("cache_read_input_tokens", "cache_creation_input_tokens"),
+            ("cacheReadInputTokens", "cacheCreationInputTokens"),
+        ):
+            with self.subTest(read_key=read_key):
+                summary = mod.summarize_trace_records([{
+                    "attributes": {"gen_ai.system": "anthropic"},
+                    "usage": {"input_tokens": 10, read_key: 9000, write_key: 1000,
+                              "output_tokens": 20},
+                }])
+                self.assertEqual(summary["input_tokens"], 10010)
+                self.assertEqual(summary["total_tokens"], 10030)
+                self.assertTrue(summary["coverage"]["calibration_eligible"])
 
     def test_native_codex_rollout_uses_last_usage_not_cumulative_usage(self) -> None:
         mod = load_workflow_cost()
@@ -1264,7 +1281,12 @@ class CliTest(unittest.TestCase):
             )
             trace = root / "trace.json"
             trace.write_text(
-                json.dumps({"usage": {"input_tokens": 1000, "output_tokens": 200}}),
+                json.dumps({"usage": {
+                    "input_tokens": 10,
+                    "cache_read_input_tokens": 1000,
+                    "cache_creation_input_tokens": 100,
+                    "output_tokens": 20,
+                }}),
                 encoding="utf-8",
             )
             proc = subprocess.run(
@@ -1284,7 +1306,10 @@ class CliTest(unittest.TestCase):
                 check=False,
             )
             self.assertEqual(proc.returncode, 0, proc.stderr)
-            self.assertIn("LA-RUN-5", {row["code"] for row in json.loads(proc.stdout)["findings"]})
+            report = json.loads(proc.stdout)
+            self.assertEqual(report["trace"]["total_tokens"], 1130)
+            self.assertTrue(report["trace"]["coverage"]["calibration_eligible"])
+            self.assertIn("LA-RUN-5", {row["code"] for row in report["findings"]})
 
     def test_incomplete_trace_cannot_emit_calibration_drift(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
