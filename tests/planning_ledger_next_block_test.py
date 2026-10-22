@@ -17,13 +17,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.planning_ledger_dispatch_test import MAX_AGENT_ID, MAX_PLAN_ID, MAX_STEP_ID
 from tests.planning_ledger_dispatch_test import leaf as git_leaf
-from tests.planning_ledger_verify_test import (
-    MAX_AGENT_ID,
-    MAX_PLAN_ID,
-    MAX_STEP_ID,
-    VerifyHarness,
-)
+from tests.planning_ledger_verify_test import VerifyHarness
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts"

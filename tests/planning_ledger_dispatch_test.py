@@ -27,6 +27,19 @@ def load(name):
 
 ledger = load("planning_ledger")
 validator = load("validate_plan_contract")
+ledger_dispatch = importlib.import_module("planningledger.dispatch")
+
+# Issue #144: 33 characters whose hyphens pushed the raw gate block past the 120 cap.
+LONG_PLAN_ID = "tqa-audit-2026-10-22-slice-1-of-2"
+# The most token-heavy ids the grammar admits: 128-character plan and agent ids and a
+# 64-character step id, each separator a proxy token of its own.
+MAX_PLAN_ID = "a" + "-" * 127
+MAX_STEP_ID = "a" + "-a" * 31 + "a"
+MAX_AGENT_ID = "a" + "-" * 127
+# An installed plugin's ledger script sits deep in a cache: 275 characters here.
+CACHED_SCRIPT = Path(
+    "/" + "/".join(f"plugin-cache-{n:02d}" for n in range(16)) + "/planning_ledger.py"
+)
 
 
 def git(cwd, *args):
@@ -232,7 +245,7 @@ class DispatchCommandTest(DispatchHarness):
         )
         self.assertEqual(bare(entry), json.loads(path.read_text()))
         prompt = entry["prompt"]
-        self.assertLessEqual(len(prompt), 1200)
+        self.assertLessEqual(len(ledger.worker_prompt_fixed_text(bare(entry))), 1200)
         for fact in (str(path), entry["worktree"], "validate-return", "--return-file -", "exactly"):
             self.assertIn(fact, prompt)
         self.assertTrue(prompt.endswith(
@@ -335,13 +348,30 @@ class DispatchCommandTest(DispatchHarness):
 
     def test_batch_prompts_name_their_position_and_ask_for_one_json_array(self):
         self.init(*batch_leaves())
-        one, two = (item["prompt"] for item in self.dispatch("first", "--create-from", "main")[1]["handoffs"])
+        handoffs = self.dispatch("first", "--create-from", "main")[1]["handoffs"]
+        one, two = (item["prompt"] for item in handoffs)
         self.assertIn("member 1 of 2 of batch group", one)
         self.assertIn("member 2 of 2 of batch group", two)
-        for prompt in (one, two):
+        for index, (item, prompt) in enumerate(zip(handoffs, (one, two)), 1):
             self.assertIn("one JSON array", prompt)
-            self.assertLessEqual(len(prompt), 1200)
+            fixed = ledger.worker_prompt_fixed_text(bare(item), (index, 2, "group"))
+            self.assertLessEqual(len(fixed), 1200)
             self.assertNotIn("exactly the bounded-step-return-v1 JSON object", prompt)
+
+    def test_long_script_and_plan_paths_still_dispatch_with_the_full_paths(self):
+        self.plan_id = MAX_PLAN_ID
+        self.init([leaf("alpha", "leaf-alpha")])
+        with unittest.mock.patch.object(ledger_dispatch, "LEDGER_SCRIPT", CACHED_SCRIPT):
+            code, result = self.dispatch("alpha", "--create-from", "main")
+        self.assertEqual(0, code, result)
+        (entry,) = result["handoffs"]
+        prompt = entry["prompt"]
+        for path in (entry["packet_path"], entry["worktree"], str(CACHED_SCRIPT)):
+            self.assertIn(path, prompt)
+        self.assertGreater(len(prompt), ledger.MAX_WORKER_PROMPT)
+        self.assertLessEqual(
+            len(ledger.worker_prompt_fixed_text(bare(entry))), ledger.MAX_WORKER_PROMPT
+        )
 
     def test_next_only_names_dispatch_for_a_pending_step(self):
         self.init([leaf("alpha", "leaf-alpha")])
@@ -349,6 +379,41 @@ class DispatchCommandTest(DispatchHarness):
         self.assertEqual(0, code, result)
         self.assertEqual("ready_pending", result["next"]["category"])
         self.assertIn(" dispatch ", result["next"]["command"])
+
+
+class WorkerPromptBoundTest(unittest.TestCase):
+    """#144: the 1,200-character bound covers the prompt's fixed text, not where files live."""
+
+    def packet(self, step_id, attempt_id, worktree):
+        return {"portable_tier": "standard", "step_id": step_id, "attempt_id": attempt_id,
+                "worktree": worktree}
+
+    def test_the_measured_fixed_text_ignores_path_and_id_length(self):
+        short = self.packet("s", "a", "/w")
+        maximal = self.packet(MAX_STEP_ID, "7d6c608b-0925-47cf-9c31-cc5867295b0e", "/" + "w" * 400)
+        for small, large in ((None, None), ((1, 2, "b"), (1, 2, MAX_STEP_ID))):
+            with self.subTest(member=small):
+                fixed = ledger.worker_prompt_fixed_text(short, small)
+                self.assertEqual(fixed, ledger.worker_prompt_fixed_text(maximal, large))
+                self.assertNotIn(MAX_STEP_ID, fixed)
+        # The bound uses that measure, so the full-length maximal prompt is still issued.
+        packet_path = Path("/" + "p" * 400)
+        prompt = ledger.worker_prompt(maximal, packet_path)
+        script = str(ledger_dispatch.LEDGER_SCRIPT)
+        self.assertEqual(ledger.worker_prompt_text(maximal, str(packet_path), script), prompt)
+        self.assertGreater(len(prompt), ledger.MAX_WORKER_PROMPT)
+
+    def test_the_bound_still_refuses_growth_of_the_fixed_text(self):
+        packet = self.packet("s", "a", "/w")
+        size = len(ledger.worker_prompt_fixed_text(packet))
+        script = str(ledger_dispatch.LEDGER_SCRIPT)
+        with unittest.mock.patch.object(ledger_dispatch, "MAX_WORKER_PROMPT", size):
+            self.assertEqual(ledger.worker_prompt_text(packet, "/p", script),
+                             ledger.worker_prompt(packet, Path("/p")))
+        with unittest.mock.patch.object(ledger_dispatch, "MAX_WORKER_PROMPT", size - 1):
+            with self.assertRaises(ledger.Error) as raised:
+                ledger.worker_prompt(packet, Path("/p"))
+        self.assertEqual("worker prompt exceeds 1200 characters", str(raised.exception))
 
 
 class WorktreeOwnerAdmissionTest(unittest.TestCase):

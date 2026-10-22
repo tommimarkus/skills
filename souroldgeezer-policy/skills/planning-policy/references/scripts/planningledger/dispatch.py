@@ -58,6 +58,7 @@ from .vocabulary import (
     FORWARD_SCHEMA,
     MAX_WORKER_HANDOFF,
     MAX_WORKER_PROMPT,
+    NEXT_ID_PLACEHOLDER,
     PORTABLE_TIERS,
     PRECISION_POLICIES,
     REGISTERED_RETURN_CODES,
@@ -74,6 +75,8 @@ __all__ = [
     "transition_step",
     "batch_source_commits",
     "worktree_result",
+    "worker_prompt_text",
+    "worker_prompt_fixed_text",
     "worker_prompt",
     "store_dispatch_packet",
     "build_worker_handoff",
@@ -326,15 +329,17 @@ def worktree_result(
     return value, str(destination.relative_to(directory)), digest(value)
 
 
-def worker_prompt(
-    packet: JsonObject, packet_path: Path, member: tuple[int, int, str] | None = None
+def worker_prompt_text(
+    packet: JsonObject,
+    packet_path: str,
+    script: str,
+    member: tuple[int, int, str] | None = None,
 ) -> str:
-    """Host-neutral worker prompt built only from packet facts.
+    """Render the worker prompt from packet facts, the packet path and the ledger script.
 
     member is (position, count, batch) for a batch group, else None.
     """
-    script = LEDGER_SCRIPT
-    text = (
+    return (
         f"You are the {packet['portable_tier']} builder for step {packet['step_id']} "
         f"(attempt {packet['attempt_id']}).\n"
         f"Read your assignment packet in full: {packet_path}\n"
@@ -349,9 +354,27 @@ def worker_prompt(
             "bounded-step-return-v1 object per member you ran, in that order, and nothing else."
         )
     )
-    if len(text) > MAX_WORKER_PROMPT:
+
+
+def worker_prompt_fixed_text(packet: JsonObject, member: tuple[int, int, str] | None = None) -> str:
+    """The prompt the bound measures: each path and identifier as one placeholder."""
+    slot = NEXT_ID_PLACEHOLDER
+    neutral = {**packet, "step_id": slot, "attempt_id": slot, "worktree": slot}
+    batch = None if member is None else (member[0], member[1], slot)
+    return worker_prompt_text(neutral, slot, slot, batch)
+
+
+def worker_prompt(
+    packet: JsonObject, packet_path: Path, member: tuple[int, int, str] | None = None
+) -> str:
+    """Host-neutral worker prompt built only from packet facts.
+
+    The bound covers the fixed text, so where the checkout and plugin live never
+    decides whether dispatch refuses; the prompt itself keeps the full paths.
+    """
+    if len(worker_prompt_fixed_text(packet, member)) > MAX_WORKER_PROMPT:
         raise Error("worker prompt exceeds 1200 characters")
-    return text
+    return worker_prompt_text(packet, str(packet_path), str(LEDGER_SCRIPT), member)
 
 
 def store_dispatch_packet(

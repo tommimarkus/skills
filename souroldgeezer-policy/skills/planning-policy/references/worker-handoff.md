@@ -24,9 +24,10 @@ other stop halts the batch. The parent repairs that member per the
 Do not give a worker the whole plan or reconstruct a packet from prose.
 
 `dispatch` also stores the packet under the run and returns its absolute
-`packet_path` with a generated, host-neutral `prompt` (at most 1,200 characters)
-built only from packet facts. Pass that prompt unchanged to the tier agent; a
-host adapter may append host facts only. The worker may run `validate-return`
+`packet_path` with a generated, host-neutral `prompt` (within 1,200 characters,
+counting each path and id as one placeholder) built only from packet facts.
+Pass that prompt unchanged to the tier agent; a host adapter may append host
+facts only. The worker may run `validate-return`
 with `--return-file -` to read its return from stdin. The packet's `precision`
 governs scope: under `standard` a changed path outside the write set is allowed,
 recorded by the parent, and judged by the verifier, so a worker names such paths

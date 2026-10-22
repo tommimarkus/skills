@@ -5,18 +5,18 @@ import unittest
 from unittest.mock import patch
 
 from tests.planning_ledger_changeset_test import ChangesetHarness
-from tests.planning_ledger_dispatch_test import batch_leaves, git, leaf, ledger
+from tests.planning_ledger_dispatch_test import (
+    LONG_PLAN_ID,
+    MAX_AGENT_ID,
+    MAX_PLAN_ID,
+    MAX_STEP_ID,
+    batch_leaves,
+    git,
+    leaf,
+    ledger,
+)
 
-from planningledger import dispatch as ledger_dispatch
 from planningledger import gitops
-
-# Issue #144: 33 characters whose hyphens pushed the raw gate block past the 120 cap.
-LONG_PLAN_ID = "tqa-audit-2026-10-22-slice-1-of-2"
-# The most token-heavy ids the grammar admits: 128-character plan and agent ids and a
-# 64-character step id, each separator a proxy token of its own.
-MAX_PLAN_ID = "a" + "-" * 127
-MAX_STEP_ID = "a" + "-a" * 31 + "a"
-MAX_AGENT_ID = "a" + "-" * 127
 
 
 class VerifyHarness(ChangesetHarness):
@@ -615,12 +615,9 @@ class IdNeutralCapTest(VerifyHarness):
     def test_maximal_ids_keep_every_full_next_block_through_land(self):
         self.plan_id, sid = MAX_PLAN_ID, MAX_STEP_ID
         self.init([leaf(sid, "leaf-owner")])
-        # The worker prompt's own 1,200-character bound counts paths, not next-block
-        # tokens; lifting it lets dispatch reach the next caps under test.
-        with patch.object(ledger_dispatch, "MAX_WORKER_PROMPT", 4096):
-            code, started = self.call("dispatch", "--actor", "parent", "--run-id", self.run_id,
-                                      "--step-id", sid, "--agent-id", MAX_AGENT_ID,
-                                      "--create-from", "main")
+        code, started = self.call("dispatch", "--actor", "parent", "--run-id", self.run_id,
+                                  "--step-id", sid, "--agent-id", MAX_AGENT_ID,
+                                  "--create-from", "main")
         attempt = self.checkpoint()["steps"][sid]["attempt_id"]
         self.assertEqual(
             (0, {"await_step_id": sid, "agent_id": MAX_AGENT_ID, "attempt_id": attempt}),
