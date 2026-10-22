@@ -14,11 +14,15 @@ titles/questions/`diagram_kind`, model bindings, declared output paths), each
 model's own `semantic_profile`, the rendered `generated/svg/*.svg`, and
 `generated/render-metadata/*.json` (node/edge counts and a derived edge-density
 hint) — and writes one
-standalone `<package>/gallery.html`. Every view's SVG is inlined as an inert
-`<template class="plate" data-id="<view-id>">`; only the currently selected
-plate is cloned into the live DOM (`#plate-host`). This is the **performance
-choice**: a package with dozens of views ships every diagram in one file
-without paying render/layout cost for the views nobody is looking at.
+standalone `<package>/gallery.html`. Every view's SVG is encoded as an inert
+base64 `data:image/svg+xml` image; only the currently selected image is created
+in the live DOM (`#plate-host`). SVG markup cannot become gallery DOM, run
+scripts, import CSS, or fetch external resources. The image copy omits only the
+renderer-added `data-arch-a11y="visible-title"` element because the gallery
+chrome already shows that title; the SVG `<title>` / `<desc>`, namespace, and
+intrinsic dimensions remain in the image bytes, and their text supplies the
+outer image's accessible name. This keeps render/layout cost bounded for
+packages with dozens of views.
 
 The one **structural device** carried through the design: a short code (e.g.
 `A1`, `S3`, `T11`) leads every register row and appears large in the header.
@@ -152,8 +156,10 @@ chrome toggle — a dark diagram shows a dark card in either chrome.
 ```
 
 - Keys are token names from the Colour-tokens table **without** the leading
-  `--` (e.g. `accent`, `sheet-line`, `warn-wash`); values are any CSS colour
-  string.
+  `--` (e.g. `accent`, `sheet-line`, `warn-wash`). Colour tokens accept CSS
+  colour keywords, hex values, and bounded colour-function syntax; `shadow`
+  accepts a bounded box-shadow value. Declaration/rule syntax, URLs, imports,
+  expressions, and values of the wrong token type fail the build.
 - Keys outside `light` / `dark` apply to **both** themes; the optional
   `light` / `dark` maps override per theme. Precedence per token:
   per-theme > shared > built-in default.
@@ -206,11 +212,10 @@ the content.
 
 - The rail and the stage's header/footer sit on `--panel`/`--rail`; only the
   scrolling areas (`#register`, `#viewer`) show `--paper`.
-- `#sheet` is a rounded, bordered, shadowed card on `--sheet`; the active
-  SVG is sized to fit the available width up to its own intrinsic pixel
-  width (never enlarged past real size), and the model's own visible-title
-  text is hidden (`[data-arch-a11y="visible-title"]{display:none}`) since the
-  chrome already shows the title.
+- `#sheet` is a rounded, bordered, shadowed card on `--sheet`; the active SVG
+  image is sized to fit the available width up to its own intrinsic pixel width
+  (never enlarged past real size). Its encoded copy omits the model's redundant
+  visible-title text since the chrome already shows the title.
 
 ## Components
 
@@ -240,8 +245,9 @@ Nothing else animates.
 - `:focus-visible` → 2px `--accent` outline, 2px offset, on every control.
 - Register is `role="tablist"`; rows are `role="tab"` with `aria-selected`;
   **↑ / ↓** move between plates and keep focus.
-- SVGs keep `role="img"` + `<title>`/`<desc>`; the redundant visible title is
-  hidden visually but the accessible name remains.
+- Each SVG is an `<img>` whose `alt` text comes from its `<title>` and `<desc>`
+  (falling back to the view title). The redundant visible title is omitted from
+  the encoded image copy while the source accessible text remains.
 
 ## Responsive
 
@@ -294,7 +300,11 @@ becomes a top bar (`max-height: 40vh`) and the header plate code shrinks to
   the read-only index of a package's models and built artifacts, and
   `dediren_verify` is the gate behind which a stale gallery or SVG is `ARCH-R-2`.
   Use them together with `--check` for gallery and workspace staleness.
+- **Path boundary:** every declared model, render-metadata, SVG, and theme input
+  resolves inside the selected package root before it is read. Absolute paths,
+  parent traversal, and symlinks that escape that root fail with exit `2`.
+  `gallery.html` is the fixed output and an existing symlink at that path is
+  refused rather than followed.
 - **File-size caveat:** `gallery.html` is one file, so its size grows with
-  view count and with the size of each inlined SVG. The `<template>` design
-  keeps the DOM cost bounded — only the active plate is ever live — but the
-  bytes shipped to the browser still include every view's markup.
+  view count and with the size of each encoded SVG. Only the active image is
+  live in the DOM, but the bytes shipped to the browser include every view.

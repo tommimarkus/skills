@@ -6,9 +6,9 @@ presentation title/question/diagram_kind, model bindings, declared output
 paths), each model's own plugins.generic-graph.semantic_profile (the notation),
 the rendered generated/svg/*.svg, and generated/render-metadata/*.json
 (node/edge counts and a derived edge-density hint) — and writes one standalone
-HTML file inside the package with
-every diagram inlined as an inert <template>. No external assets, so it works on
-GitHub Pages, a static host, or opened straight from disk.
+HTML file inside the package with every diagram encoded as a self-contained SVG
+image. SVG markup never enters the gallery DOM, and no external assets are
+loaded, so it works on GitHub Pages, a static host, or opened straight from disk.
 
 package.json is the dediren-native build manifest and the only authored manifest:
 its package-level presentation object supplies <html lang dir> — the same
@@ -33,10 +33,13 @@ input error; 3 render sources incomplete (re-render before building/checking).
 
 Stdlib-only; Python >= 3.9.
 """
+import base64
+import html
 import json
 import os
 import re
 import sys
+import xml.etree.ElementTree as ET
 from urllib.parse import quote
 
 DENSE_EDGES = 50  # edge-count density hint; never a layout-quality verdict
@@ -63,6 +66,11 @@ _DARK = {
 # Every token an author theme may override: the keys above, i.e. the CSS
 # custom-property names without the leading "--". _LIGHT and _DARK share them.
 _THEME_TOKENS = frozenset(_LIGHT)
+_COLOUR_TOKENS = _THEME_TOKENS - {"shadow"}
+_COLOUR_FUNCTIONS = frozenset((
+    "color", "color-mix", "hsl", "hsla", "hwb", "lab", "lch", "oklab",
+    "oklch", "rgb", "rgba",
+))
 
 # Ordered UML diagram-kind keyword families for classify(): first matching row wins.
 _UML_FAMILIES = (
@@ -77,6 +85,45 @@ _UML_FAMILIES = (
 
 class SourceMissing(Exception):
     """A required rendered source (svg or render-metadata) is absent."""
+
+
+def _package_root(pkg_dir):
+    """Absolute selected package root used as the authority for every path."""
+    root = os.path.realpath(os.path.abspath(os.fspath(pkg_dir)))
+    if not os.path.isdir(root):
+        raise ValueError("package directory does not exist: %s" % pkg_dir)
+    return root
+
+
+def _source_path(pkg_dir, relative, label):
+    """Resolve one package-declared relative path without leaving pkg_dir."""
+    if not isinstance(relative, str) or not relative:
+        raise ValueError("%s path must be a non-empty string" % label)
+    if os.path.isabs(relative):
+        raise ValueError("%s path must be relative to the package: %s" %
+                         (label, relative))
+    if ".." in relative.split(os.sep):
+        raise ValueError("%s path must not traverse outside the package: %s" %
+                         (label, relative))
+    root = _package_root(pkg_dir)
+    resolved = os.path.realpath(os.path.join(root, relative))
+    try:
+        contained = os.path.commonpath((root, resolved)) == root
+    except ValueError:
+        contained = False
+    if not contained:
+        raise ValueError("%s path resolves outside the package: %s" %
+                         (label, relative))
+    return resolved
+
+
+def _output_path(pkg_dir):
+    """Return the fixed gallery output, refusing an existing symlink target."""
+    root = _package_root(pkg_dir)
+    path = os.path.join(root, "gallery.html")
+    if os.path.islink(path):
+        raise ValueError("gallery output must not be a symlink: %s" % path)
+    return path
 
 
 def _read_json(path):
@@ -113,7 +160,13 @@ def _semantic_profile(pkg_dir, source):
     if not source:
         return "archimate"
     try:
-        model = _read_json(os.path.join(pkg_dir, source))
+        path = _source_path(pkg_dir, source, "model source")
+    except ValueError:
+        if not os.path.isdir(pkg_dir):
+            return "archimate"
+        raise
+    try:
+        model = _read_json(path)
     except (OSError, ValueError):
         return "archimate"
     if not isinstance(model, dict):
@@ -155,7 +208,7 @@ def _favicon():
 
 def _load_package(pkg_dir):
     """Parsed package.json — the dediren-native build manifest, required."""
-    return _read_json(os.path.join(pkg_dir, "package.json"))
+    return _read_json(_source_path(pkg_dir, "package.json", "package manifest"))
 
 
 def _feature_name(pkg_dir):
@@ -173,7 +226,8 @@ def _reject_retired_sidecar(pkg_dir):
     said. Fail on the *live* keys only: a leftover file holding just `feature`
     (or schema alone) is harmless, since the directory name supplies it."""
     try:
-        loaded = _read_json(os.path.join(pkg_dir, "project.json"))
+        loaded = _read_json(_source_path(
+            pkg_dir, "project.json", "retired presentation sidecar"))
     except (OSError, ValueError):
         return
     if not isinstance(loaded, dict):
@@ -298,6 +352,46 @@ class GalleryThemeError(ValueError):
     """The package's gallery-theme.json is present but malformed."""
 
 
+def _balanced_parentheses(value):
+    depth = 0
+    for char in value:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0
+
+
+def _valid_colour(value):
+    """A bounded CSS colour grammar with no URL, declaration, or rule syntax."""
+    if re.fullmatch(r"#[0-9a-fA-F]{3,4}(?:[0-9a-fA-F]{2}){0,2}", value):
+        return len(value) in (4, 5, 7, 9)
+    if re.fullmatch(r"[A-Za-z][A-Za-z-]*", value):
+        return True
+    match = re.fullmatch(r"([A-Za-z][A-Za-z-]*)\((.*)\)", value)
+    if not match or match.group(1).lower() not in _COLOUR_FUNCTIONS:
+        return False
+    body = match.group(2)
+    return (bool(body) and _balanced_parentheses(body)
+            and re.fullmatch(r"[0-9A-Za-z#.,%+\-/ ()]+", body) is not None
+            and not re.search(r"(?i)(?:url|expression)\s*\(", body))
+
+
+def _valid_shadow(value):
+    """Accept inert box-shadow values while excluding colour-only values."""
+    if value == "none":
+        return True
+    if (not _balanced_parentheses(value)
+            or re.fullmatch(r"[0-9A-Za-z#.,%+\-/ ()]+", value) is None
+            or re.search(r"(?i)(?:url|expression|import)\s*\(?", value)):
+        return False
+    return re.search(
+        r"(?:^|[\s,(])-?(?:\d+(?:\.\d*)?|\.\d+)(?:px|rem|em|ex|ch|cm|mm|in|pt|pc|q)",
+        value, re.I) is not None
+
+
 def _check_token(name, value):
     if name not in _THEME_TOKENS:
         raise GalleryThemeError(
@@ -307,6 +401,13 @@ def _check_token(name, value):
         raise GalleryThemeError(
             "gallery-theme.json: token %r must be a string, got %s"
             % (name, type(value).__name__))
+    value = value.strip()
+    valid = _valid_shadow(value) if name == "shadow" else _valid_colour(value)
+    if not valid:
+        kind = "box-shadow" if name == "shadow" else "CSS colour"
+        raise GalleryThemeError(
+            "gallery-theme.json: token %r must be a safe %s value" %
+            (name, kind))
 
 
 def _load_gallery_theme(pkg_dir):
@@ -316,7 +417,7 @@ def _load_gallery_theme(pkg_dir):
     Tokens are the Colour-token names without the leading "--"; keys outside
     "light"/"dark" apply to both themes, the per-theme maps override them.
     """
-    path = os.path.join(pkg_dir, "gallery-theme.json")
+    path = _source_path(pkg_dir, "gallery-theme.json", "gallery theme")
     try:
         with open(path, encoding="utf-8") as fh:
             raw = json.load(fh)
@@ -368,44 +469,113 @@ def _emit_tokens(tokens):
     return "".join("  --%s:%s;\n" % (k, v) for k, v in tokens.items())
 
 
+def _text(value, label):
+    if not isinstance(value, str):
+        raise ValueError("%s must be a string" % label)
+    return value
+
+
+def _svg_number(value):
+    """Positive numeric SVG length in user units/pixels, or None."""
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"\s*(\d+(?:\.\d*)?|\.\d+)(?:px)?\s*", value)
+    if not match:
+        return None
+    number = float(match.group(1))
+    return number if number > 0 else None
+
+
+def _svg_image(svg_bytes, fallback_alt):
+    """Return an inert SVG image payload, accessible text, and dimensions.
+
+    The renderer-added visible title is omitted from the image copy because the
+    gallery chrome already renders the same title. The source title and desc
+    elements remain image bytes and also supply the outer img's alt text.
+    """
+    try:
+        svg = svg_bytes.decode("utf-8")
+        root = ET.fromstring(svg)
+    except (UnicodeDecodeError, ET.ParseError) as exc:
+        raise ValueError("rendered SVG is not well-formed UTF-8 XML: %s" % exc)
+    if root.tag.rsplit("}", 1)[-1] != "svg":
+        raise ValueError("rendered SVG root element must be <svg>")
+
+    accessible = []
+    for element in root.iter():
+        if element.tag.rsplit("}", 1)[-1] in ("title", "desc"):
+            text = " ".join("".join(element.itertext()).split())
+            if text and text not in accessible:
+                accessible.append(text)
+    alt = " — ".join(accessible) if accessible else fallback_alt
+
+    viewbox = root.get("viewBox", "").replace(",", " ").split()
+    box_width = box_height = None
+    if len(viewbox) == 4:
+        try:
+            box_width, box_height = float(viewbox[2]), float(viewbox[3])
+        except ValueError:
+            pass
+    width = _svg_number(root.get("width")) or box_width or 300.0
+    height = _svg_number(root.get("height")) or box_height or 150.0
+    if width <= 0 or height <= 0:
+        raise ValueError("rendered SVG must have positive intrinsic dimensions")
+
+    visible_title = re.compile(
+        r'<(?P<tag>[A-Za-z_:][\w:.-]*)\b'
+        r'(?=[^>]*\bdata-arch-a11y=["\']visible-title["\'])[^>]*>'
+        r'.*?</(?P=tag)\s*>', re.S)
+    image_svg = visible_title.sub("", svg)
+    encoded = base64.b64encode(image_svg.encode("utf-8")).decode("ascii")
+    return "data:image/svg+xml;base64," + encoded, alt, width, height
+
+
 def collect(pkg_dir):
-    """Return (data, plates_html) for the package, or raise SourceMissing."""
+    """Return inert per-view image data, or raise SourceMissing."""
+    pkg_dir = _package_root(pkg_dir)
     pkg = _load_package(pkg_dir)
     prof = profile_resolver(pkg, pkg_dir)
-    counters, data, plates = {}, [], []
+    counters, data = {}, []
     for v in pkg["views"]:
-        vid = v["id"]
+        vid = _text(v["id"], "view id")
         pres = v.get("presentation", {})
         outputs = v.get("outputs", {})
-        key, gtitle, gnote, prefix = classify(prof(v), pres.get("diagram_kind", ""))
+        title = _text(pres.get("title", vid), "view title")
+        question = _text(pres.get("question", ""), "view question")
+        kind = _text(pres.get("diagram_kind", ""), "diagram kind")
+        key, gtitle, gnote, prefix = classify(prof(v), kind)
         counters[key] = counters.get(key, 0) + 1
         meta_out = outputs.get(
             "render_metadata", "generated/render-metadata/%s.json" % vid)
         svg_out = outputs.get("diagram", "generated/svg/%s.svg" % vid)
-        meta_path = os.path.join(pkg_dir, meta_out)
-        svg_path = os.path.join(pkg_dir, svg_out)
+        meta_path = _source_path(pkg_dir, meta_out, "render-metadata")
+        svg_path = _source_path(pkg_dir, svg_out, "SVG")
         if not os.path.exists(meta_path):
             raise SourceMissing("render-metadata: %s" % meta_out)
         if not os.path.exists(svg_path):
             raise SourceMissing("svg: %s" % svg_out)
         n, e = _count(meta_path)
-        with open(svg_path, encoding="utf-8") as fh:
-            svg = fh.read().strip()
+        with open(svg_path, "rb") as fh:
+            svg_bytes = fh.read()
+        try:
+            svg = svg_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("rendered SVG is not UTF-8: %s" % exc)
         sheet, sheet_line = _plate_sheet(svg)
+        image, alt, width, height = _svg_image(svg_bytes, title)
         data.append({
             "id": vid,
             "code": "%s%d" % (prefix, counters[key]),
             "group": {"key": key, "title": gtitle, "note": gnote},
-            "title": pres.get("title", vid),
-            "q": pres.get("question", ""),
-            "kind": pres.get("diagram_kind", ""),
+            "title": title,
+            "q": question,
+            "kind": kind,
             "nodes": n, "edges": e,
             "density": density_of(e),
             "sheet": sheet, "sheetLine": sheet_line,
+            "image": image, "alt": alt, "width": width, "height": height,
         })
-        plates.append(
-            '<template class="plate" data-id="%s">%s</template>' % (vid, svg))
-    return data, "\n".join(plates)
+    return data
 
 
 def _notation_summary(data):
@@ -420,8 +590,9 @@ def _notation_summary(data):
 
 def build_html(pkg_dir):
     """Full standalone HTML for the package (pure function of its sources)."""
+    pkg_dir = _package_root(pkg_dir)
     _reject_retired_sidecar(pkg_dir)
-    data, plates_html = collect(pkg_dir)
+    data = collect(pkg_dir)
     light, dark, sheet_pinned = _resolve_theme(pkg_dir)
     feature = _feature_name(pkg_dir)
     # lang/dir come from the package itself, the same declaration dediren folds into
@@ -432,20 +603,29 @@ def build_html(pkg_dir):
     n = len(data)
     sub = "%d view%s · %s" % (n, "" if n == 1 else "s", _notation_summary(data))
     foot = os.path.normpath(pkg_dir)
-    return (TEMPLATE
-            .replace("__FAVICON__", _favicon())
-            .replace("__LANG__", lang)
-            .replace("__DIR__", direction)
-            .replace("__PAGETITLE__", "%s · architecture gallery" % feature)
-            .replace("__EYEBROW__", feature)
-            .replace("__TITLE__", "Architecture gallery")
-            .replace("__SUB__", sub)
-            .replace("__THEME_LIGHT__", _emit_tokens(light))
-            .replace("__THEME_DARK__", _emit_tokens(dark))
-            .replace("__SHEET_DERIVE__", "false" if sheet_pinned else "true")
-            .replace("__FOOT__", foot)
-            .replace("__DATA__", json.dumps(data, ensure_ascii=False))
-            .replace("__PLATES__", plates_html))
+    values = {
+        "FAVICON": html.escape(_favicon(), quote=True),
+        "LANG": html.escape(_text(lang, "package presentation lang"), quote=True),
+        "DIR": html.escape(_text(direction, "package presentation dir"), quote=True),
+        "PAGETITLE": html.escape("%s · architecture gallery" % feature),
+        "EYEBROW": html.escape(feature),
+        "TITLE": "Architecture gallery",
+        "SUB": html.escape(sub),
+        "THEME_LIGHT": _emit_tokens(light),
+        "THEME_DARK": _emit_tokens(dark),
+        "SHEET_DERIVE": "false" if sheet_pinned else "true",
+        "FOOT": html.escape(foot),
+        "DATA": _json_for_html(data),
+    }
+    return re.sub(r"__([A-Z_]+)__", lambda match: values[match.group(1)], TEMPLATE)
+
+
+def _json_for_html(value):
+    """Serialize script data without permitting an HTML raw-text close tag."""
+    encoded = json.dumps(value, ensure_ascii=False)
+    return (encoded.replace("&", r"\u0026").replace("<", r"\u003c")
+            .replace(">", r"\u003e").replace("\u2028", r"\u2028")
+            .replace("\u2029", r"\u2029"))
 
 
 # ---------------------------------------------------------------- template ----
@@ -529,8 +709,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
 #sheet.swap{animation:swap .18s ease}
 @keyframes swap{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
 #plate-host{display:block}
-#plate-host svg{display:block;height:auto;max-width:none}
-#plate-host svg [data-arch-a11y="visible-title"]{display:none}  /* title lives in the chrome */
+#plate-host img{display:block;height:auto;max-width:none}
 #foot{display:flex;gap:16px;align-items:center;padding:8px 24px;border-top:1px solid var(--line);
   background:var(--panel);font-family:var(--mono);font-size:11px;color:var(--faint)}
 #p-note{color:var(--muted)}
@@ -584,18 +763,15 @@ body{background:var(--paper);color:var(--ink);font-family:var(--sans);line-heigh
   </main>
 </div>
 
-<div hidden>__PLATES__</div>
-
 <script>
 "use strict";
 const DATA = __DATA__;
 const SHEET_DERIVE = __SHEET_DERIVE__;  // false when an author theme pins the sheet
-const byId = Object.fromEntries(DATA.map(d => [d.id, d]));
+const byId = new Map(DATA.map(d => [d.id, d]));
 const q = s => document.querySelector(s);
-const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let current = null, zoom = 100;
 
-// build the register from the data
+// Build package-provided text with DOM text properties, never HTML parsing.
 (function buildRegister(){
   const groups = [];
   for (const d of DATA){
@@ -603,16 +779,24 @@ let current = null, zoom = 100;
     if (!g){ g = {key:d.group.key, title:d.group.title, note:d.group.note, items:[]}; groups.push(g); }
     g.items.push(d);
   }
-  q('#register').innerHTML = groups.map(g => `
-    <section class="reg-group">
-      <header class="reg-head"><span class="reg-title">${esc(g.title)}</span><span class="reg-note">${esc(g.note)} · ${g.items.length}</span></header>
-      ${g.items.map(d => `
-        <button class="reg-item" role="tab" data-id="${d.id}" aria-selected="false" title="${esc(d.title)}">
-          <span class="reg-code">${d.code}</span>
-          <span class="reg-label">${esc(d.title)}</span>
-          <span class="reg-meta">${d.nodes}·${d.edges}</span>
-        </button>`).join('')}
-    </section>`).join('');
+  const register = q('#register');
+  for (const g of groups){
+    const section = document.createElement('section'); section.className = 'reg-group';
+    const head = document.createElement('header'); head.className = 'reg-head';
+    const groupTitle = document.createElement('span'); groupTitle.className = 'reg-title'; groupTitle.textContent = g.title;
+    const groupNote = document.createElement('span'); groupNote.className = 'reg-note'; groupNote.textContent = `${g.note} · ${g.items.length}`;
+    head.append(groupTitle, groupNote); section.append(head);
+    for (const d of g.items){
+      const button = document.createElement('button'); button.className = 'reg-item';
+      button.type = 'button'; button.setAttribute('role', 'tab'); button.dataset.id = d.id;
+      button.setAttribute('aria-selected', 'false'); button.title = d.title;
+      for (const [className, text] of [['reg-code', d.code], ['reg-label', d.title], ['reg-meta', `${d.nodes}·${d.edges}`]]){
+        const span = document.createElement('span'); span.className = className; span.textContent = text; button.append(span);
+      }
+      section.append(button);
+    }
+    register.append(section);
+  }
 })();
 
 const viewer = q('#viewer'), sheet = q('#sheet');
@@ -629,23 +813,27 @@ function availWidth(){
     - parseFloat(ss.paddingLeft) - parseFloat(ss.paddingRight)
     - parseFloat(ss.borderLeftWidth) - parseFloat(ss.borderRightWidth));
 }
-// Intrinsic pixel width straight off the SVG (width attr, viewBox as fallback).
+// Intrinsic pixel width is recorded from the decoded SVG root at build time.
 function intrinsicWidth(s){
-  return parseFloat(s.getAttribute('width')) || (s.viewBox && s.viewBox.baseVal && s.viewBox.baseVal.width);
+  return parseFloat(s.dataset.intrinsicWidth) || s.naturalWidth;
 }
 function applyZoom(){
-  const s = q('#plate-host svg'); if (!s) return;
+  const s = q('#plate-host img'); if (!s) return;
   const base = Math.min(intrinsicWidth(s), availWidth());   // fill the width, but never past real pixels
   s.style.width = Math.round(base * zoom / 100) + 'px';
 }
 function setZoom(z){ zoom = Math.max(25, Math.min(400, z)); applyZoom(); }
 
 function select(id){
-  const d = byId[id]; if (!d) return;
+  const d = byId.get(id); if (!d) return;
   current = id;
   document.querySelectorAll('.reg-item').forEach(b => b.setAttribute('aria-selected', String(b.dataset.id === id)));
-  const tpl = document.querySelector(`template.plate[data-id="${id}"]`);
-  q('#plate-host').replaceChildren(tpl ? tpl.content.cloneNode(true) : document.createTextNode(''));
+  const image = document.createElement('img');
+  image.src = d.image; image.alt = d.alt; image.decoding = 'async';
+  image.width = Math.round(d.width); image.height = Math.round(d.height);
+  image.dataset.intrinsicWidth = String(d.width);
+  image.addEventListener('load', applyZoom, {once:true});
+  q('#plate-host').replaceChildren(image);
   q('#p-code').textContent  = d.code;
   q('#p-kind').textContent  = d.kind;
   q('#p-title').textContent = d.title;
@@ -655,7 +843,7 @@ function select(id){
   q('#p-path').textContent  = `generated/svg/${d.id}.svg`;
   q('#p-note').textContent  = 'Density is an edge-count heuristic; assess layout quality from build diagnostics and the SVG.';
   zoom = 100; applyZoom();
-  if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
+  if (hashId() !== id) history.replaceState(null, '', '#' + encodeURIComponent(id));
   const sheet = q('#sheet');
   // Per-view sheet: a dark diagram gets its own dark, harmonized card. Skipped
   // when an author theme pins the sheet (SHEET_DERIVE false) so the pinned value
@@ -663,7 +851,14 @@ function select(id){
   if (SHEET_DERIVE && d.sheet){ sheet.style.setProperty('--sheet', d.sheet); sheet.style.setProperty('--sheet-line', d.sheetLine); }
   else { sheet.style.removeProperty('--sheet'); sheet.style.removeProperty('--sheet-line'); }
   sheet.classList.remove('swap'); void sheet.offsetWidth; sheet.classList.add('swap');
-  document.querySelector(`.reg-item[data-id="${id}"]`)?.scrollIntoView({block:'nearest'});
+  registerButton(id)?.scrollIntoView({block:'nearest'});
+}
+
+function registerButton(id){
+  return Array.from(document.querySelectorAll('.reg-item')).find(button => button.dataset.id === id);
+}
+function hashId(){
+  try { return decodeURIComponent(location.hash.slice(1)); } catch (_) { return ''; }
 }
 
 document.querySelectorAll('.reg-item').forEach(b => b.addEventListener('click', () => select(b.dataset.id)));
@@ -678,7 +873,7 @@ addEventListener('resize', applyZoom);  // keep "fit" honest when the window cha
 viewer.addEventListener('wheel', e => {
   if (!e.ctrlKey && !e.metaKey) return;
   e.preventDefault();
-  const s = q('#plate-host svg'); if (!s) return;
+  const s = q('#plate-host img'); if (!s) return;
   let dy = e.deltaY;                                    // normalise line/page deltas to ~pixels
   if (e.deltaMode === 1) dy *= 16; else if (e.deltaMode === 2) dy *= viewer.clientHeight;
   const before = s.getBoundingClientRect();
@@ -696,7 +891,7 @@ q('#register').addEventListener('keydown', e => {
   const ids = DATA.map(d => d.id), i = ids.indexOf(current);
   const next = e.key === 'ArrowDown' ? Math.min(ids.length - 1, i + 1) : Math.max(0, i - 1);
   select(ids[next]);
-  document.querySelector(`.reg-item[data-id="${ids[next]}"]`)?.focus();
+  registerButton(ids[next])?.focus();
 });
 
 const root = document.documentElement;
@@ -706,18 +901,32 @@ q('#theme').onclick = () => {
 };
 
 addEventListener('hashchange', () => {
-  const id = location.hash.slice(1);
-  if (byId[id] && id !== current) select(id);
+  const id = hashId();
+  if (byId.has(id) && id !== current) select(id);
 });
 
 if (DATA.length) {
-  const start = byId[location.hash.slice(1)] ? location.hash.slice(1) : DATA[0].id;
+  const start = byId.has(hashId()) ? hashId() : DATA[0].id;
   select(start);
 }
 </script>
 </body>
 </html>
 """
+
+
+def _read_gallery(path):
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags)
+    with os.fdopen(descriptor, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def _write_gallery(path, contents):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(path, flags, 0o666)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as fh:
+        fh.write(contents)
 
 
 def main(argv=None):
@@ -740,29 +949,36 @@ def main(argv=None):
         return 2
     pkg = positional[0]
     try:
-        html = build_html(pkg)
+        root = _package_root(pkg)
+        rendered = build_html(root)
+        out = _output_path(root)
     except SourceMissing as exc:
         sys.stderr.write("sources incomplete: %s\n" % exc)
         return 3
     except (OSError, ValueError, KeyError) as exc:
         sys.stderr.write("error: %s\n" % exc)
         return 2
-    out = os.path.join(pkg, "gallery.html")
     if check:
         try:
-            with open(out, encoding="utf-8") as fh:
-                current = fh.read()
-        except OSError:
+            current = _read_gallery(out)
+        except FileNotFoundError:
             sys.stderr.write("stale: %s is missing\n" % out)
             return 1
-        if current != html:
+        except OSError as exc:
+            sys.stderr.write("error: %s\n" % exc)
+            return 2
+        if current != rendered:
             sys.stderr.write("stale: %s differs from current sources\n" % out)
             return 1
         sys.stdout.write("fresh: %s\n" % out)
         return 0
-    with open(out, "w", encoding="utf-8") as fh:
-        fh.write(html)
-    sys.stdout.write("wrote %s (%d views)\n" % (out, html.count('class="plate"')))
+    try:
+        _write_gallery(out, rendered)
+    except OSError as exc:
+        sys.stderr.write("error: %s\n" % exc)
+        return 2
+    sys.stdout.write("wrote %s (%d views)\n" %
+                     (out, rendered.count("data:image/svg+xml;base64,")))
     return 0
 
 

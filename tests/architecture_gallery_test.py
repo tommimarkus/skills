@@ -1,4 +1,5 @@
 # lean-audit:dup-intentional — identifier-rich parallel test bodies (CLAUDE.md § Repo-local Python® tooling)
+import base64
 import importlib.util
 import json as _json
 import os
@@ -134,16 +135,71 @@ class BuildHtmlTest(unittest.TestCase):
                           "external resource reference found: %r"
                           % (external.group(0) if external else None))
 
-    def test_svgs_inlined_verbatim_keep_namespace(self):
-        # Verbatim inlining preserves the renderer's SVG namespace (not stripped).
-        self.assertIn('xmlns="http://www.w3.org/2000/svg"', self.html)
+    def test_svgs_are_inert_base64_images_with_accessible_text(self):
+        views = {v["id"]: v for v in _data(self.html)}
+        self.assertNotIn('<template class="plate"', self.html)
+        self.assertNotIn("data-dediren-node-id", self.html)
+        for vid, view in views.items():
+            prefix = "data:image/svg+xml;base64,"
+            self.assertTrue(view["image"].startswith(prefix))
+            decoded = base64.b64decode(view["image"][len(prefix):])
+            source = os.path.join(FIXTURE, "generated", "svg", vid + ".svg")
+            with open(source, "rb") as fh:
+                original = fh.read()
+            expected = re.sub(
+                rb'<text\b(?=[^>]*\bdata-arch-a11y="visible-title")[^>]*>'
+                rb'.*?</text\s*>', b'', original, flags=re.S)
+            self.assertEqual(decoded, expected)
+            self.assertIn(b'xmlns="http://www.w3.org/2000/svg"', decoded)
+            self.assertTrue(view["alt"])
+            self.assertGreater(view["width"], 0)
+            self.assertGreater(view["height"], 0)
 
-    def test_every_svg_inlined_as_template(self):
-        self.assertEqual(self.html.count('class="plate"'), 3)
-        self.assertIn('data-id="app-cooperation"', self.html)
-        self.assertIn('data-id="domain-class"', self.html)
-        self.assertIn('data-id="order-sequence"', self.html)
-        self.assertIn("data-dediren-node-id", self.html)
+    def test_package_text_is_context_safe_and_ids_never_form_selectors(self):
+        with tempfile.TemporaryDirectory(prefix="gallery-<script>") as d:
+            _mk_pkg(d, _DARK_SVG)
+            package_path = os.path.join(d, "package.json")
+            with open(package_path, encoding="utf-8") as fh:
+                pkg = _json.load(fh)
+            marker = '</script><script id="owned">globalThis.owned=1</script>'
+            pkg["presentation"] = {"lang": 'en\" onload="owned()',
+                                       "dir": 'rtl\" data-owned="yes'}
+            pkg["views"][0]["id"] = 'x\"] button,script[data-x="'
+            pkg["views"][0]["presentation"] = {
+                "title": marker, "question": marker,
+                "diagram_kind": marker,
+            }
+            with open(package_path, "w", encoding="utf-8") as fh:
+                _json.dump(pkg, fh)
+            os.rename(os.path.join(d, "generated", "svg", "v.svg"),
+                      os.path.join(d, "generated", "svg", 'x\"] button,script[data-x=".svg'))
+            os.rename(os.path.join(d, "generated", "render-metadata", "v.json"),
+                      os.path.join(d, "generated", "render-metadata",
+                                   'x\"] button,script[data-x=".json'))
+            pkg["views"][0]["outputs"] = {
+                "diagram": 'generated/svg/x\"] button,script[data-x=".svg',
+                "render_metadata":
+                    'generated/render-metadata/x\"] button,script[data-x=".json',
+            }
+            with open(package_path, "w", encoding="utf-8") as fh:
+                _json.dump(pkg, fh)
+
+            rendered = self.m.build_html(d)
+            self.assertEqual(rendered.count("<script>"), 1)
+            self.assertNotIn('<script id="owned">', rendered)
+            self.assertIn(r"\u003c/script\u003e", rendered)
+            self.assertNotIn('data-id="x', rendered)
+            self.assertIn("encodeURIComponent(id)", rendered)
+
+    def test_svg_external_reference_remains_only_in_inert_image_bytes(self):
+        svg = (_DARK_SVG.replace(
+            "</svg>", '<image href="https://attacker.invalid/pixel"/></svg>'))
+        with tempfile.TemporaryDirectory() as d:
+            _mk_pkg(d, svg)
+            rendered = self.m.build_html(d)
+            self.assertNotIn("https://attacker.invalid", rendered)
+            image = _data(rendered)[0]["image"].split(",", 1)[1]
+            self.assertIn(b"https://attacker.invalid", base64.b64decode(image))
 
     def test_sections_derived_from_real_profiles(self):
         # ArchiMate view -> A/ArchiMate views ; UML class -> T ; UML sequence -> S
@@ -435,8 +491,10 @@ class SheetDerivationTest(unittest.TestCase):
         self.assertEqual(dense["density"], "dense")
         self.assertNotIn("status", sparse)
         self.assertNotIn("status", dense)
-        self.assertIn('data-dediren-edge-label-for="e0"', sparse_html)
-        self.assertIn('data-dediren-edge-id="e49"', dense_html)
+        sparse_svg = base64.b64decode(_data(sparse_html)[0]["image"].split(",", 1)[1])
+        dense_svg = base64.b64decode(_data(dense_html)[0]["image"].split(",", 1)[1])
+        self.assertIn(b'data-dediren-edge-label-for="e0"', sparse_svg)
+        self.assertIn(b'data-dediren-edge-id="e49"', dense_svg)
         # the rendered hint is static template JS: anchor on the two
         # assignment statements rather than pinning the whole HTML
         density = re.search(r"q\('#p-density'\)\.textContent\s*=\s*([^;\n]+);", sparse_html)
@@ -456,7 +514,8 @@ class SheetDerivationTest(unittest.TestCase):
             self.assertEqual(
                 set(view),
                 {"id", "code", "group", "title", "q", "kind", "nodes", "edges",
-                 "density", "sheet", "sheetLine"})
+                 "density", "sheet", "sheetLine", "image", "alt", "width",
+                 "height"})
             self.assertNotIn("layout", _json.dumps(view).casefold())
 
 
@@ -515,6 +574,23 @@ class AuthorThemeTest(unittest.TestCase):
             _mk_pkg(d, _DARK_SVG, theme={"theme": {"accent": 123}})
             with self.assertRaises(self.m.GalleryThemeError):
                 self.m.build_html(d)
+
+    def test_colour_token_rejects_non_colour_and_css_breakout(self):
+        for value in ("10px", "red;}@import url(https://attacker.invalid/x){"):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as d:
+                _mk_pkg(d, _DARK_SVG, theme={"theme": {"accent": value}})
+                with self.assertRaises(self.m.GalleryThemeError):
+                    self.m.build_html(d)
+
+    def test_shadow_token_rejects_colour_value_and_accepts_safe_shadow(self):
+        with tempfile.TemporaryDirectory() as d:
+            _mk_pkg(d, _DARK_SVG, theme={"theme": {"shadow": "#fff"}})
+            with self.assertRaises(self.m.GalleryThemeError):
+                self.m.build_html(d)
+        with tempfile.TemporaryDirectory() as d:
+            value = "0 1px 0 rgba(0,0,0,.4), 0 20px 46px -26px #000"
+            _mk_pkg(d, _DARK_SVG, theme={"theme": {"shadow": value}})
+            self.assertEqual(self.m._resolve_theme(d)[0]["shadow"], value)
 
     def test_unexpected_top_level_key_rejected(self):
         with tempfile.TemporaryDirectory() as d:
@@ -585,6 +661,57 @@ class CliTest(unittest.TestCase):
             pkg = self._copy_fixture(os.path.join(d, "pkg"))
             os.remove(os.path.join(pkg, "generated", "svg", "domain-class.svg"))
             self.assertEqual(self.m.main([pkg]), 3)
+
+    def test_external_model_and_output_inputs_are_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            outside = os.path.join(d, "outside.json")
+            with open(outside, "w", encoding="utf-8") as fh:
+                fh.write('{"private":"canary"}')
+            package_path = os.path.join(pkg, "package.json")
+            with open(package_path, encoding="utf-8") as fh:
+                body = _json.load(fh)
+            cases = (("model", "../outside.json"),
+                     ("diagram", outside),
+                     ("render_metadata", "../outside.json"))
+            for kind, value in cases:
+                with self.subTest(kind=kind):
+                    changed = _json.loads(_json.dumps(body))
+                    if kind == "model":
+                        changed["models"][0]["source"] = value
+                    else:
+                        changed["views"][0]["outputs"][kind] = value
+                    with open(package_path, "w", encoding="utf-8") as fh:
+                        _json.dump(changed, fh)
+                    self.assertEqual(self.m.main([pkg]), 2)
+                    self.assertFalse(os.path.exists(os.path.join(pkg, "gallery.html")))
+
+    def test_escaping_input_symlink_is_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            outside = os.path.join(d, "outside.svg")
+            with open(outside, "w", encoding="utf-8") as fh:
+                fh.write(_DARK_SVG)
+            link = os.path.join(pkg, "generated", "svg", "escape.svg")
+            os.symlink(outside, link)
+            package_path = os.path.join(pkg, "package.json")
+            with open(package_path, encoding="utf-8") as fh:
+                body = _json.load(fh)
+            body["views"][0]["outputs"]["diagram"] = "generated/svg/escape.svg"
+            with open(package_path, "w", encoding="utf-8") as fh:
+                _json.dump(body, fh)
+            self.assertEqual(self.m.main([pkg]), 2)
+
+    def test_gallery_output_symlink_is_rejected_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as d:
+            pkg = self._copy_fixture(os.path.join(d, "pkg"))
+            canary = os.path.join(d, "outside.html")
+            with open(canary, "w", encoding="utf-8") as fh:
+                fh.write("do not overwrite")
+            os.symlink(canary, os.path.join(pkg, "gallery.html"))
+            self.assertEqual(self.m.main([pkg]), 2)
+            with open(canary, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), "do not overwrite")
 
 
 if __name__ == "__main__":
