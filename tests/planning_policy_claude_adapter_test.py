@@ -3,6 +3,8 @@ from pathlib import Path
 import re
 import unittest
 
+from tests.surface_test_lib import assert_phrases, compact, section
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md"
@@ -115,36 +117,37 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertNotIn("2.1.284", adapter)
 
     def test_adapter_and_agents_share_the_bounded_step_return_profile(self):
-        documents = [ADAPTER.read_text(encoding="utf-8")]
-        documents.extend((AGENTS / f"{tier}.md").read_text(encoding="utf-8") for tier in EXPECTED_TIERS)
+        # caps, KiB bound, vocabularies, evidence pairs and the commit rule are held to the
+        # validator by planning_return_contract_parity_test; this pins the shared profile tokens
+        adapter = ADAPTER.read_text(encoding="utf-8")
+        agents = [(tier, (AGENTS / f"{tier}.md").read_text(encoding="utf-8")) for tier in EXPECTED_TIERS]
+        documents = [("adapter", adapter, "## Bounded step return")]
+        documents.extend((tier, text, None) for tier, text in agents)
 
-        for content in documents:
-            normalized = re.sub(r"\s+", " ", content)
-            for marker in RETURN_PROFILE:
-                self.assertIn(marker, normalized)
-            self.assertIn("no Markdown, prose outside the object", content)
-            self.assertIn("raw logs", content)
-            self.assertIn("Use `completed` only", content)
-            self.assertNotIn("`commit_hash` is `null`", content)
-            self.assertTrue("return <=8 KiB" in content or "at most 8 KiB" in content)
-            self.assertTrue("oversized also needs remainder" in content or "oversized` also requires an unstarted remainder" in content)
-            self.assertTrue("<=480-character" in content or "at most 480 characters" in content)
-            self.assertTrue("<=240-character summary" in content or "at most 240 characters" in content)
-            self.assertTrue('"exit_code": integer|null' in content or "integer/null exit code" in content)
-            self.assertTrue("eight blockers" in content or "at most eight" in content)
-            self.assertTrue("empty string or 40/64-hex hash" in content or "empty\nstring or a 40- or 64-hex hash" in content)
-            self.assertTrue("completed changed work needs a commit hash" in content or "completed\nwork with changed paths needs a commit hash" in content)
+        for name, text, heading in documents:
+            with self.subTest(document=name):
+                assert_phrases(self, text, RETURN_PROFILE + (
+                    "no Markdown, prose outside the object", "raw logs", "Use `completed` only",
+                ), heading=heading)
+                scope = compact(section(text, heading) if heading else text)
+                self.assertNotIn("`commit_hash` is `null`", scope)
+                for rule, pattern in (
+                    ("nullable exit code", r"integer\s*(?:/|\||or )\s*null"),
+                    ("oversized needs a remainder", r"oversized[^.]*?(?:needs|requires)[^.]*?remainder"),
+                    ("empty or 40/64-hex hash", r"\b40(?:/|- or )64-hex hash"),
+                    ("completed work needs a commit hash", r"completed[^.]*?commit hash"),
+                ):
+                    self.assertRegex(scope, pattern, rule)
 
-        self.assertIn("return itself does not carry `run_id`", documents[0])
-        self.assertIn("helper-generated assignment value", documents[0])
-        self.assertNotIn("attempt_id` is a positive integer", documents[0])
-        self.assertIn("`completed` → `integrated` → `cleaned`", documents[0])
-        self.assertIn("current parent tip", documents[0])
-        self.assertIn("never a routine cherry-pick", documents[0])
-        for content in documents[1:]:
-            self.assertIn("do not return it", content)
-            self.assertIn("helper-generated `attempt_id`", content)
-            self.assertNotIn("positive integer `attempt_id`", content)
+        assert_phrases(self, adapter, (
+            "return itself does not carry `run_id`", "helper-generated assignment value",
+            "`completed` → `integrated` → `cleaned`", "current parent tip", "never a routine cherry-pick",
+        ), heading="## Bounded step return")
+        self.assertNotIn("attempt_id` is a positive integer", adapter)
+        for tier, content in agents:
+            with self.subTest(agent=tier):
+                assert_phrases(self, content, ("do not return it", "helper-generated `attempt_id`"))
+                self.assertNotIn("positive integer `attempt_id`", content)
 
 
 if __name__ == "__main__":

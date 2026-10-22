@@ -6,9 +6,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, read_jsonl
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, read_jsonl
 
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
+ARCH_DOC = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
+ARCH_REFS = ARCH_PLUGIN / "skills" / "architecture-design" / "references"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -64,6 +66,10 @@ EXTRACT_GROUP_SURFACES = [
 ]
 def compact_file(path: Path) -> str:
     return " ".join(path.read_text(encoding="utf-8").split())
+
+
+def raw_file(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
@@ -1534,107 +1540,111 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             with self.subTest(legacy_prefix=legacy_prefix):
                 self.assertNotIn(legacy_prefix, smell_catalog)
 
-    def test_standards_guidance_preserves_evidence_and_notation_boundaries(self) -> None:
+    def test_xmi_export_footer_does_not_claim_uml_conformance(self) -> None:
         """Public guidance must not turn envelope-only XMI into UML conformance."""
-        architecture = compact_file(ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md")
-        output = compact_file(ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md")
-        source_grounding = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md"
-        )
-        uml_hub = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml.md"
-        )
-        data = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "data.md"
-        )
-        deployment = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "notations" / "uml" / "deployment.md"
-        )
-        self_check = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md"
-        )
+        architecture = raw_file(ARCH_DOC)
+        output = raw_file(ARCH_REFS / "output-format.md")
+        # the not-assessed rule precedes output-format.md's first heading
+        assert_phrases(self, output, (
+            "report `Quality level: not assessed`",
+            "schema-only validation does not establish `source-valid`",
+        ))
+        assert_phrases(self, output, (
+            "Quality level: source-valid | view-readable | render-ready | review-ready | not assessed",
+            "XMI envelope only", "UML-content schema", "importer validated", "view/count", "omissions",
+            "represented content",
+        ), heading="## Footer")
+        assert_phrases(self, architecture, ("schema plus semantic-profile validation",), heading="## 2. Quality Levels")
 
-        self.assertIn("Quality level: not assessed", output)
-        self.assertIn("schema plus semantic-profile validation", architecture)
-        self.assertIn("XMI envelope only", output)
-        self.assertIn("UML-content schema", output)
-        self.assertIn("importer validated", output)
-        self.assertIn("view/count", output)
-        self.assertIn("omissions", output)
-        self.assertIn("represented content", output)
-        self.assertIn("Dediren issue #71", source_grounding)
-        self.assertIn("export-result.schema.v2", source_grounding)
-        self.assertIn(".data.assurance", source_grounding)
-        self.assertIn("kind_taxonomy", source_grounding)
-        self.assertIn("validation_evidence", source_grounding)
-        self.assertIn("independently verifies", source_grounding)
-        self.assertIn("package-build-result does not surface assurance", source_grounding)
-        self.assertIn("active structure -> behavior", architecture)
-        self.assertNotIn("or vice versa", architecture)
-        self.assertIn(
-            "Physical active/passive structure extends the Technology layer", architecture
-        )
-        self.assertIn(
-            "Motivation spans the layers as a cross-cutting aspect", architecture
-        )
-        self.assertIn("Motivation is not a layer", architecture)
-        self.assertNotIn("Motivation is not an ArchiMate layer or aspect", architecture)
-        self.assertIn("stakeholders, concerns, purpose, scope/abstraction", architecture)
-        self.assertIn("allowed elements/relationships, conventions, audience, quality target", architecture)
-        self.assertIn("`Device` is physical", deployment)
-        self.assertIn("`ExecutionEnvironment` is software/runtime", deployment)
-        self.assertIn("`Node` is a generic computational resource", deployment)
-        self.assertIn("Dediren-local classifier-structure view", data)
-        self.assertIn("not a UML Annex A diagram kind", uml_hub)
-        self.assertIn("root `mcp.json` deliberately declares no `env` or `cwd`", self_check)
-        self.assertIn("legacy Copilot lane explicitly sets `DEDIREN_HOME`", self_check)
-        self.assertIn("package.json declares bindings and paths", architecture)
-        self.assertIn("runtime owns projection, layout, rendering, and export execution", architecture)
+    def test_export_assurance_claims_are_source_grounded(self) -> None:
+        source_grounding = raw_file(ARCH_REFS / "source-grounding.md")
+        assert_phrases(self, source_grounding, (
+            "Dediren issue #71", "export-result.schema.v2", ".data.assurance", "kind_taxonomy",
+            "validation_evidence", "independently verifies",
+            "package-build-result does not surface assurance",
+        ), heading="# Source Grounding")
 
-    def test_review_isolation_contract_is_complete_and_consistent(self) -> None:
-        skill = compact_file(ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md")
-        architecture = compact_file(ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md")
-        self_check = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md"
-        )
-        isolated = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "isolated-review.md"
-        )
-        drift = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "drift-detection.md"
-        )
-        output = compact_file(
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
-        )
-        readme = compact_file(REPO_ROOT / "README.md")
+    def test_archimate_layer_aspect_and_viewpoint_stance(self) -> None:
+        architecture = raw_file(ARCH_DOC)
+        assert_phrases(self, architecture, ("active structure -> behavior",),
+                       heading="## 5. Relationship Discipline")
+        assert_phrases(self, architecture, (
+            "Physical active/passive structure extends the Technology layer",
+            "Motivation spans the layers as a cross-cutting aspect", "Motivation is not a layer",
+        ), heading="## 4. ArchiMate Layers And Aspects")
+        assert_phrases(self, architecture, (
+            "stakeholders, concerns, purpose, scope/abstraction",
+            "allowed elements/relationships, conventions, audience, quality target",
+        ), heading="### Custom Viewpoint Path")
+        compacted = " ".join(architecture.split())
+        self.assertNotIn("or vice versa", compacted)
+        self.assertNotIn("Motivation is not an ArchiMate layer or aspect", compacted)
 
-        for content in (skill, architecture, isolated, drift, output, readme):
-            with self.subTest(surface=content[:60]):
-                self.assertIn("original", content.lower())
-        for phrase in (
+    def test_uml_notation_boundaries_are_explicit(self) -> None:
+        uml = ARCH_REFS / "notations"
+        assert_phrases(self, raw_file(uml / "uml" / "deployment.md"), (
+            "`Device` is physical", "`ExecutionEnvironment` is software/runtime",
+            "`Node` is a generic computational resource",
+        ), heading="## Source Contract")
+        assert_phrases(self, raw_file(uml / "uml" / "data.md"), (
+            "Dediren-local classifier-structure view",
+        ), heading="# UML Data Views (`uml-data`)")
+        assert_phrases(self, raw_file(uml / "uml.md"), (
+            "not a UML Annex A diagram kind",
+        ), heading="## Validation, Render, Export")
+
+    def test_package_and_server_configuration_ownership_is_explicit(self) -> None:
+        architecture = raw_file(ARCH_DOC)
+        self_check = raw_file(ARCH_REFS / "procedures" / "self-check.md")
+        assert_phrases(self, self_check, (
+            "root `mcp.json` deliberately declares no `env` or `cwd`",
+            "legacy Copilot lane explicitly sets `DEDIREN_HOME`",
+        ), heading="## Server availability")
+        assert_phrases(self, architecture, (
+            "package.json declares bindings and paths",
+            "runtime owns projection, layout, rendering, and export execution",
+        ), heading="### Package JSON Generation")
+
+    def test_original_evidence_stays_authoritative_over_the_review_copy(self) -> None:
+        # the bare word "original" per surface was an incidental pin; asserted where each rule lives
+        architecture = raw_file(ARCH_DOC)
+        isolated = raw_file(ARCH_REFS / "procedures" / "isolated-review.md")
+        output = raw_file(ARCH_REFS / "output-format.md")
+        assert_phrases(self, architecture, (
+            "successful copy build does not clear stale or missing original evidence",
+        ), heading="## 1. Operating Contract")
+        assert_phrases(self, isolated, (
+            "at most one native package build", "never promotes or removes a copy",
+        ), heading="# Isolated Review")
+        # output-format.md states these rules before its first heading: not section-anchorable
+        assert_phrases(self, output, (
+            "Copy success never upgrades the original quality level",
+            "Review reports defects in the original evidence", "does not tune its copy",
+        ))
+
+    def test_dediren_validate_commands_and_result_reading_are_pinned(self) -> None:
+        architecture = raw_file(ARCH_DOC)
+        self_check = raw_file(ARCH_REFS / "procedures" / "self-check.md")
+        assert_phrases(self, self_check, (
             '"$DEDIREN" validate --input <pkg>/model.json',
             '"$DEDIREN" validate --input <pkg>/model.json --plugin generic-graph --profile archimate',
             '"$DEDIREN" validate --input <pkg>/model-uml.json',
             '"$DEDIREN" validate --input <pkg>/model-uml.json --plugin generic-graph --profile uml',
-        ):
-            self.assertIn(phrase, self_check)
-        self.assertIn("outer `isError`", self_check)
-        self.assertIn("`.data.views[]`", self_check)
-        self.assertIn("`.data.exports[]`", self_check)
-        self.assertIn("unqualified top-level `views`", self_check)
-        self.assertIn("seven-tool surface", self_check)
-        self.assertIn("`dediren_import`", self_check)
-        self.assertIn("uncertain artifact-writing outcome stops for inspection without retry or fallback", self_check)
-        self.assertIn("confirmed, scoped diagnostic may be repaired and rerun in Build or Extract only", self_check)
-        self.assertIn("Single-model `dediren_build` returns the unwrapped build-result", architecture)
-        self.assertIn("Package `dediren_build` puts `package-build-result` under `.data`", architecture)
-        self.assertIn("successful copy build does not clear stale or missing original evidence", architecture)
-        self.assertIn("at most one native package build", isolated)
-        self.assertIn("never promotes or removes a copy", isolated)
-        self.assertIn("Copy success never upgrades the original quality level", output)
-        self.assertIn("Review reports defects in the original evidence", output)
-        self.assertIn("does not tune its copy", output)
+        ), heading="## Validate")
+        assert_phrases(self, self_check, (
+            "outer `isError`", "`.data.views[]`", "`.data.exports[]`", "unqualified top-level `views`",
+            "uncertain artifact-writing outcome stops for inspection without retry or fallback",
+            "confirmed, scoped diagnostic may be repaired and rerun in Build or Extract only",
+        ), heading="## Reading tool results")
+        assert_phrases(self, self_check, (
+            "seven-tool surface", "`dediren_import`",
+        ), heading="## Server availability")
+        assert_phrases(self, architecture, (
+            "Single-model `dediren_build` returns the unwrapped build-result",
+            "Package `dediren_build` puts `package-build-result` under `.data`",
+        ), heading="## 9. Runtime Evidence")
 
+    def test_isolated_review_behavior_cases_forbid_retry_and_rebuild(self) -> None:
         cases = {
             json.loads(line)["id"]: json.loads(line)
             for line in (

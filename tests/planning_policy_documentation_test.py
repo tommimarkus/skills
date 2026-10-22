@@ -3,7 +3,7 @@
 from pathlib import Path
 import unittest
 
-from tests.surface_test_lib import load_script_module
+from tests.surface_test_lib import assert_phrases, load_script_module
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -383,12 +383,16 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         self.assertIn("stopping `oversized:changeset`", handoff)
         self.assertIn("leaf_verify_v1", ledger)
         self.assertIn("record-verify", ledger)
-        for adapter in (claude, codex):
-            self.assertIn("verifier_tier", adapter)
-            self.assertIn("never", adapter)
-        self.assertIn("plan-verify-standard", claude)
-        self.assertIn("plan-verify-analytical", claude)
-        self.assertIn("gpt-5.6-sol", codex)
+        assert_phrases(self, claude, (
+            "`souroldgeezer-policy:plan-verify-standard`",
+            "`souroldgeezer-policy:plan-verify-analytical`",
+            "as named by the packet's `verifier_tier`", "never builder context or notes",
+            "An unavailable agent is `blocked:model_unavailable`; never downgrade",
+        ), heading="## Capability resolution")
+        assert_phrases(self, codex, (
+            "`gpt-5.6-sol`", "as named by `verifier_tier`",
+            "Never pass builder context", "do not silently downgrade",
+        ), heading="## Dispatch and model mapping")
 
 
 if __name__ == "__main__":

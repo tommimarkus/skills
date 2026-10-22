@@ -38,7 +38,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         cls.runner = load_module("planning_policy_forward_eval", RUNNER)
         cls.contract = load_module("planning_policy_contract_eval", CONTRACT)
 
-    def test_required_contract_and_audit_cases_are_evidence_backed(self):
+    def test_required_behavior_case_ids_are_present(self):
         required = {
             "planning-policy-behavior-approval-inline-reset",
             "planning-policy-behavior-approval-parent-recovery",
@@ -87,6 +87,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-generated-prompt-unchanged",
         }
         self.assertTrue(required.issubset(self.behavior))
+
+    def test_plan_mode_scaffold_and_closeout_cases_carry_their_checks(self):
         reference = self.behavior["planning-policy-behavior-claude-plan-mode-reference"]
         self.assertIn("git check-ignore", " ".join(reference["required_checks"]))
         self.assertIn("inline block", (reference["prompt"] + " ".join(reference["required_checks"])))
@@ -110,6 +112,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             closeout = self.behavior[f"planning-policy-behavior-{host}-clean-closeout"]
             self.assertIn("routine cherry-pick", closeout["forbidden_behaviors"])
             self.assertTrue(any("once the first leaf is integrated" in check for check in closeout["required_checks"]))
+
+    def test_selective_audit_and_standard_ready_validation(self):
         accepted = self.contract.validate(v5_plan(leaf("ordinary-work", "ordinary"), leaf("unknown-work", "unknown", "analytical", owner="task/unknown"), work_units=[{"id": "ordinary", "original_size": "medium"}, {"id": "unknown", "original_size": "small"}]))
         self.assertTrue(accepted["valid"], accepted["errors"])
         self.assertGreaterEqual(accepted["standard_ready_ratio"], 0.60)

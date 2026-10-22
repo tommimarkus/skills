@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import assert_phrases
+
 SCRIPT = (
     Path(__file__).parents[1]
     / "souroldgeezer-policy/skills/planning-policy/references/scripts/validate_plan_contract.py"
@@ -694,67 +696,49 @@ class SharedContractTest(unittest.TestCase):
         self.assertTrue(result["valid"], result["errors"])
 
     def test_ledger_contract_has_required_v2_lifecycle_and_return_anchors(self):
-        contract = LEDGER_CONTRACT.read_text(encoding="utf-8") + LEDGER_COMPATIBILITY.read_text(
-            encoding="utf-8"
+        contract = LEDGER_CONTRACT.read_text(encoding="utf-8")
+        anchors = {
+            "### Isolation, authority, and initialization": (
+                "<plan-id>/<run-id>", "UUID4", "exactly one current attempt", "canonical lowercase UUID4",
+                "blocked:plan_tampered", "SHA-256",
+            ),
+            "### Driving transitions and validate --closeout": (
+                "assignment set", "--run-id", "--step-id", "planning-worktree-result-v1",
+                "validate --closeout",
+            ),
+            "### Bounded step return": (
+                "bounded-step-return-v1", "changed_paths", "commit_hash", "progress fingerprint",
+                "oversized", "at most 8 KiB", "1 through 128 characters", "integer or `null` `exit_code`",
+                "at most 32 unique", "at most 8 objects, each with `code`", "summary` of at most 240",
+                "optional paired `evidence_path`/`sha256`", "`finding`", "`decision_needed`",
+                "`residual_risk`", "`untouched`", "`verification_limit`",
+                "The return does not list `run_id`", "40 or 64 lowercase",
+                "only when `changed_paths` is non-empty", "oversized` also requires",
+                "helper-generated bounded opaque `attempt_id`",
+            ),
+            "### Ancestry-preserving worktree closeout": ("planning worktree closeout",),
+            "### Listing, retention, and deletion": ("unsupported_count",),
+            "### `show` output shape": ("truncated: true",),
+            "### State machine and legal transitions": ("`completed` → `integrated` → `cleaned`",),
+            "### Retry policy, remediation, and terminal precedence": (
+                "max_attempts", "blocked:no_progress", "blocked:retry_exhausted",
+                "attempt count starts at 1", "escalating_remediation_v1", "retry-remediation-v1",
+                "exact `failed:acceptance`", "`blocked:needs_higher_tier`", "same-tier retry",
+                "same-tier-used", "prior-return digest", "reuse or fresh", "target tier",
+                "terminal precedence",
+            ),
+            "### Retired contract versions": (
+                "Contract versions 1–4 are retired", "blocked:contract_migration_required",
+            ),
+        }
+        for heading, phrases in anchors.items():
+            assert_phrases(self, contract, phrases, heading=heading)
+        assert_phrases(
+            self,
+            LEDGER_COMPATIBILITY.read_text(encoding="utf-8"),
+            ("blocked:contract_migration_required",),
+            heading="## Version-5 policy stamps",
         )
-        required = (
-            "<plan-id>/<run-id>",
-            "UUID4",
-            "Contract versions 1–4 are retired",
-            "assignment set",
-            "exactly one current attempt",
-            "--run-id",
-            "max_attempts",
-            "bounded-step-return-v1",
-            "changed_paths",
-            "commit_hash",
-            "progress fingerprint",
-            "blocked:no_progress",
-            "blocked:retry_exhausted",
-            "oversized",
-            "SHA-256",
-            "blocked:plan_tampered",
-            "--step-id",
-            "truncated: true",
-            "blocked:contract_migration_required",
-            "unsupported_count",
-            "at most 8 KiB",
-            "1 through 128 characters",
-            "integer or `null` `exit_code`",
-            "at most 32 unique",
-            "at most 8 objects, each with `code`",
-            "summary` of at most 240",
-            "optional paired `evidence_path`/`sha256`",
-            "`finding`",
-            "`decision_needed`",
-            "`residual_risk`",
-            "`untouched`",
-            "`verification_limit`",
-            "The return does not list `run_id`",
-            "40 or 64 lowercase",
-            "only when `changed_paths` is non-empty",
-            "oversized` also requires",
-            "helper-generated bounded opaque `attempt_id`",
-            "attempt count starts at 1",
-            "canonical lowercase UUID4",
-            "`completed` → `integrated` → `cleaned`",
-            "planning-worktree-result-v1",
-            "validate --closeout",
-            "planning worktree closeout",
-            "escalating_remediation_v1",
-            "retry-remediation-v1",
-            "exact `failed:acceptance`",
-            "`blocked:needs_higher_tier`",
-            "same-tier retry",
-            "same-tier-used",
-            "prior-return digest",
-            "reuse or fresh",
-            "target tier",
-            "terminal precedence",
-        )
-        for anchor in required:
-            with self.subTest(anchor=anchor):
-                self.assertIn(anchor, contract)
 
 
 def series_plan(series):
