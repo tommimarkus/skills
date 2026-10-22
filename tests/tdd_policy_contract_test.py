@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 import unittest
 
+from tests.surface_test_lib import assert_phrases
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TDD_ROOT = ROOT / "souroldgeezer-policy/skills/tdd-policy"
@@ -386,8 +388,7 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn(phrase, invariant)
 
     def test_core_classifies_trivial_code_and_behavior_removal(self) -> None:
-        core = flat(self.core())
-        for phrase in (
+        assert_phrases(self, self.core(), (
             "**Trivial code**",
             "no RED of its own",
             "a classification, not an exception",
@@ -397,35 +398,31 @@ class TddPolicyContractTest(unittest.TestCase):
             "**Behavior removal**",
             "delete the removed behavior's tests in the same change",
             "no successor",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, core)
+        ), heading="## Behavioral change or refactor")
 
     def test_core_retention_check_scaffolds_and_characterization_expiry(self) -> None:
-        core = flat(self.core())
-        for phrase in (
+        assert_phrases(self, self.core(), (
             "Would a behavior-preserving refactor force this test to change?",
+        ), heading="## Selecting the RED test")
+        assert_phrases(self, self.core(), (
             "scaffold test",
             "Resolve every scaffold test",
             "no supersession proof",
             "GREEN does not land with an unresolved scaffold test",
             "characterization tests it added below the seam",
             "at the seam stay",
+        ), heading="## REFACTOR includes the suite")
+        assert_phrases(self, self.core(), (
             "resolves its own scaffold tests",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, core)
+        ), heading="## Delegated work")
 
     def test_core_bounds_examples_per_rule_and_uses_mutation_evidence(self) -> None:
-        core = flat(self.core())
-        for phrase in (
+        assert_phrases(self, self.core(), (
             "a few key examples per rule",
             "property-based test",
             "stay declarative",
             "kills a mutant no existing test kills",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, core)
+        ), heading="## Selecting the RED test")
 
     def test_core_records_structure_coupled_tests_for_the_audit(self) -> None:
         refactor = flat(self.core().split("## REFACTOR includes the suite", 1)[1].split("\n## ", 1)[0])

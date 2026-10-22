@@ -30,7 +30,7 @@ class SoftwareDesignToolSelectionSurfaceTest(unittest.TestCase):
         skill = compact(read(f"{SOFTWARE_SKILL}/SKILL.md"))
 
         for marker in (
-            "Context7 MCP",
+            "Context7 MCP is already exposed",
             "resolve the library",
             "query its documentation",
             "local project configuration, installed versions, and actual tool output",
@@ -85,13 +85,6 @@ class SoftwareDesignToolSelectionSurfaceTest(unittest.TestCase):
                 forbidden_behaviors = " ".join(behaviors[case_id]["forbidden_behaviors"])
                 self.assertIn(required, checks)
                 self.assertIn(forbidden, forbidden_behaviors)
-
-    def test_skill_explains_optional_context7_path(self) -> None:
-        readme = compact(read(f"{SOFTWARE_SKILL}/SKILL.md"))
-
-        self.assertIn("bounded discovery", readme)
-        self.assertIn("Context7 MCP is already exposed", readme)
-        self.assertIn("Do not install Context7", readme)
 
 
 if __name__ == "__main__":

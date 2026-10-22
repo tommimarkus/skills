@@ -1,7 +1,7 @@
 # lean-audit:dup-intentional — surface-verification bodies whose entire content is literal paths and strings the tokenizer normalizes to STR; the shared read/read_jsonl helpers are already imported from surface_test_lib, so remaining matches are read()+assert scaffolds around distinct literals
 import unittest
 
-from tests.surface_test_lib import read, read_jsonl
+from tests.surface_test_lib import assert_phrases, read, read_jsonl, section
 
 
 class SkillLeanRemediationTest(unittest.TestCase):
@@ -19,16 +19,20 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("New endpoint or feature defaults to Build", skill)
         self.assertIn("they never weaken the core reference", skill)
 
-        moved_sections = [
-            "### Framework-agnostic discovery",
-            "### Stack-specific discovery",
-            "### Mapping existing infrastructure to reference rules",
-            "### Conflict handling",
-            "## Red flags",
-        ]
-        for section in moved_sections:
-            with self.subTest(section=section):
-                self.assertNotIn(section, skill)
+        procedures = "souroldgeezer-design/skills/api-design/references/procedures/"
+        assimilation = read(procedures + "project-assimilation.md")
+        red_flags = read(procedures + "red-flags.md")
+        moved_sections = {
+            "### Framework-agnostic discovery": (assimilation, "## Discovery"),
+            "### Stack-specific discovery": (assimilation, "## Discovery"),
+            "### Mapping existing infrastructure to reference rules": (assimilation, "## Reuse Or Replace"),
+            "### Conflict handling": (assimilation, "## Conflict Handling"),
+            "## Red flags": (red_flags, "# API Design Red Flags"),
+        }
+        for moved, (destination, heading) in moved_sections.items():
+            with self.subTest(section=moved):
+                self.assertNotIn(moved, skill)
+                section(destination, heading)
 
     def test_api_design_preflight_defaults_continue_without_forced_questions(
         self,
@@ -39,14 +43,24 @@ class SkillLeanRemediationTest(unittest.TestCase):
         behavior_cases = read_jsonl(
             "souroldgeezer-design/skills/api-design/references/evals/behavior-cases.jsonl"
         )
-        case_ids = {record["id"] for record in behavior_cases}
-
-        self.assertIn(
-            "Apply the listed defaults when the user has not supplied an answer.",
-            preflight,
+        case = next(
+            record
+            for record in behavior_cases
+            if record["id"] == "api-design-behavior-greenfield-defaults"
         )
-        self.assertIn("Ask only when a default would be unsafe", preflight)
-        self.assertIn("api-design-behavior-greenfield-defaults", case_ids)
+
+        assert_phrases(
+            self,
+            preflight.split("\n## ", 1)[0],
+            (
+                "Apply the listed defaults when the user has not supplied an answer.",
+                "Ask only when a default would be unsafe",
+            ),
+        )
+        self.assertIn(
+            "apply safe defaults instead of asking unnecessary preflight questions",
+            case["required_checks"],
+        )
 
     def test_pr_ops_uses_reference_core_workflow(self) -> None:
         skill = read("souroldgeezer-ops/skills/pr-ops/SKILL.md")
@@ -106,8 +120,15 @@ class SkillLeanRemediationTest(unittest.TestCase):
         overlay = read("internal-skills/github-issue-lifecycle/SKILL.md")
 
         self.assertNotIn("AGENTS.md", overlay)
-        self.assertIn("CLAUDE.md", overlay)
-        self.assertIn("docs/skill-architecture.md", overlay)
+        assert_phrases(
+            self,
+            overlay,
+            (
+                "For sync-surface decisions, follow `CLAUDE.md` and "
+                "`docs/skill-architecture.md` instead of duplicating the repo-wide list here.",
+            ),
+            heading="## Repo-Specific Gates",
+        )
         repeated_surface_names = [
             "skills/<skill>/agents/openai.yaml",
             "both plugin manifests",

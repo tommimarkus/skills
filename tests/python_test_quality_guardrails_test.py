@@ -3,7 +3,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, section
 
 PYTHON_ROOT = REPO_ROOT / "souroldgeezer-audit/skills/test-quality-audit"
 UNIT = PYTHON_ROOT / "references/extensions/python/unit.md"
@@ -44,10 +44,10 @@ class PythonTestQualityGuardrailsTest(unittest.TestCase):
             ("python.I-POS-4", integration),
         ):
             with self.subTest(code=code):
-                heading = text[text.index(f"### `{code}`") :]
-                self.assertIn("Applies to:", heading.split("### ", 1)[0] + heading[:120])
-                self.assertIn("Detection:", heading)
-                self.assertIn("Rewrite:", heading)
+                body = section(text, f"### `{code}`")
+                self.assertIn("Applies to:", body)
+                self.assertIn("Detection:", body)
+                self.assertIn("Rewrite:", body)
 
         self.assertNotIn("python.I-HC-A3", unit)
         self.assertNotIn("python.I-POS-4", unit)
@@ -63,9 +63,10 @@ class PythonTestQualityGuardrailsTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, unit)
                 self.assertIn(phrase, integration)
-        self.assertIn("Do not rely on a clock or scheduler\nchance", unit)
-        self.assertIn("fake-clock", unit)
-        self.assertIn("fixture, and cleanup", unit)
+        assert_phrases(self, unit, ("Do not rely on a clock or scheduler chance",),
+                       heading="### `python.HC-7`")
+        assert_phrases(self, unit, ("fake-clock", "fixture, and cleanup"),
+                       heading="### `python.POS-6`")
         self.assertIn("normal `finally`/fixture teardown", integration)
 
     def test_python_guardrails_are_source_grounded(self) -> None:

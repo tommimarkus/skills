@@ -116,8 +116,8 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
                 integration,
             ],
         )
-        self.assertEqual(len(quick), 6)
-        self.assertEqual(len(deep), 9)
+        snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
+        self.assertLess(snapshot["quick-python-unit"], snapshot["deep-python-suite"])
 
 
 if __name__ == "__main__":

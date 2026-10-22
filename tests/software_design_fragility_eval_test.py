@@ -28,7 +28,14 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
         self.assertEqual(["SD-E-6"] * 4, [case["target"] for case in fragility])
         self.assertEqual(["positive", "positive", "fp-bait", "clean"], [case["kind"] for case in cases[-4:]])
         self.assertEqual(["SD-Q-5"] * 4, [case["target"] for case in cases[-4:]])
-        self.assertEqual({"positive": 66, "fp-bait": 41, "clean": 12}, {kind: sum(case["kind"] == kind for case in cases) for kind in ("positive", "fp-bait", "clean")})
+        for case in cases:
+            with self.subTest(case=case["id"]):
+                if case["kind"] == "positive":
+                    self.assertIn(case["target"], case["ground_truth_codes"])
+                else:
+                    self.assertIn(case["kind"], ("fp-bait", "clean"))
+                    self.assertEqual([], case["ground_truth_codes"])
+                    self.assertIn(case["target"], case["must_not_flag"])
         for case in cases[-4:]:
             self.assertEqual("synthetic", case["source_kind"])
             self.assertFalse(case["contains_third_party_text"])
