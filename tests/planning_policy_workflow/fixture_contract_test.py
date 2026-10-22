@@ -1,5 +1,6 @@
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -40,11 +41,11 @@ class FixtureContractTest(unittest.TestCase):
             shutil.copytree(FIXTURE, copied)
             (copied / "slug.py").write_text("def slug(value):\n    return value\n", encoding="utf-8")
             (copied / "labels.py").write_text("def unique_labels(values):\n    return values\n", encoding="utf-8")
-            rejected = subprocess.run(["python", "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
+            rejected = subprocess.run([sys.executable, "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
             self.assertNotEqual(rejected.returncode, 0)
             (copied / "slug.py").write_text(CORRECT_SLUG, encoding="utf-8")
             (copied / "labels.py").write_text(CORRECT_LABELS, encoding="utf-8")
-            accepted = subprocess.run(["python", "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
+            accepted = subprocess.run([sys.executable, "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
 
 

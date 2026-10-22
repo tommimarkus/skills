@@ -1,7 +1,9 @@
 import json
 import importlib.util
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -28,6 +30,7 @@ def git(cwd: Path, *args: str, check: bool = True) -> subprocess.CompletedProces
 class PlanningWorktreeHelperTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
+        self.process_env = None
         self.root = Path(self.temporary.name) / "repo"
         git(self.root.parent, "init", "-b", "main", str(self.root))
         git(self.root, "config", "user.name", "Test User")
@@ -59,7 +62,7 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
     def invoke(self, command: str, worktree: Path, branch: str, *extra: str):
         result = subprocess.run(
             [
-                "python",
+                sys.executable,
                 str(SCRIPT),
                 command,
                 "--repo-root",
@@ -74,6 +77,7 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
             ],
             text=True,
             capture_output=True,
+            env=self.process_env,
         )
         return result, json.loads(result.stdout)
 
@@ -332,10 +336,37 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         self.assertTrue(leaf.exists())
         self.assertIn("task/ordered", git(self.root, "branch", "--list").stdout)
 
-        helper = SCRIPT.read_text(encoding="utf-8")
-        self.assertNotIn('branch", "-D', helper)
-        self.assertNotIn("--force", helper)
-        self.assertNotIn("cherry-pick", helper)
+        # Record every git invocation the helper makes while it refuses and then
+        # succeeds at cleanup, so a force delete cannot hide in an unexecuted branch.
+        shim_dir = Path(self.temporary.name) / "shim"
+        shim_dir.mkdir()
+        log = Path(self.temporary.name) / "git-argv.log"
+        real_git = shutil.which("git")
+        shim = shim_dir / "git"
+        shim.write_text(
+            f'#!/bin/sh\nprintf \'%s\\n\' "$*" >> "{log}"\nexec "{real_git}" "$@"\n',
+            encoding="utf-8",
+        )
+        shim.chmod(0o755)
+        self.process_env = {**os.environ, "PATH": f"{shim_dir}{os.pathsep}{os.environ['PATH']}"}
+
+        refused, _ = self.cleanup("ordered", leaf, fake)
+        self.assertNotEqual(0, refused.returncode)
+
+        done = self.add_worktree("landed")
+        landed_source = self.commit(done, "landed.txt", "landed\n")
+        result, integrated = self.integrate("landed", done, landed_source)
+        self.assertEqual(0, result.returncode, result.stderr)
+        result, cleaned = self.cleanup("landed", done, integrated)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertFalse(done.exists())
+
+        calls = log.read_text(encoding="utf-8").splitlines()
+        self.assertTrue(any("branch" in call and "--merged" in call for call in calls), calls)
+        for call in calls:
+            self.assertNotIn(" -D", call)
+            self.assertNotIn("--force", call)
+            self.assertNotIn("cherry-pick", call)
 
     def test_batch_commit_ancestry_records_all_members(self) -> None:
         leaf = self.add_worktree("batch-happy")
@@ -496,7 +527,7 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         def invoke(command: str, *extra: str):
             return subprocess.run(
                 [
-                    "python", str(SCRIPT), command,
+                    sys.executable, str(SCRIPT), command,
                     "--repo-root", str(root), "--target", "main",
                     "--branch", "task/sha256-batch", "--worktree", str(leaf), *extra,
                 ],

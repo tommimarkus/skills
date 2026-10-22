@@ -26,6 +26,25 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+def bwrap_unavailable_reason():
+    """Return why a read-only bwrap bind cannot run here, or "" when it can."""
+    if not shutil.which("bwrap"):
+        return "bwrap is unavailable"
+    try:
+        probe = subprocess.run(
+            ["bwrap", "--ro-bind", "/", "/", "true"], capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return f"bwrap probe failed: {error}"
+    if probe.returncode != 0:
+        lines = probe.stderr.strip().splitlines()
+        return lines[0] if lines else f"bwrap probe exited {probe.returncode}"
+    return ""
+
+
+BWRAP_UNAVAILABLE = bwrap_unavailable_reason()
+
+
 class PlanningPolicyPersistenceTest(unittest.TestCase):
     def setUp(self):
         cache = ROOT / ".cache"
@@ -156,6 +175,7 @@ class PlanningPolicyPersistenceTest(unittest.TestCase):
         self.assertEqual(code, 1, result)
         self.assertEqual(result["blocked"], "blocked:missing_input")
 
+    @unittest.skipIf(os.geteuid() == 0, "root bypasses chmod 0o000")
     def test_denied_explicit_root_is_operationally_unavailable_after_validation(self):
         (self.directory / "unrelated-cwd").mkdir()
         denied = self.directory / "denied"
@@ -344,7 +364,7 @@ class PlanningPolicyPersistenceTest(unittest.TestCase):
         self.assertEqual(rejected.returncode, 1)
         self.assertEqual(json.loads(rejected.stdout)["blocked"], "blocked:missing_input")
 
-    @unittest.skipUnless(shutil.which("bwrap"), "bwrap is unavailable")
+    @unittest.skipIf(bool(BWRAP_UNAVAILABLE), BWRAP_UNAVAILABLE)
     def test_read_only_install_home_and_git_need_only_the_explicit_bound_root(self):
         (self.directory / "unrelated-cwd").mkdir()
         self.root.mkdir()

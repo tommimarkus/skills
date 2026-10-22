@@ -306,8 +306,8 @@ and only to an explicit `--out`; engines and guards print to stdout.
 Scoped to this tree via `pyproject.toml`: **stdlib-only, `target-version=py311`,
 `line-length=100`, ruff lint select `E,F,W,I,UP,B`, `mypy --strict`.** The gate
 is `tests/lean_audit_python_standard_test.py` (at the marketplace source-repo root),
-which shells out to three checks (it **skips**, not fails, when the toolchain is
-offline — a green offline run may mean "skipped," so confirm it actually ran):
+which shells out to three checks (it skips only when `uv` is not installed; a
+fetch failure, timeout, or any non-zero exit fails with the tool output):
 
 ```bash
 uv run --frozen ruff check .
@@ -386,8 +386,8 @@ tests, then [§ Before you finish](#before-you-finish).
 
 ## Before you finish
 
-- Rerun the affected tests, and the standard gate, and confirm they *ran* (not
-  skipped offline).
+- Rerun the affected tests, and the standard gate, and confirm they *ran* (they
+  skip only when `uv` is absent).
 - **Dogfood the engine on your own change** — run `lean_engine.py` over the
   changed markdown and confirm no unexpected `LA-DUP-*` / `LA-STALE-1`. This
   guide, being under `references/`, is itself scanned: cite, don't restate.

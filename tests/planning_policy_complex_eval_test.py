@@ -1,6 +1,7 @@
 """Complex-plan evidence must distinguish task success from workflow evidence."""
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -99,8 +100,12 @@ class ComplexPlanEvalTest(unittest.TestCase):
             trial = Path(temporary) / 'trial'
             shutil.copytree(FIXTURE, trial)
             (trial / '.gitignore').write_text('.worktrees/\n.evaluation/\n')
+            # Isolate git from the host's global/system config and identity.
+            git_env = {**os.environ, 'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1',
+                       'GIT_AUTHOR_NAME': 'Fixture', 'GIT_AUTHOR_EMAIL': 'fixture@example.invalid',
+                       'GIT_COMMITTER_NAME': 'Fixture', 'GIT_COMMITTER_EMAIL': 'fixture@example.invalid'}
             def command(argv, cwd=trial, successful=True):
-                proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True)
+                proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, env=git_env)
                 if successful:
                     self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
                 return proc
@@ -151,8 +156,10 @@ class ComplexPlanEvalTest(unittest.TestCase):
                 str(evidence / 'plan.json'), '--assignments-file', str(evidence / 'assignments.json'),
                 '--capability-binding-file', str(evidence / 'binding.json')).stdout)
             run_id = init['run_id']
-            self.assertNotEqual(call('transition', '--actor', 'parent', '--run-id', run_id,
-                '--step-id', 'export', '--to', 'ready', '--agent-id', 'premature', successful=False).returncode, 0)
+            premature = call('transition', '--actor', 'parent', '--run-id', run_id,
+                '--step-id', 'export', '--to', 'ready', '--agent-id', 'premature', successful=False)
+            self.assertNotEqual(premature.returncode, 0)
+            self.assertIn('dependencies are not integrated or cleaned', json.loads(premature.stdout)['error'])
             for leaf in leaves:
                 name = leaf['id']
                 worktree = trial / '.worktrees' / name

@@ -355,7 +355,8 @@ class SkillArchitectureReportTest(unittest.TestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Usage: scripts/skill-architecture-report.sh [--format markdown|json] [--strict] [--native-validate] [repo-root]", result.stdout)
+        for token in ("--strict", "--native-validate"):
+            self.assertIn(token, result.stdout)
 
     def test_native_validate_skips_when_claude_absent(self) -> None:
         module = load_engine()

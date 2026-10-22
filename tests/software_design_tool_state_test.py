@@ -88,21 +88,41 @@ class SoftwareDesignToolStateTest(unittest.TestCase):
         self.assertIn("softwaredesign.tool-cache-bad.schema-version", git(self.root, "config", "--local", "--get-regexp", "^softwaredesign\\.tool-cache-bad").stdout)
 
     def test_list_and_clear_all_have_bounded_kind_scopes(self) -> None:
-        run(self.root, "put", "formatter", "--tool", "black", "--reported-version", "24", "--source", "pyproject.toml", "--validated-on", date.today().isoformat())
+        fixed = date(2026, 8, 9)
+        module = self.load_module()
+        module.utc_today = lambda: fixed
+
+        def call(*args: str) -> dict:
+            captured = io.StringIO()
+            with redirect_stdout(captured):
+                self.assertEqual(0, module.main(["--repo-root", str(self.root), *args]))
+            return json.loads(captured.getvalue())
+
+        call("put", "formatter", "--tool", "black", "--reported-version", "24", "--source", "pyproject.toml", "--validated-on", fixed.isoformat())
         git(self.root, "config", "--local", "softwaredesign.tool-decision-formatter", "defer-until:2099-01-01")
-        listed = run(self.root, "list")
+        listed = call("list")
         self.assertEqual(["formatter"], [record["capability"] for record in listed["records"]])
         self.assertEqual([{"capability": "formatter", "status": "deferred"}], listed["decisions"])
-        decisions = run(self.root, "clear-all", "--kind", "decisions")
+        decisions = call("clear-all", "--kind", "decisions")
         self.assertEqual(["decision:formatter"], decisions["cleared"])
-        self.assertEqual("valid", run(self.root, "get", "formatter")["status"])
-        cache = run(self.root, "clear-all", "--kind", "cache")
+        self.assertEqual("valid", call("get", "formatter")["status"])
+        cache = call("clear-all", "--kind", "cache")
         self.assertEqual(["cache:formatter"], cache["cleared"])
-        self.assertEqual("absent", run(self.root, "get", "formatter")["status"])
+        self.assertEqual("absent", call("get", "formatter")["status"])
+
+    @staticmethod
+    def load_module():
+        spec = importlib.util.spec_from_file_location("tool_state", SCRIPT)
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
 
     def test_capability_is_not_a_path(self) -> None:
-        result = subprocess.run(["python3", str(SCRIPT.resolve()), "put", "../bad", "--tool", "x", "--reported-version", "x", "--source", "x"], text=True, capture_output=True)
+        result = subprocess.run(["python3", str(SCRIPT.resolve()), "--repo-root", str(self.root), "put", "../bad", "--tool", "x", "--reported-version", "x", "--source", "x"], text=True, capture_output=True)
         self.assertNotEqual(0, result.returncode)
+        self.assertIn("it is not a path", result.stderr)
+        self.assertEqual("absent", run(self.root, "get", "bad")["status"])
 
     def test_utc_clock_and_collection_results_are_bounded(self) -> None:
         spec = importlib.util.spec_from_file_location("tool_state", SCRIPT)
