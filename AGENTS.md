@@ -245,6 +245,10 @@ emits a proposed plan for explicit approval.
 
 ### Bounded audit-lane gate
 
+For delegated Deep/in-depth audit population and coverage reconciliation, follow
+[scaled-audit.md §3](souroldgeezer-audit/docs/audit-reference/scaled-audit.md#3-delegation-protocol),
+including authoritative enumeration before slicing.
+
 The shared audit craft contract defines a bounded-lane gate: `Quick gate: <status>`
 for test-quality and DevSecOps, `triage gate: <status>` for IP, and
 `limited-scope gate: <status>` for bounded Lean. Its status is `fail` for a

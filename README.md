@@ -70,6 +70,10 @@ is distinct from unknown work, and completion means the result is usable. CLI
 and agent adapters preserve their data channels and disclose host limits rather
 than fabricating status.
 
+Delegated Deep/in-depth audits establish their population from authoritative
+item enumeration and reconcile returned identities and counts; see the shared
+[scaled-audit procedure](souroldgeezer-audit/docs/audit-reference/scaled-audit.md).
+
 | Plugin | Version | Skills | Docs |
 |---|---:|---|---|
 | `souroldgeezer-audit` | `2026.10.12` | [devsecops-audit](souroldgeezer-audit/skills/devsecops-audit/SKILL.md), [test-quality-audit](souroldgeezer-audit/skills/test-quality-audit/SKILL.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md), [lean-audit](souroldgeezer-audit/skills/lean-audit/SKILL.md) | [audit-craft core](souroldgeezer-audit/docs/audit-reference/audit-craft.md), [security](souroldgeezer-audit/docs/security-reference/devsecops.md), [quality](souroldgeezer-audit/docs/quality-reference/unit-testing.md), [ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) |

@@ -43,6 +43,13 @@ assume.
 the tier map (materiality.md), and compute the slice plan. Never delegate these:
 every slice depends on them.
 
+Derive the population from the subject's authoritative enumeration; record its
+source, selected scope/exclusions, item identities, and count before slicing.
+For tests, use the configured runner's collected test IDs or collect-only/list
+output, including nested and generated/parameterised cases. File globs may
+partition that population, but must not define it. If enumeration is unavailable
+or incomplete, disclose the evidence gap; do not claim complete reconciliation.
+
 **Slice unit and size.** Use the §4 unit for the skill. Size each slice so the
 WORKER's own context holds it comfortably — a compacted worker reproduces this
 same defect one level down, where the parent cannot see it.
@@ -57,8 +64,10 @@ transcripts. Returning material instead of records relocates the parent's contex
 problem rather than solving it.
 
 **Parent, after collection.** Reconcile coverage FIRST: every dispatched slice
-returned, and their union equals the declared population. A missing, truncated, or
-non-conforming slice is an evidence gap — disclose it (§5), never drop it
+returned, and their union equals the declared population by item identity and
+count; detect duplicate or unexpected items rather than accepting equal totals.
+A missing, truncated, or non-conforming slice is an evidence gap — disclose it
+(§5), never drop it
 silently, and never relabel it as a sample. Only then compute the population
 lanes, worklist, verdict, and footer.
 

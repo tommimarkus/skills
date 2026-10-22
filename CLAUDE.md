@@ -316,6 +316,9 @@ Current `<kind>-reference/` directories in use:
 - `souroldgeezer-audit/docs/audit-reference/materiality.md` — risk-tier procedure: materiality = max(signal strength, declared tier); orthogonal to smell severity, combined at the worklist
 - `souroldgeezer-audit/docs/audit-reference/sampling-projection.md` — sampling and projection procedure for Deep / in-depth modes when full enumeration exceeds budget
 - `souroldgeezer-audit/docs/audit-reference/scaled-audit.md` — the rung *before* sampling: bounded per-item evidence records, the delegation protocol (parent owns population lanes; workers return records, not material), the divisible / parent-only lane table for all four audit skills, and the rung + coverage-reconciliation disclosure
+  For delegated Deep/in-depth audit population and coverage reconciliation,
+  follow [§3](souroldgeezer-audit/docs/audit-reference/scaled-audit.md#3-delegation-protocol),
+  including authoritative enumeration before slicing.
 - `souroldgeezer-design/docs/software-reference/software-design.md` — software-design playbook
 - `souroldgeezer-design/docs/app-reference/app-design.md` — app-design playbook
 - `souroldgeezer-design/docs/api-reference/api-design.md` — api-design playbook

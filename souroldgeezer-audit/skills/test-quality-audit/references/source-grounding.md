@@ -1,5 +1,13 @@
 # Source Grounding
 
+- Source: [issue #142](https://github.com/tommimarkus/skills/issues/142) and the
+  local shared scaled-audit procedure.
+  Handling: the existing slice reconciliation lacked an independent population
+  source. The shared procedure now requires runner-enumerated test identities
+  and counts; glob-based partitioning remains permitted. Synthetic behavior
+  cases cover omissions, equal-count substitutions, and unavailable collection;
+  no issue or session text is bundled.
+
 This skill's behavioral evals are synthetic, repo-authored cases derived from
 the local test-quality workflow, bundled quality references, and existing
 golden-corpus maintenance process. They do not copy external prompt text, code,
