@@ -1,6 +1,7 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -55,23 +56,28 @@ class SkillArchitectureReportTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return result.stdout
 
-    def test_replacement_ledger_measures_at_least_500_skill_only_findings(self) -> None:
-        module = load_engine()
-        cases = load_ledger_cases()
+    @classmethod
+    def setUpClass(cls) -> None:
+        # The replacement calibration is the costliest computation in this class;
+        # run it once through the JSON surface and share the immutable payload.
+        result = run_engine_args("--format", "json", str(REPO_ROOT))
+        cls.calibration_returncode = result.returncode
+        cls.calibration_stderr = result.stderr
+        cls.calibration_payload = json.loads(result.stdout)["replacement_calibration"] if result.returncode == 0 else {}
 
-        calibration = module.calculate_replacement_calibration(REPO_ROOT)
+    def test_replacement_ledger_measures_at_least_500_skill_only_findings(self) -> None:
+        self.assertEqual(self.calibration_returncode, 0, self.calibration_stderr)
+        cases = load_ledger_cases()
+        calibration = self.calibration_payload
 
         self.assertGreaterEqual(len(cases), 500)
-        self.assertGreaterEqual(calibration.gold_finding_count, 500)
-        self.assertGreaterEqual(calibration.automated_recall_percentage, 90.0)
-        self.assertLessEqual(calibration.manual_only_finding_count, calibration.gold_finding_count * 0.1)
+        self.assertGreaterEqual(calibration["gold_finding_count"], 500)
+        self.assertGreaterEqual(calibration["automated_recall_percentage"], 90.0)
+        self.assertLessEqual(calibration["manual_only_finding_count"], calibration["gold_finding_count"] * 0.1)
 
     def test_json_output_reports_empirical_replacement_recall(self) -> None:
-        result = run_engine_args("--format", "json", str(REPO_ROOT))
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        payload = json.loads(result.stdout)
-        calibration = payload["replacement_calibration"]
+        self.assertEqual(self.calibration_returncode, 0, self.calibration_stderr)
+        calibration = self.calibration_payload
         self.assertEqual("tests/skill_architecture_report_ledger.jsonl", calibration["ledger_path"])
         self.assertGreaterEqual(calibration["case_count"], 500)
         self.assertGreaterEqual(calibration["gold_finding_count"], 500)
@@ -344,6 +350,7 @@ class SkillArchitectureReportTest(unittest.TestCase):
 
             self.assertEqual([], module.find_skill_files(repo))
 
+    @unittest.skipIf(shutil.which("uv") is None, "uv is required by the report wrapper")
     def test_shell_wrapper_help_smoke(self) -> None:
         result = subprocess.run(
             ["bash", str(WRAPPER), "--help"],

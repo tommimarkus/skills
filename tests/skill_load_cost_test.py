@@ -396,44 +396,6 @@ class CliTest(unittest.TestCase):
             self.assertIn("SELECTION METADATA", out.getvalue())
 
 
-def baseline_skill_md(repo: Path, baseline_name: str) -> Path:
-    """Map a committed baseline name to its unique owning SKILL.md — the inverse
-    of the guard's `_baseline_for` (skill dir name → baselines/<name>.json)."""
-    matches = sorted(repo.glob(f"souroldgeezer-*/skills/{baseline_name}/SKILL.md"))
-    if len(matches) != 1:
-        raise AssertionError(
-            f"baseline {baseline_name!r} must map to exactly one published "
-            f"SKILL.md, found {matches}"
-        )
-    return matches[0]
-
-
-class CommittedBaselinesClosureTest(unittest.TestCase):
-    """Every committed load-cost baseline must be satisfied by the inventory of
-    the guard's own link closure (resolve_closure) — the same closure the Stop
-    hook enforces. A directory-glob inventory is deliberately NOT used here: a
-    baseline built wider than the closure would report permanent phantom
-    regressions the guard can never satisfy (issue #75)."""
-
-    def test_committed_baselines_satisfied_by_guard_closure(self):
-        repo = REPO_ROOT
-        patterns = json.loads(
-            (repo / "tests/skill_load_cost/code_patterns.json").read_text()
-        )
-        baselines = sorted((repo / "tests/skill_load_cost/baselines").glob("*.json"))
-        self.assertTrue(baselines, "no committed baselines found")
-        for bl in baselines:
-            with self.subTest(skill=bl.stem):
-                closure = slc.resolve_closure(baseline_skill_md(repo, bl.stem))
-                current = slc.union_inventory([
-                    slc.extract_inventory(p.read_text(encoding="utf-8"), patterns)
-                    for p in closure
-                ])
-                self.assertEqual(
-                    slc.diff_inventory(json.loads(bl.read_text()), current), []
-                )
-
-
 class ResolveClosureWithOverridesTest(unittest.TestCase):
     def _skill_with_ref(self, root: Path) -> tuple:
         skill_md = root / "SKILL.md"

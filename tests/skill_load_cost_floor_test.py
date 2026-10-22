@@ -24,6 +24,7 @@ pure reordering as add/remove pairs, which once produced a false "section has go
 unreachable" report; `diff_inventory` below is set-based and is the same function
 the guard uses.
 """
+import functools
 import json
 import unittest
 
@@ -53,6 +54,7 @@ def skill_md_for(name: str):
     return matches[0]
 
 
+@functools.lru_cache(maxsize=None)
 def current_inventory(name: str):
     patterns = json.loads(CODE_PATTERNS.read_text(encoding="utf-8"))
     files = slc.resolve_closure(skill_md_for(name))
