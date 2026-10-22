@@ -299,6 +299,7 @@ class DispatchCommandTest(DispatchHarness):
         code, result = self.dispatch("alpha", "--create-from", "main")
         self.assertEqual(3, code)
         self.assertIn("cannot create worktree", result["error"])
+        self.assertIn("(removed branch leaf-alpha created by this attempt)", result["error"])
         self.assertEqual(before, self.checkpoint_path().read_bytes())
         self.assertEqual("", git(self.repo, "branch", "--list", "leaf-alpha").stdout.strip())
 
@@ -310,6 +311,7 @@ class DispatchCommandTest(DispatchHarness):
         code, result = self.dispatch("alpha", "--create-from", "main")
         self.assertEqual(3, code)
         self.assertIn("cannot create worktree", result["error"])
+        self.assertNotIn("removed branch", result["error"])
         self.assertEqual(old, git(self.repo, "rev-parse", "leaf-alpha").stdout.strip())
 
     def test_unmet_dependency_is_refused_before_a_worktree_is_created(self):
