@@ -38,6 +38,7 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
         flat = re.sub(r"\s+", " ", self.text)
         for entry in host["verifiers"].values():
             self.assertIn(f"`{entry['model']}` / `{entry['effort']}`", flat)
+        self.assertIn("`plan-step-standard` (default)", self.text)
         self.assertIn("https://developers.openai.com/api/docs/guides/latest-model", self.text)
 
     def test_requires_complete_handoff_and_honest_stops(self):
