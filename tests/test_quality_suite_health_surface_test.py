@@ -3,7 +3,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, assert_phrases
 
 
 SKILL_ROOT = REPO_ROOT / "souroldgeezer-audit/skills/test-quality-audit"
@@ -100,100 +100,74 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
 
     def test_suite_health_contract_uses_progressive_project_evidence(self) -> None:
         output = read(OUTPUT)
-        output_lower = output.lower()
-        output_compact = " ".join(output_lower.split())
-        for phrase in (
-            "## suite health",
-            "static snapshot",
-            "current-run evidence",
-            "historical trends",
-            "effectiveness evidence",
-            "evidence sources",
-            "window",
-            "limitations",
-            "feedback",
-            "efficiency",
-            "reliability",
-            "maintainability",
-            "keep",
-            "strengthen",
-            "move down",
-            "consolidate",
-            "schedule later",
-            "verify-then-retire",
-            "management evidence before sampling",
+        assert_phrases(self, output, (
+            "Static snapshot",
+            "Current-run evidence",
+            "Historical trends",
+            "Effectiveness evidence",
+        ), heading="## Evidence ladder")
+        assert_phrases(self, output, (
             "safe one-shot suite execution",
-            "current-run evidence is mandatory",
-            "runtime distribution is mandatory",
-            "supported-positive",
-            "substantiated-finding",
-            "unknown-evidence-gap",
-            "### setup/teardown lifecycle",
-            "cost attribution: measured | inferred | unknown",
-            "lifecycle safety: supported-positive | substantiated-finding | unknown-evidence-gap",
-            "up to five material resources/hooks",
-            "current scope",
-            "mutability/isolation need",
-            "cost evidence",
-            "cleanup evidence",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, output_lower)
-        self.assertIn("project-declared", output)
-        self.assertIn("unknown", output)
-        self.assertNotIn("### Pyramid ratio", output)
-        self.assertNotIn("### Runtime distribution", output)
-        for universal_threshold in ("> 100 ms", "> 2 s", "> 5 min", "70-80%"):
-            self.assertNotIn(universal_threshold, output)
-
-        for required_execution_fact in (
+            "about ten minutes",
+            "longer, unknown, browser, external-service, rerun, or mutation",
+            "repository discovery",
+            "datastore",
+            "trend collector",
+            "CI adapter",
+            'python3 "${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
+            'python3 "<absolute-loaded-skill-dir>/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
+        ), heading="## Management evidence before sampling")
+        assert_phrases(self, output, (
+            "### Suite health",
+            "Evidence sources",
+            "Window",
+            "Limitations",
+            "Current-run evidence is mandatory",
+            "Runtime distribution is mandatory",
+            "project-declared",
             "collection count",
             "pass/fail/error/skip",
             "elapsed time",
             "duration distribution",
             "lane selection",
             "ownership/cadence",
-            "about ten minutes",
-            "longer, unknown, browser, external-service, rerun, or mutation",
-        ):
-            with self.subTest(required_execution_fact=required_execution_fact):
-                self.assertIn(required_execution_fact, output_compact)
-
-        for evidence_rule in (
+            "supported-positive",
+            "substantiated-finding",
+            "unknown-evidence-gap",
+            *(f"**{dimension}:**" for dimension in (
+                "Feedback", "Current execution", "Efficiency", "Reliability", "Maintainability")),
+            "weak — any block",
+            "adequate — warnings or material unknowns without blocks",
+            "strong — all five dimensions are supported-positive",
+            "not assessed — target or runner cannot be established",
+            *(f"`{action}`" for action in (
+                "keep", "strengthen", "move down", "consolidate", "schedule later", "verify-then-retire")),
+            "### Setup/teardown lifecycle",
+            "Cost attribution: measured | inferred | unknown",
+            "Lifecycle safety: supported-positive | substantiated-finding | unknown-evidence-gap",
+            "up to five material resources/hooks",
+            "Current scope",
+            "Mutability/isolation need",
+            "Cost evidence",
+            "Cleanup evidence",
             "direct phase/timing evidence",
             "declared-budget breach",
             "static lifecycle evidence",
-            "never request new instrumentation",
+            "Never request new instrumentation",
             "immutable or safely resettable infrastructure",
             "mutable data, users, sessions, and browser contexts remain per-test",
-            "do not consolidate tests merely because their setup text matches",
-        ):
-            with self.subTest(evidence_rule=evidence_rule):
-                self.assertIn(evidence_rule, output_compact)
+            "Do not consolidate tests merely because their setup text matches",
+        ), heading="## Suite assessment")
+        self.assertNotIn("### Pyramid ratio", output)
+        self.assertNotIn("### Runtime distribution", output)
+        for universal_threshold in ("> 100 ms", "> 2 s", "> 5 min", "70-80%"):
+            self.assertNotIn(universal_threshold, output)
 
-        self.assertIn(
-            'python3 "${CLAUDE_SKILL_DIR}/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
-            output,
-        )
-        self.assertIn(
-            'python3 "<absolute-loaded-skill-dir>/references/scripts/suite_health_snapshot.py" --junit <report.xml>',
-            output,
-        )
-        for excluded_role in ("repository discovery", "datastore", "trend collector", "CI adapter"):
-            with self.subTest(excluded_role=excluded_role):
-                self.assertIn(excluded_role, output)
-
+        lowered = output.lower()
         self.assertLess(
-            output_lower.index("## management evidence before sampling"),
-            output_lower.index("## per-file rollup"),
+            lowered.index("## management evidence before sampling"),
+            lowered.index("## per-file rollup"),
         )
-        for dimension in ("Feedback", "Current execution", "Efficiency", "Reliability", "Maintainability"):
-            with self.subTest(dimension=dimension):
-                self.assertIn(f"**{dimension}:**", output)
-        self.assertIn("weak — any block", output)
-        self.assertIn("adequate — warnings or material unknowns without blocks", output)
-        self.assertIn("strong — all five dimensions are supported-positive", " ".join(output.split()))
-        self.assertIn("not assessed — target or runner cannot be established", " ".join(output.split()))
 
     def test_suite_health_codes_and_retirement_gate_are_documented(self) -> None:
         catalog = read(CATALOG)

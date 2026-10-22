@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, compact, section
 
 
 SKILL_ROOT = REPO_ROOT / "souroldgeezer-audit/skills/test-quality-audit"
@@ -33,16 +33,20 @@ def corpus() -> dict[str, dict]:
 class TestQualityQuickGateTest(unittest.TestCase):
     def test_quick_loads_materiality_and_emits_the_shared_gate(self) -> None:
         skill = SKILL.read_text(encoding="utf-8")
-        compact = " ".join(skill.split())
-        self.assertIn("materiality.md`](../../docs/audit-reference/materiality.md) in all modes", compact)
-        self.assertIn("Quick gate: <status>", skill)
-        self.assertLess(skill.index("per-test findings"), skill.index("Quick gate: <status>"))
-        self.assertIn("fail if any substantiated in-scope `block`", compact)
-        self.assertIn("not-evaluated", compact)
-        self.assertIn("pass-limited", compact)
-        self.assertIn("remediated block needs a clean rerun", compact)
-        self.assertIn("risk is orthogonal", compact)
-        self.assertIn("never emits `Gap-*` findings or a remediation worklist", compact)
+        assert_phrases(self, skill, (
+            "materiality.md`](../../docs/audit-reference/materiality.md) in all modes",
+        ), heading="## Load Map")
+        assert_phrases(self, skill, (
+            "Quick emits per-test findings, then `Quick gate: <status>`",
+            "fail if any substantiated in-scope `block`",
+            "remediated block needs a clean rerun",
+            "risk is orthogonal",
+            "never emits `Gap-*` findings or a remediation worklist",
+        ), heading="## Workflow")
+        gate = compact(section(skill, "## Workflow"))
+        gate = gate[gate.index("Quick gate: <status>"):]
+        positions = [gate.index(token) for token in ("fail if", "`not-evaluated`", "`pass-limited`")]
+        self.assertEqual(positions, sorted(positions))
 
     def test_quick_scenarios_load_materiality_but_not_deep_only_output(self) -> None:
         scenarios = {row["id"]: row for row in json.loads(SCENARIOS.read_text(encoding="utf-8"))}

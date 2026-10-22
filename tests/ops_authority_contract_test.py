@@ -19,6 +19,9 @@ class OpsAuthorityContractTest(unittest.TestCase):
         ):
             metadata, _body = self.parse_frontmatter(REPO_ROOT / relative)
             with self.subTest(agent=relative):
+                # a parse that yielded nothing would pass the absence check vacuously
+                self.assertTrue(metadata.get("name"), "agent name missing")
+                self.assertTrue(metadata.get("description"), "agent description missing")
                 self.assertNotIn("tools", metadata)
 
     def test_synthetic_cases_have_valid_schema_and_required_decision_coverage(self) -> None:

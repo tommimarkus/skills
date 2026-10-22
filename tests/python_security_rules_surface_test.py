@@ -22,7 +22,7 @@ ASVS_APP_RULES = {
     "codes": devsecops_codes("pys.HC", 10, 14),
     "inline_codes": devsecops_codes("pys.POS", 6, 9),
     "pack_text": (
-        "Emit a `pys.*` finding only when both the risky sink and a\nvisible trust-boundary/taint path are present.",
+        "Emit a `pys.*` finding only when both the risky sink and a visible trust-boundary/taint path are present.",
         "stored password verifier",
     ),
     "urls": (

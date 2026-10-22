@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, section
 
 
 SKILL = REPO_ROOT / "souroldgeezer-audit/skills/devsecops-audit/SKILL.md"
@@ -52,15 +52,19 @@ class DevSecOpsQuickGateTest(unittest.TestCase):
             "DSO-GOLD-0011": {"docker.HC-1"},
             "DSO-GOLD-0013": {"bicep.HC-1"},
         }
+        pack_of = {"gha": "github-actions.md", "docker": "dockerfile.md", "bicep": "bicep.md"}
         entries = corpus()
-        packs = "\n".join(read(path) for path in RULE_PACKS.glob("*.md"))
         for case_id, extension_codes in expected.items():
             with self.subTest(case_id=case_id):
                 entry = entries[case_id]
                 self.assertEqual("block", entry["expected_severity"])
                 self.assertTrue(extension_codes <= set(entry["expected_codes"]))
                 for code in extension_codes:
-                    self.assertRegex(packs, rf"(?s){code}.*?\*\*Severity:\*\* `block`", msg=code)
+                    pack = read(RULE_PACKS / pack_of[code.split(".")[0]])
+                    # a conditional rule (`warn` ... `block` when confirmed) still reaches block
+                    self.assertRegex(
+                        section(pack, f"### `{code}`"), r"\*\*Severity:\*\*[^\n]*`block`", msg=code
+                    )
 
         self.assertIn("DSO-HC-7", entries["DSO-GOLD-0009"]["expected_codes"])
 

@@ -23,6 +23,50 @@ def compact(text: str) -> str:
     return " ".join(text.split())
 
 
+_HEADING_LINE = re.compile(r"^(#{1,6})\s")
+
+
+def section(text: str, heading: str) -> str:
+    """The span from the heading line to the next heading of the same or higher level.
+
+    `heading` is the heading's leading text (`"## Gate"`, or `"### `gha.HC-1`"` for a
+    heading that goes on to carry a title); a line matches when it equals `heading` or
+    continues it after a space, so a closing backtick keeps `HC-1` from matching `HC-10`.
+    Headings inside fenced code blocks are not headings. Raises AssertionError naming
+    the heading when absent."""
+    level = len(heading) - len(heading.lstrip("#"))
+    assert level, f"not a Markdown heading: {heading!r}"
+    lines = text.splitlines()
+    start = None
+    fenced = False
+    for index, line in enumerate(lines):
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        found = _HEADING_LINE.match(line)
+        if start is None:
+            if line == heading or line.startswith(heading + " "):
+                start = index
+        elif found and len(found.group(1)) <= level:
+            return "\n".join(lines[start:index])
+    if start is None:
+        raise AssertionError(f"heading not found: {heading}")
+    return "\n".join(lines[start:])
+
+
+def assert_phrases(tc, text: str, phrases, *, heading: str | None = None) -> None:
+    """Each phrase appears in `text` (or in its `heading` section) with whitespace
+    compacted on both sides, one subTest per phrase; a failure names the phrase and
+    heading rather than dumping the document."""
+    scope = section(text, heading) if heading else text
+    haystack = compact(scope)
+    for phrase in phrases:
+        with tc.subTest(phrase=phrase, heading=heading):
+            tc.assertTrue(compact(phrase) in haystack, f"{phrase!r} missing from {heading or 'document'}")
+
+
 def eval_ids(path: str) -> set[str]:
     """The set of case ids in an evals JSONL corpus. Shared by the synthetic
     eval-coverage checks here and in the per-stack surface tests."""
@@ -262,13 +306,14 @@ def assert_devsecops_rule_set(tc, spec: dict) -> None:
     pack, catalog, grounding = devsecops_pack_texts(spec["pack"])
     assert_devsecops_codes_catalogued(tc, pack, catalog, spec["codes"])
     assert_devsecops_codes_catalogued(tc, pack, catalog, spec.get("inline_codes", ()), heading=False)
+    pack_compact, grounding_compact = compact(pack), compact(grounding)
     for text in spec.get("pack_text", ()):
-        tc.assertIn(text, pack)
+        tc.assertIn(compact(text), pack_compact)
     for text in spec.get("pack_absent", ()):
-        tc.assertNotIn(text, pack)
+        tc.assertNotIn(compact(text), pack_compact)
     for text in spec.get("grounding_text", ()):
-        tc.assertIn(text, grounding)
-    url_texts = (grounding, pack) if spec.get("urls_in_pack", True) else (grounding,)
+        tc.assertIn(compact(text), grounding_compact)
+    url_texts = (grounding_compact, pack_compact) if spec.get("urls_in_pack", True) else (grounding_compact,)
     for url in spec.get("urls", ()):
         for text in url_texts:
             tc.assertIn(url, text)

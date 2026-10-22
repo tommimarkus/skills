@@ -1,6 +1,6 @@
 import unittest
 
-from tests.surface_test_lib import read
+from tests.surface_test_lib import assert_phrases, read
 
 
 SKILL = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
@@ -65,9 +65,11 @@ class IpHygieneLegalContractTest(unittest.TestCase):
 
     def test_finding_contract_requires_decision_complete_evidence(self) -> None:
         skill = read(SKILL)
-        self.assertContainsAll(
+        assert_phrases(
+            self,
             skill,
             (
+                "Emit one structured `finding:` record per issue",
                 "criterion and authority class",
                 "condition and exact location",
                 "source identity and provenance",
@@ -84,6 +86,7 @@ class IpHygieneLegalContractTest(unittest.TestCase):
                 "risk tier",
                 "counsel outcome",
             ),
+            heading="## Finding And Remediation Contract",
         )
 
     def test_scope_exclusions_disclaimers_and_counsel_triggers_are_explicit(self) -> None:

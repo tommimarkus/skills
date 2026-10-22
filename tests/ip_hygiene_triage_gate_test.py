@@ -2,9 +2,10 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, read
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, compact, read, section
 
 
+GATE = "### Triage Gate"
 SKILL_PATH = "souroldgeezer-audit/skills/ip-hygiene/SKILL.md"
 IN_DEPTH_PATH = "souroldgeezer-audit/skills/ip-hygiene/references/procedures/in-depth-review.md"
 CORPUS = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus"
@@ -12,18 +13,16 @@ CORPUS = REPO_ROOT / "souroldgeezer-audit/skills/ip-hygiene/references/evals/acc
 
 class IpHygieneTriageGateTest(unittest.TestCase):
     def test_triage_gate_is_scoped_and_has_ip_specific_blockers(self) -> None:
-        skill = read(SKILL_PATH)
-        self.assertIn("triage gate: <fail | not-evaluated |\npass-limited>", skill)
-        self.assertIn("Do not emit this line in in-depth mode.", skill)
-        for blocker in (
+        gate = section(read(SKILL_PATH), GATE)
+        assert_phrases(self, gate, (
+            "triage gate: <fail | not-evaluated | pass-limited>",
+            "Do not emit this line in in-depth mode.",
             "misleading mark claims or branding",
             "unauthorized logos or endorsement implications",
             "unlicensed copied expression",
             "missing operative copyright or licence notices",
             "incompatible or restricted bundled content",
-        ):
-            with self.subTest(blocker=blocker):
-                self.assertIn(blocker, skill)
+        ))
 
     def test_triage_procedure_answers_all_six_questions_including_the_notice_question(self) -> None:
         skill = read(SKILL_PATH)
@@ -73,12 +72,19 @@ class IpHygieneTriageGateTest(unittest.TestCase):
         )
 
     def test_ambiguity_and_nonblocking_semantics_are_explicit(self) -> None:
-        skill = read(SKILL_PATH)
-        self.assertIn("unclear source authority, holder policy, or redistribution terms", skill)
-        self.assertIn("unless a confirmed blocker already makes the gate `fail`", skill)
-        self.assertIn("Ordinary mark-symbol, grammar, or optional-attribution convention issues are\nnonblocking", skill)
-        self.assertIn("preserve\ntheir underlying `warn` or `info` severity", skill)
-        self.assertIn("clean triage rerun before `pass-limited`", skill)
+        gate = section(read(SKILL_PATH), GATE)
+        assert_phrases(self, gate, (
+            "unclear source authority, holder policy, or redistribution terms",
+            "unless a confirmed blocker already makes the gate `fail`",
+            "Ordinary mark-symbol, grammar, or optional-attribution convention issues are nonblocking",
+            "preserve their underlying `warn` or `info` severity",
+            "clean triage rerun before `pass-limited`",
+        ))
+
+    def test_gate_outcomes_are_defined_in_precedence_order(self) -> None:
+        gate = compact(section(read(SKILL_PATH), GATE))
+        positions = [gate.index(f"- `{status}`") for status in ("fail", "not-evaluated", "pass-limited")]
+        self.assertEqual(positions, sorted(positions))
 
     def test_synthetic_corpus_covers_each_triage_gate_outcome(self) -> None:
         expected = [json.loads(line) for line in (CORPUS / "expected.jsonl").read_text().splitlines()]

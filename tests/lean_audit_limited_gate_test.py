@@ -2,7 +2,7 @@ import json
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, compact, section
 
 
 SKILL = REPO_ROOT / "souroldgeezer-audit/skills/lean-audit/SKILL.md"
@@ -25,32 +25,39 @@ def rows(path: Path) -> dict[str, dict]:
 
 class LeanAuditLimitedGateTest(unittest.TestCase):
     def test_limited_scope_gate_derives_only_after_filtering_and_carve_outs(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn("limited-scope gate: <status>", skill)
-        self.assertIn("only for a file, named-file, or diff coverage", skill)
-        self.assertIn(
-            "filter findings to the requested paths and apply declared carve-outs before", skill
-        )
-        self.assertIn("never derive it from a directory-wide engine exit alone", skill)
-        self.assertIn("`LA-DUP-1`, `LA-DUP-2`, `LA-CODE-DUP-1`, `LA-RUN-2`, or `LA-RUN-3`", skill)
-        self.assertIn("expected lane exceeds declared capacity", skill)
+        assert_phrases(self, SKILL.read_text(encoding="utf-8"), (
+            "limited-scope gate: <status>",
+            "only for a file, named-file, or diff coverage",
+            "filter findings to the requested paths and apply declared carve-outs before",
+            "never derive it from a directory-wide engine exit alone",
+            "`LA-DUP-1`, `LA-DUP-2`, `LA-CODE-DUP-1`, `LA-RUN-2`, or `LA-RUN-3`",
+            "expected lane exceeds declared capacity",
+        ), heading="## Workflow")
 
     def test_gate_precedence_and_not_evaluated_evidence_rules_are_explicit(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn("confirmed in-scope block exists, `fail` wins", skill)
-        self.assertIn("`not-evaluated`", skill)
-        self.assertIn("Python ≥3.11 floor is unmet", skill)
-        self.assertIn("required deterministic engine is unavailable", skill)
-        self.assertIn("cannot rule out overflow", skill)
-        self.assertIn("Otherwise emit `pass-limited`", skill)
-        self.assertIn("judgment-only findings are warn/info and nonblocking", skill)
+        skill = SKILL.read_text(encoding="utf-8")
+        assert_phrases(self, skill, (
+            "confirmed in-scope block exists, `fail` wins",
+            "Python ≥3.11 floor is unmet",
+            "required deterministic engine is unavailable",
+            "cannot rule out overflow",
+            "judgment-only findings are warn/info and nonblocking",
+        ), heading="## Workflow")
+        gate = compact(section(skill, "## Workflow"))
+        gate = gate[gate.index("limited-scope gate: <status>"):]
+        positions = [gate.index(token) for token in ("`fail` wins", "`not-evaluated`", "Otherwise emit `pass-limited`")]
+        self.assertEqual(positions, sorted(positions))
 
     def test_scan_coverage_and_indeterminate_forecast_contracts_are_explicit(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn("Normal scans report `coverage`", skill)
-        self.assertIn("empty in-scope Markdown set is an input/coverage error", skill)
-        self.assertIn("verification reserve, orchestrator base tokens", skill)
-        self.assertIn("Treat missing bounds as `indeterminate`", skill)
+        skill = SKILL.read_text(encoding="utf-8")
+        assert_phrases(self, skill, (
+            "Normal scans report `coverage`",
+            "empty in-scope Markdown set is an input/coverage error",
+        ), heading="## Workflow")
+        assert_phrases(self, skill, (
+            "verification reserve, orchestrator base tokens",
+            "Treat missing bounds as `indeterminate`",
+        ), heading="## Rules and Stop Conditions")
 
     def test_behavior_cases_cover_block_clean_and_not_evaluated_paths(self) -> None:
         cases = rows(BEHAVIOR_CASES)
@@ -75,31 +82,28 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
         self.assertEqual(workflow["workflow-bounded-compact"]["expected_codes"], [])
 
     def test_directory_scope_is_limited_and_mixed_scope_emits_no_gate(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn(
+        skill = SKILL.read_text(encoding="utf-8")
+        assert_phrases(self, skill, (
             "any scope short of a full-repo enumeration (a file, named files, a diff, a directory,"
             " or a mix) derives `limited`",
-            skill,
-        )
-        self.assertIn("only a full-repo enumeration derives `reasonable`", skill)
-        self.assertIn(
+            "only a full-repo enumeration derives `reasonable`",
+        ), heading="## One adaptive path (no mode dispatch)")
+        assert_phrases(self, skill, (
             "any scope that contains a directory is a rollup and emits no gate, even when it also"
             " names files; its scope line lists the named files",
-            skill,
-        )
+        ), heading="## Workflow")
 
     def test_carve_out_disclosure_lists_suppressed_pairs_never_a_bare_zero(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn(
+        assert_phrases(self, SKILL.read_text(encoding="utf-8"), (
             "a carve-out disclosure names its rule and lists the engine's `coverage.suppressed`"
             " in-scope pairs, or the `by_rule` counts when truncated",
-            skill,
-        )
-        self.assertIn("a zero is never reported bare while `suppressed.count` is nonzero", skill)
+            "a zero is never reported bare while `suppressed.count` is nonzero",
+        ), heading="## Rules and Stop Conditions")
 
     def test_code_adjudication_procedure_is_linked_and_states_its_four_rules(self) -> None:
-        skill = " ".join(SKILL.read_text(encoding="utf-8").split())
-        self.assertIn("](references/procedures/code-adjudication.md)", skill)
+        assert_phrases(self, SKILL.read_text(encoding="utf-8"), (
+            "](references/procedures/code-adjudication.md)",
+        ), heading="## Load Map")
         text = " ".join(PROCEDURE.read_text(encoding="utf-8").split())
         self.assertIn("LA-CODE-DUP-", text)
         self.assertIn("messages, limits, names and constants are parameters", text)
