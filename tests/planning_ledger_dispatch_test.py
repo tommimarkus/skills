@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -76,17 +77,25 @@ def batch_leaves():
 
 
 class DispatchHarness(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        base = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(base.cleanup)
+        cls.base_repo = Path(base.name) / "repo"
+        git(Path(base.name), "init", "-b", "main", str(cls.base_repo))
+        git(cls.base_repo, "config", "user.name", "Test User")
+        git(cls.base_repo, "config", "user.email", "test@example.invalid")
+        (cls.base_repo / ".gitignore").write_text(".worktrees/\n")
+        git(cls.base_repo, "add", ".gitignore")
+        git(cls.base_repo, "commit", "-m", "base")
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.scratch = Path(self.temporary.name)
         self.repo = self.scratch / "repo"
-        git(self.scratch, "init", "-b", "main", str(self.repo))
-        git(self.repo, "config", "user.name", "Test User")
-        git(self.repo, "config", "user.email", "test@example.invalid")
-        (self.repo / ".gitignore").write_text(".worktrees/\n")
-        git(self.repo, "add", ".gitignore")
-        git(self.repo, "commit", "-m", "base")
+        shutil.copytree(self.base_repo, self.repo, symlinks=True)
 
     def call(self, *arguments):
         with contextlib.redirect_stdout(io.StringIO()) as stream:

@@ -204,7 +204,11 @@ class CheckChangesetTest(ChangesetHarness):
     def test_outside_write_set_lists_at_most_eight_paths(self):
         packet = self.started(precision="strict")
         for index in range(10):
-            self.commit_file(f"elsewhere/f{index}.txt", "x\n", f"c{index}")
+            path = self.worktree / f"elsewhere/f{index}.txt"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("x\n")
+        git(self.worktree, "add", "-A")
+        git(self.worktree, "commit", "-m", "ten outside files")
         code, result = self.check(packet)
         self.assertEqual(1, code, result)
         self.assertEqual("outside_write_set", result["verdict"])

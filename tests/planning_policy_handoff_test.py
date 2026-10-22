@@ -242,10 +242,13 @@ class PlanningPolicyHandoffTest(unittest.TestCase):
         plan = copy.deepcopy(self.plan)
         settled = plan['leaves'][0]['settled_decisions']
         index = 0
-        while len(canonical(plan)) < 64 * 1024 - 40:
+        size = len(canonical(plan))
+        while size < 64 * 1024 - 40:
             settled[f'k{index:05d}'] = 'x'
+            size += len(f',"k{index:05d}":"x"')
             index += 1
-        settled['padding'] = 'x' * (64 * 1024 - len(canonical(plan)) - len(',"padding":""'))
+        self.assertEqual(size, len(canonical(plan)))
+        settled['padding'] = 'x' * (64 * 1024 - size - len(',"padding":""'))
         self.assertEqual(len(canonical(plan)), 64 * 1024)
         _, text = self.block('inline', plan)
         self.assertGreater(len(text.encode()), 68 * 1024)
