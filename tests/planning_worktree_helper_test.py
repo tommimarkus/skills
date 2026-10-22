@@ -650,39 +650,31 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
             marker.unlink()
         self.assertEqual(0, self.integrate("active-op", leaf, source)[0].returncode)
 
+    def assert_both_commands_refuse(self, name: str, expected: str, **overrides) -> None:
+        leaf, integrated = self.integrated_leaf(name)
+        absent = str(Path(self.temporary.name) / "absent.json")
+        for command, flag, argument in (
+            ("integrate", "--source-commit", integrated["source_commit"]),
+            ("cleanup", "--integrated-result", absent),
+        ):
+            result, value = self.invoke(command, leaf, f"task/{name}", flag, argument, **overrides)
+            self.assertEqual(3, result.returncode)
+            self.assertEqual(expected, value["error"])
+
     def test_refuses_repo_root_that_is_not_the_parent_toplevel(self) -> None:
-        leaf, integrated = self.integrated_leaf("subdir-root")
-        subdir = self.root / ".worktrees"
-        expected = "--repo-root must be the parent worktree root"
-        result, value = self.invoke(
-            "integrate", leaf, "task/subdir-root", "--source-commit",
-            integrated["source_commit"], repo_root=subdir,
+        self.assert_both_commands_refuse(
+            "subdir-root",
+            "--repo-root must be the parent worktree root",
+            repo_root=self.root / ".worktrees",
         )
-        self.assertEqual(3, result.returncode)
-        self.assertEqual(expected, value["error"])
-        result, value = self.invoke(
-            "cleanup", leaf, "task/subdir-root", "--integrated-result",
-            str(Path(self.temporary.name) / "absent.json"), repo_root=subdir,
-        )
-        self.assertEqual(3, result.returncode)
-        self.assertEqual(expected, value["error"])
 
     def test_refuses_parent_not_checked_out_on_the_target(self) -> None:
-        leaf, integrated = self.integrated_leaf("wrong-target")
         git(self.root, "branch", "release", "main")
-        expected = "parent worktree must be checked out on the exact target"
-        result, value = self.invoke(
-            "integrate", leaf, "task/wrong-target", "--source-commit",
-            integrated["source_commit"], target="release",
+        self.assert_both_commands_refuse(
+            "wrong-target",
+            "parent worktree must be checked out on the exact target",
+            target="release",
         )
-        self.assertEqual(3, result.returncode)
-        self.assertEqual(expected, value["error"])
-        result, value = self.invoke(
-            "cleanup", leaf, "task/wrong-target", "--integrated-result",
-            str(Path(self.temporary.name) / "absent.json"), target="release",
-        )
-        self.assertEqual(3, result.returncode)
-        self.assertEqual(expected, value["error"])
 
     def test_batch_commit_count_is_capped_at_eight(self) -> None:
         eight = [f"step{i}={'a' * 40}" for i in range(8)]
@@ -708,97 +700,96 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         self.assertEqual("returned source commit is not the exact branch tip", value["error"])
         self.assertEqual(before, git(self.root, "rev-parse", "main").stdout.strip())
 
-    def test_refuses_when_target_moves_during_rebase(self) -> None:
-        leaf = self.add_worktree("moving-target")
+    def assert_integrate_refused(self, name: str, expected: str, *rules: tuple[str, str]) -> None:
+        leaf = self.add_worktree(name)
         source = self.commit(leaf, "work.txt", "work\n")
-        moved = f'"{shutil.which("git")}" -C "{self.root}" commit --allow-empty -q -m moved'
-        self.install_git_shim(("rebase main", moved))
+        self.install_git_shim(*rules)
 
-        result, value = self.integrate("moving-target", leaf, source)
+        result, value = self.integrate(name, leaf, source)
 
         self.assertEqual(3, result.returncode)
-        self.assertEqual("parent target moved during rebase; rebased branch retained", value["error"])
+        self.assertEqual(expected, value["error"])
+        self.assertIn(f"task/{name}", self.branches())
+
+    def assert_cleanup_refused(self, name: str, expected: str, arrange, leaf_remains=True) -> None:
+        leaf, integrated = self.integrated_leaf(name)
+        arrange(leaf)
+
+        result, value = self.cleanup(name, leaf, integrated)
+
+        self.assertEqual(3, result.returncode)
+        self.assertEqual(expected, value["error"])
+        self.assertEqual(leaf_remains, leaf.exists())
+        self.assertIn(f"task/{name}", self.branches())
+
+    def test_refuses_when_target_moves_during_rebase(self) -> None:
+        moved = f'"{shutil.which("git")}" -C "{self.root}" commit --allow-empty -q -m moved'
+        self.assert_integrate_refused(
+            "moving-target",
+            "parent target moved during rebase; rebased branch retained",
+            ("rebase main", moved),
+        )
         self.assertEqual("moved", git(self.root, "log", "-1", "--format=%s").stdout.strip())
-        self.assertIn("task/moving-target", self.branches())
 
     def test_refuses_when_fast_forward_merge_fails(self) -> None:
-        leaf = self.add_worktree("ff-fails")
-        source = self.commit(leaf, "work.txt", "work\n")
         before = git(self.root, "rev-parse", "main").stdout.strip()
-        self.install_git_shim(("merge --ff-only", "exit 1"))
-
-        result, value = self.integrate("ff-fails", leaf, source)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("fast-forward-only merge failed; rebased branch retained", value["error"])
+        self.assert_integrate_refused(
+            "ff-fails",
+            "fast-forward-only merge failed; rebased branch retained",
+            ("merge --ff-only", "exit 1"),
+        )
         self.assertEqual(before, git(self.root, "rev-parse", "main").stdout.strip())
-        self.assertIn("task/ff-fails", self.branches())
 
     def test_refuses_when_fast_forward_does_not_land_the_rebased_commit(self) -> None:
-        leaf = self.add_worktree("ff-noop")
-        source = self.commit(leaf, "work.txt", "work\n")
-        self.install_git_shim(("merge --ff-only", "exit 0"))
-
-        result, value = self.integrate("ff-noop", leaf, source)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("fast-forward target does not equal rebased branch", value["error"])
-
-    def test_cleanup_refuses_branch_registered_at_an_unexpected_worktree(self) -> None:
-        leaf, integrated = self.integrated_leaf("elsewhere")
-        git(self.root, "worktree", "remove", str(leaf))
-        other = self.root / ".worktrees" / "somewhere-else"
-        git(self.root, "worktree", "add", str(other), "task/elsewhere")
-
-        result, value = self.cleanup("elsewhere", leaf, integrated)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("delegated branch is registered at an unexpected worktree", value["error"])
-        self.assertIn("task/elsewhere", self.branches())
-
-    def test_cleanup_refuses_when_branch_merged_listing_omits_the_branch(self) -> None:
-        leaf, integrated = self.integrated_leaf("unlisted")
-        self.install_git_shim(("branch --merged", "exit 0"))
-
-        result, value = self.cleanup("unlisted", leaf, integrated)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("git branch --merged did not confirm the exact branch", value["error"])
-        self.assertTrue(leaf.exists())
-        self.assertIn("task/unlisted", self.branches())
-
-    def test_cleanup_retains_branch_when_worktree_removal_fails(self) -> None:
-        leaf, integrated = self.integrated_leaf("locked")
-        git(self.root, "worktree", "lock", str(leaf))
-
-        result, value = self.cleanup("locked", leaf, integrated)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("clean worktree removal failed; branch retained", value["error"])
-        self.assertTrue(leaf.exists())
-        self.assertIn("task/locked", self.branches())
-
-    def test_cleanup_reports_failed_non_force_branch_deletion(self) -> None:
-        leaf, integrated = self.integrated_leaf("delete-fails")
-        (self.root / ".git" / "refs" / "heads" / "task" / "delete-fails.lock").write_text(
-            "", encoding="utf-8"
+        self.assert_integrate_refused(
+            "ff-noop",
+            "fast-forward target does not equal rebased branch",
+            ("merge --ff-only", "exit 0"),
         )
 
-        result, value = self.cleanup("delete-fails", leaf, integrated)
+    def test_cleanup_refuses_branch_registered_at_an_unexpected_worktree(self) -> None:
+        def arrange(leaf: Path) -> None:
+            git(self.root, "worktree", "remove", str(leaf))
+            other = self.root / ".worktrees" / "somewhere-else"
+            git(self.root, "worktree", "add", str(other), "task/elsewhere")
 
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("non-force branch deletion failed; branch retained", value["error"])
-        self.assertIn("task/delete-fails", self.branches())
+        self.assert_cleanup_refused(
+            "elsewhere",
+            "delegated branch is registered at an unexpected worktree",
+            arrange,
+            leaf_remains=False,
+        )
+
+    def test_cleanup_refuses_when_branch_merged_listing_omits_the_branch(self) -> None:
+        self.assert_cleanup_refused(
+            "unlisted",
+            "git branch --merged did not confirm the exact branch",
+            lambda leaf: self.install_git_shim(("branch --merged", "exit 0")),
+        )
+
+    def test_cleanup_retains_branch_when_worktree_removal_fails(self) -> None:
+        self.assert_cleanup_refused(
+            "locked",
+            "clean worktree removal failed; branch retained",
+            lambda leaf: git(self.root, "worktree", "lock", str(leaf)),
+        )
+
+    def test_cleanup_reports_failed_non_force_branch_deletion(self) -> None:
+        lock = self.root / ".git" / "refs" / "heads" / "task" / "delete-fails.lock"
+        self.assert_cleanup_refused(
+            "delete-fails",
+            "non-force branch deletion failed; branch retained",
+            lambda leaf: lock.write_text("", encoding="utf-8"),
+            leaf_remains=False,
+        )
 
     def test_cleanup_refuses_when_branch_survives_a_reported_deletion(self) -> None:
-        leaf, integrated = self.integrated_leaf("delete-noop")
-        self.install_git_shim(("branch -d", "exit 0"))
-
-        result, value = self.cleanup("delete-noop", leaf, integrated)
-
-        self.assertEqual(3, result.returncode)
-        self.assertEqual("branch still exists after non-force deletion", value["error"])
-        self.assertIn("task/delete-noop", self.branches())
+        self.assert_cleanup_refused(
+            "delete-noop",
+            "branch still exists after non-force deletion",
+            lambda leaf: self.install_git_shim(("branch -d", "exit 0")),
+            leaf_remains=False,
+        )
 
 
 if __name__ == "__main__":
