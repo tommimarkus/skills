@@ -29,6 +29,11 @@ class PlanningPolicyCostTest(unittest.TestCase):
     def measure(self, scenario_id):
         return slc.measure_scenario(self.scenarios[scenario_id], REPO_ROOT)
 
+    def assert_within_budget(self, route, measured, budget):
+        # One subTest per budget, so a run reports every overrun, not just the first.
+        with self.subTest(budget=route):
+            self.assertLessEqual(measured, budget)
+
     def test_declared_load_budgets_and_routes(self):
         lookup = self.measure("planning-policy-lookup")
         agent_lookup = self.measure("planning-policy-claude-agent-lookup")
@@ -41,8 +46,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # file, docs/skill-architecture.md), superseding the earlier slack-5 figures.
         # Every SKILL.md route then gained +14 for the planningledger/ package pointer
         # that SAC-REF-UNADVERTISED-SUPPORT requires once the ledger became a shim.
-        self.assertLessEqual(lookup["load_total"], 1190)
-        self.assertLessEqual(agent_lookup["total"], 1200)
+        self.assert_within_budget("lookup", lookup["load_total"], 1190)
+        self.assert_within_budget("claude-agent-lookup", agent_lookup["total"], 1200)
         # claude and codex were re-baselined together, from 4000/4200, to carry the
         # downward tier test. The contract gated only escalation: analytical/deep had
         # to name an irreducible unknown, while nothing had to be argued to pick
@@ -109,7 +114,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # pin scan cannot see (+52 measured on every route loading it; rounded up to 10).
         # #147: parent review before record-return and the --parent-review lane in the
         # Claude adapter plus shared contract text (+54 measured; rounded up to 10).
-        self.assertLessEqual(claude["load_total"], 8900)
+        self.assert_within_budget("active-claude", claude["load_total"], 8900)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -126,13 +131,13 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # #135/#137: same core-workflow.md write-set closure sentence (+52).
         # #147: the same parent-review sentences in the Codex adapter and shared
         # contract text (+54 measured; rounded up to 10).
-        self.assertLessEqual(codex["load_total"], 8780)
+        self.assert_within_budget("active-codex", codex["load_total"], 8780)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
         # verify-loop contract docs: SKILL.md pointer and worker-handoff
         # budget/preflight (+70 measured; slack 5 kept).
-        self.assertLessEqual(live_next["load_total"], 2700)
+        self.assert_within_budget("approved-v5-live-next", live_next["load_total"], 2700)
         base = "souroldgeezer-policy/skills/"
         self.assertEqual(
             [
@@ -183,11 +188,12 @@ class PlanningPolicyCostTest(unittest.TestCase):
             # verifier missed (+37 measured; rounded up to 10).
             ("worker", "step", "worker", 2500), ("verifier", "verify", "verify", 1220),
         ):
-            result = self.measure(f"planning-policy-{name}")
-            files = [row["file"] for row in result["rows"]]
-            self.assertLessEqual(result["load_total"], budget)
-            self.assertTrue(files[0].endswith(f"agents/plan-{agent}-standard.md"), files)
-            self.assertTrue(files[1].endswith(f"references/{handoff}-handoff.md"), files)
+            with self.subTest(route=name):
+                result = self.measure(f"planning-policy-{name}")
+                files = [row["file"] for row in result["rows"]]
+                self.assertLessEqual(result["load_total"], budget)
+                self.assertTrue(files[0].endswith(f"agents/plan-{agent}-standard.md"), files)
+                self.assertTrue(files[1].endswith(f"references/{handoff}-handoff.md"), files)
 
     def test_series_successor_scenario_is_bounded_and_isolated(self):
         # Slicing an oversized plan into a series loads the new on-demand

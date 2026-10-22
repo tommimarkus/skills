@@ -82,13 +82,15 @@ class SoftwareDesignDataEfficiencyTest(unittest.TestCase):
         for scenario_id, scenario in by_id.items():
             if scenario["skill"] != "software-design":
                 continue
-            self.assertEqual(snapshot[scenario_id], slc.measure_scenario(by_id[scenario_id], REPO_ROOT)["total"])
+            with self.subTest(scenario_id=scenario_id):
+                self.assertEqual(snapshot[scenario_id], slc.measure_scenario(by_id[scenario_id], REPO_ROOT)["total"])
         # Original 40a and e03780f comparisons remain recorded in measurements. The
         # approved task-relative baseline is the test-code lane change, which grew
         # these routes by +148..+298 over main d2e72d8 (justified in measurements).
         baseline = {"sd-lookup-principle": 2644, "sd-build-csharp": 8520, "sd-review-typescript": 12019, "sd-review-fragility": 10961}
         for scenario_id, before in baseline.items():
-            self.assertLessEqual(snapshot[scenario_id] - before, 250)
+            with self.subTest(baseline=scenario_id):
+                self.assertLessEqual(snapshot[scenario_id] - before, 250)
         self.assertLessEqual(slc.estimate_tokens(read(procedure)), 1400)
 
     def test_stack_extensions_keep_core_rules_and_csharp_adds_ef_cues(self) -> None:
