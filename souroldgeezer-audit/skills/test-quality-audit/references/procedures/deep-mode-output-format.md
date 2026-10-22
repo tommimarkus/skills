@@ -147,7 +147,8 @@ dimension dispositions with cited `SH-*` evidence. Each disposition is exactly
 - **Reliability:** flakes, retries, skips, quarantine ownership, exits, and
   trends where available.
 - **Maintainability:** ownership, requirement/risk mapping, overlap review,
-  and frequent bounded portfolio gardening.
+  frequent bounded portfolio gardening, and any `structure-coupled` record
+  (below).
 
 Derive the overall verdict deterministically: **weak — any block**;
 **adequate — warnings or material unknowns without blocks**; **strong — all
@@ -160,6 +161,16 @@ Classify each portfolio candidate as `keep`, `strengthen`, `move down`,
 deletion from coverage similarity alone. A retirement candidate needs
 distinct-contract review plus mutation, failure-attribution, or
 controlled-removal evidence; absent that evidence, use `verify-then-retire`.
+
+A `structure-coupled` record is the exception to similarity-grade evidence. It
+is a `tdd-policy` footer field naming an existing test that a
+behavior-preserving refactor had to edit. Read it only from accessible history
+(commit messages, PR/MR text) when the project keeps it there; when absent,
+report nothing and ask for no instrumentation. The named test is tied to
+structure below the seam, so make it a `verify-then-retire` candidate: rewrite
+it at the seam, then retire the original under the gate above. The record is
+stronger than similarity or never-failed history because a behavior-preserving
+change broke the test, yet it never retires a test by itself.
 
 ### Setup/teardown lifecycle
 

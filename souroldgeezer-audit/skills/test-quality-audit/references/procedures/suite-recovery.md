@@ -26,6 +26,8 @@ Reuse the Deep evidence already in hand; never re-derive it here:
   helper when a report was available;
 - the SUT risk-tier map from
   [../../../../docs/audit-reference/materiality.md](../../../../docs/audit-reference/materiality.md);
+- any `structure-coupled` records found in accessible history, weighed as
+  [deep-mode-output-format.md](deep-mode-output-format.md) states;
 - the portfolio candidates with their dispositions and the `SH-*` codes they
   cite from [../smell-catalog.md](../smell-catalog.md).
 

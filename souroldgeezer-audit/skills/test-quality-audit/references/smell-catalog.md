@@ -43,7 +43,8 @@ runtime, reliability, or effectiveness evidence.
 Retirement requires a distinct-contract review plus mutation, failure-attribution,
 or controlled-removal evidence. Coverage-only similarity can produce false
 positives, so it supports a `verify-then-retire` candidate, never deletion by
-itself. Frequent bounded gardening is a qualitative maintenance practice; the
+itself; a `structure-coupled` record is weighed per
+[deep-mode-output-format.md](procedures/deep-mode-output-format.md). Frequent bounded gardening is a qualitative maintenance practice; the
 supporting empirical evidence concerns visual GUI suites and is not a universal
 numeric cadence.
 

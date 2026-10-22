@@ -510,6 +510,25 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             {"delete-from-coverage-alone", "edit-tests", "add-instrumentation"}.issubset(case["forbidden_actions"])
         )
 
+    def test_structure_coupled_record_is_verify_then_retire_evidence(self) -> None:
+        output = " ".join(read(OUTPUT).split())
+        self.assertIn("`structure-coupled`", output)
+        self.assertIn("stronger than similarity", output)
+        self.assertIn("never retires a test by itself", output)
+        self.assertIn("accessible history", output)
+        self.assertIn("ask for no instrumentation", output)
+        recovery = " ".join(read(RECOVERY).split())
+        self.assertIn("`structure-coupled`", recovery)
+        self.assertIn("deep-mode-output-format.md", recovery)
+
+        case = read_jsonl(BEHAVIORS)["test-quality-behavior-structure-coupled-record"]
+        self.assertEqual("synthetic", case["source_kind"])
+        self.assertFalse(case["contains_third_party_text"])
+        for field in ("expected_artifacts", "required_checks", "forbidden_behaviors"):
+            self.assertTrue(case[field], field)
+        self.assertIn("verify-then-retire", " ".join(case["required_checks"]))
+        self.assertIn("delet", " ".join(case["forbidden_behaviors"]))
+
 
 if __name__ == "__main__":
     unittest.main()
