@@ -103,6 +103,14 @@ class VerifyHarness(ChangesetHarness):
             (code, shown.get("next")),
         )
 
+    def assert_names_the_retry(self, result):
+        """A reject's own `next` is the standard-tier retry; return the block for further checks."""
+        block = result["next"]
+        self.assertEqual(("reasoning", "failed:verification", "standard"),
+                         (block["retry_class"], block["outcome"], block["next_tier"]))
+        self.assertIn("--retry-remediation-file", block["command"])
+        return block
+
     def verified(self, verdict="pass", findings=(), **extra):
         packet, _ = self.completed(**extra)
         code, issued = self.verify_handoff()
@@ -470,10 +478,7 @@ class RejectRoutingTest(VerifyHarness):
         stored = json.loads((self.checkpoint_path().parent / step["return_path"]).read_text())
         self.assertEqual("failed", stored["status"])
         self.assertEqual(step["return_sha256"], ledger.digest(stored))
-        block = result["next"]
-        self.assertEqual(("reasoning", "failed:verification", "standard"),
-                         (block["retry_class"], block["outcome"], block["next_tier"]))
-        self.assertIn("--retry-remediation-file", block["command"])
+        block = self.assert_names_the_retry(result)
         self.assertLessEqual(ledger.next_tokens(block), ledger.MAX_NEXT_TOKENS)
         self.assertEqual(3, self.land()[0])
 
@@ -642,10 +647,7 @@ class ParentReviewTest(VerifyHarness):
         event = json.loads((run / "events.jsonl").read_text().splitlines()[-1])
         self.assertEqual(("record-verify", "reject", "parent-review"),
                          (event["action"], event["verdict"], event.get("source")))
-        block = result["next"]
-        self.assertEqual(("reasoning", "failed:verification", "standard"),
-                         (block["retry_class"], block["outcome"], block["next_tier"]))
-        self.assertIn("--retry-remediation-file", block["command"])
+        self.assert_names_the_retry(result)
         # Checkpoint validation accepts the parent-review file beside the verifier's own, only.
         self.assertEqual(0, self.call("validate", "--run-id", self.run_id)[0])
         (run / f"verifies/alpha/{verify['verify_id']}.forged.json").write_text("{}")
