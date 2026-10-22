@@ -663,6 +663,12 @@ Before finishing a skill change, inspect for these common regressions:
   scope than its invariant. Compare their qualifiers and exceptions; omitted
   behavioral-change, source, or lane limits are over-enforcement.
 - The skill now duplicates a sibling skill instead of delegating.
+- A new or redefined term reuses a word that the same reader already meets in
+  another sense — in the skill's own `SKILL.md`, references, and evals, or in a
+  sibling's passage on the same subject. Search those surfaces for the word,
+  then rename the older sense or pick another word in the same change, so one
+  word carries one meaning. When the edit was delegated, check the files the
+  drafting worker did not own; a worker sees only its own write set.
 - Heavy reference material moved into always-loaded context.
 - Plugin manifest, marketplace entry, and matching subagent metadata diverged.
 - Deterministic checks were replaced by prose-only reminders.
