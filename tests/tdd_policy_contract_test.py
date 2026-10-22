@@ -1,5 +1,6 @@
-"""Keep RED-test selection, refactor classification, execution scope, suite
-maintenance, and the feedback budget explicit in the public TDD policy contract."""
+"""Keep RED-test selection, the declared seam, change classification, execution
+scope, suite maintenance and retention, and the feedback budget explicit in the
+public TDD policy contract."""
 
 import json
 from pathlib import Path
@@ -36,6 +37,17 @@ NEW_BEHAVIOR_CASES = {
     "tdd-policy-behavior-lane-marker": "lane",
     "tdd-policy-behavior-green-duration-slow-tail": "duration",
     "tdd-policy-behavior-stack-idioms-fallback": "software-design",
+    "tdd-policy-behavior-seam-internal-change-is-refactor": "seam",
+    "tdd-policy-behavior-structure-coupled-test-rewritten-at-seam": "at the seam",
+    "tdd-policy-behavior-scaffold-resolved-before-green": "before green",
+    "tdd-policy-behavior-trivial-code-no-red": "trivial",
+    "tdd-policy-behavior-controller-short-integration": "integration",
+    "tdd-policy-behavior-overcomplicated-split-first": "split",
+    "tdd-policy-behavior-behavior-removal-deletes-tests": "delete",
+    "tdd-policy-behavior-characterization-expires": "below the seam",
+    "tdd-policy-behavior-examples-per-rule": "per rule",
+    "tdd-policy-behavior-mutation-unique-kill": "mutant",
+    "tdd-policy-behavior-refactor-edits-listed-structure-coupled": "structure-coupled",
 }
 
 
@@ -62,6 +74,12 @@ class TddPolicyContractTest(unittest.TestCase):
 
     def skill(self) -> str:
         return (TDD_ROOT / "SKILL.md").read_text(encoding="utf-8")
+
+    def standing_block(self) -> str:
+        """The template section, with its blockquote markers stripped."""
+        core = self.core()
+        section = core.split("## Standing block template", 1)[1].split("\n## ", 1)[0]
+        return flat(re.sub(r"(?m)^> ", "", section))
 
     def jsonl_cases(self, relative: str) -> dict[str, dict[str, object]]:
         path = TDD_ROOT / relative
@@ -199,15 +217,21 @@ class TddPolicyContractTest(unittest.TestCase):
                     self.assertNotRegex(text, r"extensions/\S*test-code")
 
     def test_standing_block_carries_level_retirement_and_budget(self) -> None:
-        core = flat(self.core())
+        block = self.standing_block()
         for phrase in (
-            "cheapest level that proves it; refactors run under existing passing tests",
-            "REFACTOR retires or consolidates superseded coverage",
+            "new or changed behavior at the seam gets a focused failing test first",
+            "at the cheapest level that proves it through the seam",
+            "a change with no effect at the seam is a refactor and runs under existing passing tests",
+            "trivial wiring, delegation, accessors, and declarative config get no RED of their own",
+            "REFACTOR retires or consolidates superseded coverage and resolves scaffold tests "
+            "before GREEN lands",
+            "removing a behavior removes its tests",
             "at least one test that fails on regression",
+            "Seam <rule|public API of each module>.",
             "Budget <lane: value|inherited|none>",
         ):
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, core)
+                self.assertIn(phrase, block)
 
     def test_feedback_budget_option_has_both_loop_ends(self) -> None:
         core = flat(self.core())
@@ -224,21 +248,31 @@ class TddPolicyContractTest(unittest.TestCase):
     def test_footer_discloses_change_level_scope_delta_and_retirement(self) -> None:
         core = self.core()
         for field in (
-            "change <behavioral|refactor|requirement-change>",
+            "seam <declared rule|public API>",
+            "change <behavioral|refactor|trivial|requirement-change|behavior-removal>",
             "level <unit|in-process|child-process|e2e>",
             "ran <focused|affected|full>",
             "suite delta <+n/−m tests",
+            "mutation <n unique kills|n/a>",
+            "scaffold: <name: rewritten|deleted|none>",
+            "structure-coupled: <list|none>",
             "retired: <list|none>",
         ):
             with self.subTest(field=field):
                 self.assertIn(field, core)
+        flat_core = flat(core)
+        for marker in ("`behavior removed`", "`characterization expired`"):
+            with self.subTest(marker=marker):
+                self.assertIn(marker, flat_core)
 
     def test_skill_stop_rules_exempt_refactors_and_hold_green_over_budget(self) -> None:
         skill = flat(self.skill())
         for phrase in (
-            "Stop before letting new or changed behavior land with no failing test first",
+            "Stop before letting new or changed behavior at the seam land with no failing test first",
             "a behavior-preserving refactor under existing passing tests is not a breach",
+            "neither is trivial code",
             "Stop before GREEN lands in a lane at or over its budget",
+            "Stop before GREEN lands with an unresolved scaffold test",
             "parent runs the suite step once",
         ):
             with self.subTest(phrase=phrase):
@@ -253,6 +287,7 @@ class TddPolicyContractTest(unittest.TestCase):
             "RED test level and placement",
             "execution scope",
             "suite feedback budget",
+            "seam",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, skill_description)
@@ -312,9 +347,105 @@ class TddPolicyContractTest(unittest.TestCase):
             "testing.googleblog.com",
             "decimal separator",
             "by skill name",
+            "Cooper",
+            "public API",
+            "Khorikov",
+            "resistance to refactoring",
+            "private method",
+            "sunk cost",
+            "cucumber.io",
+            "Canon TDD",
+            "mutation",
+            "Noemmer",
+            "structure-coupled",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, grounding)
+
+    def test_core_measures_observable_behavior_at_a_declared_seam(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "cheapest level that proves it through the declared seam",
+            "A change with no effect visible at the seam is a refactor",
+            "cheapest level that proves the behavior through the seam",
+            "- `seam` —",
+            "public API of each module or package",
+            "not individual functions or classes",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_invariant_coverage_clause_survives_removal_and_scaffold_deletion(self) -> None:
+        invariant = flat(self.core().split("## Invariant", 1)[1].split("\n## ", 1)[0])
+        for phrase in (
+            "Behavior removal and scaffold deletion keep this clause",
+            "no longer shipped",
+            "never pinned seam behavior",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, invariant)
+
+    def test_core_classifies_trivial_code_and_behavior_removal(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "**Trivial code**",
+            "no RED of its own",
+            "a classification, not an exception",
+            "domain logic and algorithms",
+            "controllers",
+            "split it first",
+            "**Behavior removal**",
+            "delete the removed behavior's tests in the same change",
+            "no successor",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_core_retention_check_scaffolds_and_characterization_expiry(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "Would a behavior-preserving refactor force this test to change?",
+            "scaffold test",
+            "Resolve every scaffold test",
+            "no supersession proof",
+            "GREEN does not land with an unresolved scaffold test",
+            "characterization tests it added below the seam",
+            "at the seam stay",
+            "resolves its own scaffold tests",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_core_bounds_examples_per_rule_and_uses_mutation_evidence(self) -> None:
+        core = flat(self.core())
+        for phrase in (
+            "a few key examples per rule",
+            "property-based test",
+            "stay declarative",
+            "kills a mutant no existing test kills",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, core)
+
+    def test_core_records_structure_coupled_tests_for_the_audit(self) -> None:
+        refactor = flat(self.core().split("## REFACTOR includes the suite", 1)[1].split("\n## ", 1)[0])
+        for phrase in ("structure-coupled", "verify-then-retire"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, refactor)
+
+    def test_skill_rules_carry_the_seam_invariant_and_evidence(self) -> None:
+        skill = flat(self.skill())
+        for phrase in (
+            "at the cheapest level that proves it through the seam",
+            "a change with no effect at the seam is a refactor",
+            "trivial wiring, delegation, accessors, and declarative config get no RED of their own",
+            "resolves scaffold tests before GREEN lands",
+            "removing a behavior removes its tests",
+            "the seam in force",
+            "structure-coupled",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, skill)
 
     def test_sibling_boundaries_name_the_handoff(self) -> None:
         planning = flat(PLANNING_CORE.read_text(encoding="utf-8"))
