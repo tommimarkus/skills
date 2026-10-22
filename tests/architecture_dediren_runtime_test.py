@@ -12,6 +12,8 @@ import hashlib
 import importlib.util
 import io
 import os
+import ssl
+import stat
 import subprocess
 import tarfile
 import tempfile
@@ -446,6 +448,38 @@ class ProvisioningTest(unittest.TestCase):
 
         self.assertFalse(runtime.bundle_dir(self.home, version).exists())
 
+    def test_archive_http_error_installs_nothing_and_releases_the_lock(self) -> None:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        payload, checksums = fake_release(version)
+        sums_url = f"{runtime.release_base_url(runtime.DEDIREN_REPO_DEFAULT, version)}/SHA256SUMS"
+
+        def urlopen(request: Any, **_kwargs: Any) -> FakeResponse:
+            url = request.full_url
+            if url == sums_url:
+                return FakeResponse([checksums.encode()])
+            error = runtime.urllib.error.HTTPError(
+                url, 404, "gone", email.message.Message(), io.BytesIO(b"")
+            )
+            self.addCleanup(error.close)
+            raise error
+
+        with mock.patch.object(runtime.urllib.request, "urlopen", side_effect=urlopen):
+            with self.assertRaises(runtime.DedirenError) as caught:
+                runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("HTTP 404", str(caught.exception))
+        self.assertFalse(runtime.bundle_dir(self.home, version).exists())
+        self.assertEqual(
+            [p.name for p in runtime.releases_dir(self.home).iterdir() if p.name.startswith(".extract-")],
+            [],
+        )
+
+        # The lock was released: a zero-wait retry acquires it and installs.
+        runtime.fetch = stub_fetch(payload, checksums)
+        with mock.patch.object(runtime, "LOCK_WAIT_SECONDS", 0):
+            launcher = runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+        self.assertTrue(launcher.is_file())
+
 
 class ExtractionSafetyTest(unittest.TestCase):
     """A checksum proves the archive is the published one, not that it is safe.
@@ -684,6 +718,81 @@ class FetchTest(unittest.TestCase):
             runtime.fetch(self.URL, 60.0)
         self.assertIn("reset", str(caught.exception))
         self.assertEqual(urlopen.call_count, runtime.DOWNLOAD_ATTEMPTS)
+
+    # TLS-trust fallback: urllib fails certificate verification, so fetch hands
+    # the URL to the platform's own curl / wget, found only on the patched PATH.
+
+    def tls_failure(self) -> Exception:
+        return runtime.urllib.error.URLError(ssl.SSLCertVerificationError("no roots"))
+
+    def fake_clients(self, **scripts: str) -> None:
+        """Install `#!/bin/sh` clients as the only executables on PATH.
+
+        Each body runs after the script has parsed its own argv for the output
+        path (the argument after `-o` for curl, `-O` for wget) into `$out`.
+        """
+        scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(scratch.cleanup)
+        for name, body in scripts.items():
+            path = Path(scratch.name) / name
+            path.write_text(
+                "#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
+                '  case "$1" in -o|-O) out="$2"; shift;; esac\n  shift\ndone\n'
+                + body + "\n",
+                encoding="utf-8",
+            )
+            path.chmod(path.stat().st_mode | stat.S_IXUSR)
+        patcher = mock.patch.dict(os.environ, {"PATH": scratch.name})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def assert_no_retry_sleep(self) -> None:
+        # subprocess polls with short sleeps through the same patched module
+        # clock; fetch's own retry back-off starts at a full second.
+        self.assertNotIn(mock.call(1.0), self.sleep.call_args_list)
+
+    def assert_tls_failure(self, urlopen: mock.MagicMock) -> None:
+        with self.assertRaises(runtime.DedirenError) as caught:
+            runtime.fetch(self.URL, 60.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("TLS certificate verification failed", str(caught.exception))
+        self.assertIn("no working curl or wget", str(caught.exception))
+        self.assertEqual(urlopen.call_count, 1)
+        self.assert_no_retry_sleep()
+
+    def test_tls_failure_uses_curl_without_retry_or_sleep(self) -> None:
+        urlopen = self.patch_urlopen(self.tls_failure())
+        self.fake_clients(curl='printf "%s" from-curl > "$out"')
+        self.assertEqual(runtime.fetch(self.URL, 60.0), b"from-curl")
+        self.assertEqual(urlopen.call_count, 1)
+        self.assert_no_retry_sleep()
+
+    def test_tls_failure_uses_wget_when_curl_is_absent(self) -> None:
+        urlopen = self.patch_urlopen(self.tls_failure())
+        self.fake_clients(wget='printf "%s" from-wget > "$out"')
+        self.assertEqual(runtime.fetch(self.URL, 60.0), b"from-wget")
+        self.assertEqual(urlopen.call_count, 1)
+        self.assert_no_retry_sleep()
+
+    def test_tls_failure_falls_back_to_wget_when_curl_exits_nonzero(self) -> None:
+        urlopen = self.patch_urlopen(self.tls_failure())
+        self.fake_clients(
+            curl='printf "%s" partial > "$out"; exit 22',
+            wget='printf "%s" from-wget > "$out"',
+        )
+        self.assertEqual(runtime.fetch(self.URL, 60.0), b"from-wget")
+        self.assertEqual(urlopen.call_count, 1)
+        self.assert_no_retry_sleep()
+
+    def test_tls_failure_without_any_client_is_unavailable(self) -> None:
+        urlopen = self.patch_urlopen(self.tls_failure())
+        self.fake_clients()
+        self.assert_tls_failure(urlopen)
+
+    def test_tls_failure_with_every_client_failing_is_unavailable(self) -> None:
+        urlopen = self.patch_urlopen(self.tls_failure())
+        self.fake_clients(curl="exit 60", wget="exit 5")
+        self.assert_tls_failure(urlopen)
 
 
 class JavaDiagnosticTest(unittest.TestCase):
