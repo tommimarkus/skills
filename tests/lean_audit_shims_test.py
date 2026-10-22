@@ -103,20 +103,33 @@ class AllCompletenessTest(unittest.TestCase):
     are walked; the package convention forbids defs nested in top-level if/try
     blocks."""
 
+    @staticmethod
+    def _undeclared_public_names(source: str, path: Path) -> set[str]:
+        tree = ast.parse(source)
+        return _public_top_level_names(tree) - _declared_all(tree, path)
+
+    def test_scanner_flags_public_def_missing_from_all(self) -> None:
+        source = "__all__ = ['kept']\n\ndef kept(): ...\n\ndef forgotten(): ...\n\ndef _private(): ...\n"
+        self.assertEqual(
+            {"forgotten"}, self._undeclared_public_names(source, Path("fixture.py")),
+        )
+        complete = "__all__ = ['kept']\n\ndef kept(): ...\n"
+        self.assertEqual(set(), self._undeclared_public_names(complete, Path("fixture.py")))
+
     def test_public_top_level_names_are_declared_in_all(self) -> None:
+        checked = 0
         for path in sorted((SCRIPTS / "leanaudit").glob("*.py")):
             if path.name == "__init__.py":
                 continue
+            checked += 1
             with self.subTest(module=path.name):
-                tree = ast.parse(path.read_text(encoding="utf-8"))
-                public = _public_top_level_names(tree)
-                declared = _declared_all(tree, path)
-                missing = public - declared
+                missing = self._undeclared_public_names(path.read_text(encoding="utf-8"), path)
                 self.assertFalse(
                     missing,
                     f"{path.name}: public top-level names missing from __all__: "
                     f"{sorted(missing)}",
                 )
+        self.assertGreater(checked, 0, "no leanaudit modules discovered")
 
 
 # --- structural gate: no leanaudit/ package-internal load off the helper ---
@@ -134,12 +147,14 @@ TESTS_DIR = REPO_ROOT / "tests"
 LOAD_PATH_SCAN_EXCLUDE = {"surface_test_lib.py"}
 
 
-def _leanaudit_package_loads(path: Path) -> list[str]:
-    """Every `load_script_module()` call in `path` whose module argument names a
-    leanaudit/ path, as 'lineno'. The path usually arrives through a module-level
-    constant (`MODULE = REPO_ROOT / ".../leanaudit/x.py"`), so resolve those names
-    first rather than only matching an inline literal."""
-    tree = ast.parse(path.read_text(encoding="utf-8"))
+def _leanaudit_package_loads_in(source: str) -> list[str]:
+    """Every unguarded leanaudit/ package load in `source`, as 'lineno': a
+    `load_script_module()` call (bare or attribute, module argument positional-last or
+    `path=`) or a raw `spec_from_file_location()` whose arguments name a leanaudit/ path.
+    The path usually arrives through a module-level constant
+    (`MODULE = REPO_ROOT / ".../leanaudit/x.py"`), so resolve those names first rather
+    than only matching an inline literal."""
+    tree = ast.parse(source)
     leanaudit_names = {
         target.id
         for node in ast.walk(tree)
@@ -153,18 +168,46 @@ def _leanaudit_package_loads(path: Path) -> list[str]:
             return arg.id in leanaudit_names
         return "leanaudit" in ast.unparse(arg)
 
+    def callee(call: ast.Call) -> str:
+        func = call.func
+        return func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+
+    def loads_leanaudit(call: ast.Call) -> bool:
+        keyword_path = [kw.value for kw in call.keywords if kw.arg == "path"]
+        if callee(call) == "load_script_module":
+            candidates = ([call.args[-1]] if call.args else []) + keyword_path
+        elif callee(call) == "spec_from_file_location":
+            candidates = [*call.args, *(kw.value for kw in call.keywords)]
+        else:
+            return False
+        return any(names_leanaudit(arg) for arg in candidates)
+
     return [
         str(call.lineno)
         for call in ast.walk(tree)
-        if isinstance(call, ast.Call)
-        and isinstance(call.func, ast.Name)
-        and call.func.id == "load_script_module"
-        and call.args
-        and names_leanaudit(call.args[-1])
+        if isinstance(call, ast.Call) and loads_leanaudit(call)
     ]
 
 
+def _leanaudit_package_loads(path: Path) -> list[str]:
+    return _leanaudit_package_loads_in(path.read_text(encoding="utf-8"))
+
+
 class LeanAuditLoadPathHygieneTest(unittest.TestCase):
+    def test_scanner_flags_attribute_keyword_and_raw_spec_loads(self) -> None:
+        for label, source in (
+            ("bare call", "load_script_module('m', ROOT / 'leanaudit/x.py')\n"),
+            ("attribute call", "lib.load_script_module('m', ROOT / 'leanaudit/x.py')\n"),
+            ("path keyword", "load_script_module('m', path=ROOT / 'leanaudit/x.py')\n"),
+            ("constant", "X = ROOT / 'leanaudit/x.py'\nload_script_module('m', X)\n"),
+            ("raw spec", "importlib.util.spec_from_file_location('m', ROOT / 'leanaudit/x.py')\n"),
+        ):
+            with self.subTest(label=label):
+                self.assertTrue(_leanaudit_package_loads_in(source))
+        self.assertEqual(
+            [], _leanaudit_package_loads_in("load_script_module('m', ROOT / 'code_lens.py')\n"),
+        )
+
     def test_no_unguarded_leanaudit_package_load(self) -> None:
         for path in sorted(TESTS_DIR.glob("*.py")):
             if path.name in LOAD_PATH_SCAN_EXCLUDE:

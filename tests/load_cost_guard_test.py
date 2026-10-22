@@ -19,13 +19,18 @@ GUARD_SCRIPT = str(SCRIPTS / "load_cost_guard.py")
 # Helper
 # ---------------------------------------------------------------------------
 
-def _run_guard(payload):
-    """Run the guard script as a subprocess, return (exit_code, stdout_lines)."""
-    result = subprocess.run(
+def _run_guard_raw(payload):
+    """Run the guard script as a subprocess, return the CompletedProcess."""
+    return subprocess.run(
         [sys.executable, GUARD_SCRIPT],
         input=json.dumps(payload),
         capture_output=True, text=True,
     )
+
+
+def _run_guard(payload):
+    """Run the guard script as a subprocess, return (exit_code, stdout_lines)."""
+    result = _run_guard_raw(payload)
     lines = [l for l in result.stdout.splitlines() if l.strip()]
     return result.returncode, lines
 
@@ -208,17 +213,12 @@ class MainIntegrationTest(unittest.TestCase):
         self.assertTrue(lines, lines_msg)
         return json.loads(lines[0]), lines
 
-    def _assert_no_output_line_matches(self, payload: dict, getter, forbidden, msg: str) -> None:
-        """Run the guard and assert no JSON output line's getter(line) == forbidden.
-        Non-JSON or getter-incompatible lines are ignored."""
-        code, lines = _run_guard(payload)
-        self.assertEqual(code, 0)
-        for line in lines:
-            try:
-                out = json.loads(line)
-                self.assertNotEqual(getter(out), forbidden, msg)
-            except (json.JSONDecodeError, AttributeError):
-                pass
+    def _assert_silent_fail_open(self, payload: dict, msg: str) -> None:
+        """Run the guard and assert exit 0 with exactly empty stdout and stderr."""
+        result = _run_guard_raw(payload)
+        self.assertEqual(result.returncode, 0, msg)
+        self.assertEqual(result.stdout, "", msg)
+        self.assertEqual(result.stderr, "", msg)
 
     # -- PreToolUse: deny when code is dropped --
 
@@ -263,11 +263,8 @@ class MainIntegrationTest(unittest.TestCase):
                 },
                 "cwd": str(root),
             }
-            # Must not emit a deny decision
-            self._assert_no_output_line_matches(
-                payload,
-                lambda out: out.get("hookSpecificOutput", {}).get("permissionDecision"),
-                "deny", "non-skill path must not produce a deny")
+            # Must be fully silent: no deny decision and no stray output
+            self._assert_silent_fail_open(payload, "non-skill path must stay silent")
 
     def test_pretooluse_cost_warn_is_pending_edit_marginal_and_advisory(self):
         with tempfile.TemporaryDirectory() as d:
@@ -363,9 +360,8 @@ class MainIntegrationTest(unittest.TestCase):
             root = Path(d)
             # No git init → git diff will fail → fail-open
             payload = {"cwd": str(root)}
-            # No block decision must be emitted
-            self._assert_no_output_line_matches(
-                payload, lambda out: out.get("decision"), "block", "no-git case must not block")
+            # Must be fully silent: no block decision and no stray output
+            self._assert_silent_fail_open(payload, "no-git case must stay silent")
 
 
 class CommittedBaselinesStopModeTest(unittest.TestCase):

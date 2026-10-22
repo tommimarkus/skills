@@ -1,10 +1,12 @@
 """Human guides retain reachable tasks, commands, and published skill links."""
 import json
 import re
+import tempfile
 import unittest
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, write_fixture
 
 
 GUIDES = (
@@ -37,6 +39,23 @@ def anchors(text: str) -> set[str]:
         result.add(f"{slug}-{count}" if count else slug)
         counts[slug] = count + 1
     return result
+
+
+def broken_local_links(source: Path, text: str) -> list[str]:
+    """Report each local link in `text` whose target or #fragment does not resolve from
+    `source`. Link text may wrap across lines."""
+    problems = []
+    for destination in re.findall(r"\[[^]]+\]\(([^)\s]+)\)", prose(text)):
+        parsed = urlsplit(destination)
+        if parsed.scheme or parsed.netloc:
+            continue
+        target = source.parent / unquote(parsed.path) if parsed.path else source
+        if not target.exists():
+            problems.append(f"missing target: {destination}")
+        elif parsed.fragment and target.suffix == ".md":
+            if unquote(parsed.fragment) not in anchors(target.read_text(encoding="utf-8")):
+                problems.append(f"missing fragment: {destination}")
+    return problems
 
 
 class ValidationSurfaceTest(unittest.TestCase):
@@ -101,16 +120,29 @@ class ValidationSurfaceTest(unittest.TestCase):
 
     def test_scoped_guides_have_existing_local_link_targets_and_anchors(self) -> None:
         for guide in GUIDES:
-            source = REPO_ROOT / guide
-            for destination in re.findall(r"\[[^]\n]+\]\(([^)\s]+)\)", prose(read(guide))):
-                parsed = urlsplit(destination)
-                if parsed.scheme or parsed.netloc:
-                    continue
-                target = source.parent / unquote(parsed.path) if parsed.path else source
-                with self.subTest(guide=guide, destination=destination):
-                    self.assertTrue(target.exists(), f"Missing local destination: {target}")
-                    if parsed.fragment and target.suffix == ".md":
-                        self.assertIn(unquote(parsed.fragment), anchors(target.read_text(encoding="utf-8")))
+            with self.subTest(guide=guide):
+                self.assertEqual([], broken_local_links(REPO_ROOT / guide, read(guide)))
+
+    def test_link_check_reports_missing_targets_and_fragments_including_wrapped_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(root / "other.md", "# Real Heading\n")
+            write_fixture(root / "guide.md", """
+                [ok](other.md#real-heading) [gone](nope.md) [bad](other.md#no-such)
+                [link text that
+                wraps](absent.md)
+                ```
+                [fenced](ignored.md)
+                ```
+            """)
+            self.assertEqual(
+                [
+                    "missing target: nope.md",
+                    "missing fragment: other.md#no-such",
+                    "missing target: absent.md",
+                ],
+                broken_local_links(root / "guide.md", (root / "guide.md").read_text(encoding="utf-8")),
+            )
 
 
 if __name__ == "__main__":

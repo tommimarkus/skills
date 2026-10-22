@@ -351,6 +351,11 @@ class CloneLogicFixes(unittest.TestCase):
         block = words(25)
         streams = {"a.py": stream(lens, "\n".join([block, block, block, block]))}
         clones = lens.find_clones(streams, 25)
+        # four copies collapse to the single maximal pair, not one clone per window
+        self.assertEqual(
+            [("a.py", "1-2", "a.py", "3-4", 50)],
+            [(c.path, c.lines, c.matched_path, c.matched_lines, c.tokens) for c in clones],
+        )
         # no smaller clone whose region nests inside a larger one on the same file
         for c in clones:
             lo, hi = (int(x) for x in c.lines.split("-"))
@@ -533,30 +538,62 @@ class MarkerSuppressionScopeTest(unittest.TestCase):
         self.assertEqual(found, [])
 
 
+def marker_policy_violations(sources: dict[str, str]) -> list[str]:
+    """Production-marker policy over {path: text}: only balanced `:begin`/`:end` regions
+    are allowed, never a stray end, an unclosed begin, or a whole-file marker. Uses the
+    engine's own marker matcher so the gate sees exactly what the engine honours."""
+    clones_mod = load_clones_mod()
+    rx = clones_mod._marker_re(clones_mod.profile_for(".py")[0])
+    problems = []
+    for path, text in sources.items():
+        depth = 0
+        for line_number, line in enumerate(text.splitlines(), 1):
+            match = rx.search(line)
+            if match is None:
+                continue
+            scope = match.group("scope")
+            if scope == "begin":
+                depth += 1
+            elif scope == "end":
+                depth -= 1
+                if depth < 0:
+                    problems.append(f"{path}:{line_number}: stray dup-intentional region end")
+                    depth = 0
+            else:
+                problems.append(f"{path}:{line_number}: production whole-file marker is forbidden")
+        if depth:
+            problems.append(f"{path}: unbalanced dup-intentional regions")
+    return problems
+
+
 class RepositoryMarkerPolicyTest(unittest.TestCase):
     def test_production_markers_are_region_scoped_and_balanced(self) -> None:
         package = (
             REPO_ROOT
             / "souroldgeezer-audit/skills/lean-audit/references/scripts/leanaudit"
         )
-        for path in sorted(package.glob("*.py")):
-            depth = 0
-            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                stripped = line.strip()
-                if not stripped.startswith("# lean-audit:dup-intentional"):
-                    continue
-                if stripped == "# lean-audit:dup-intentional:begin":
-                    depth += 1
-                elif stripped == "# lean-audit:dup-intentional:end":
-                    depth -= 1
-                    self.assertGreaterEqual(
-                        depth,
-                        0,
-                        f"{path}:{line_number}: stray dup-intentional region end",
-                    )
-                else:
-                    self.fail(f"{path}:{line_number}: production whole-file marker is forbidden")
-            self.assertEqual(depth, 0, f"{path}: unbalanced dup-intentional regions")
+        sources = {
+            str(path): path.read_text(encoding="utf-8")
+            for path in sorted(package.glob("*.py"))
+        }
+        self.assertTrue(sources, "no production sources discovered")
+        self.assertEqual([], marker_policy_violations(sources))
+
+    def test_marker_policy_flags_stray_unclosed_and_whole_file_markers(self) -> None:
+        sources = {
+            "stray.py": "x = 1\n# lean-audit:dup-intentional:end\n",
+            "unclosed.py": "# lean-audit:dup-intentional:begin\nx = 1\n",
+            "whole.py": "x = 1  # lean-audit:dup-intentional\n",
+            "clean.py": "# lean-audit:dup-intentional:begin\nx = 1\n# lean-audit:dup-intentional:end\n",
+        }
+        self.assertEqual(
+            [
+                "stray.py:2: stray dup-intentional region end",
+                "unclosed.py: unbalanced dup-intentional regions",
+                "whole.py:1: production whole-file marker is forbidden",
+            ],
+            marker_policy_violations(sources),
+        )
 
 
 class LiteralListFalsePositiveTest(unittest.TestCase):

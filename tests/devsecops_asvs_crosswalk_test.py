@@ -34,6 +34,10 @@ SHA256 = "8201b20eec2908c3380ac600c91c8ba746346fbb808859366abb232027532311"
 ROW_RE = re.compile(r"^\| (V\d+\.\d+\.\d+) \| L([123]) \| ([a-z]+) \| (.+) \|$", re.M)
 SUMMARY_RE = re.compile(r"^\| (V\d+|Total) \|((?: \d+ \|){9})$", re.M)
 CITATION_RE = re.compile(r"ASVS 5\.0\.0 (V\d+(?:\.\d+)*(?:, V\d+(?:\.\d+)*)*)")
+BARE_ID_RE = re.compile(r"\bV\d+\.\d+\.\d+\b")
+# Bare full requirement IDs cited outside the crosswalk today; a drop below this means
+# the scan stopped seeing the citations rather than the citations being fixed.
+MIN_BARE_CITATIONS = 4
 
 
 def parse_rows(text: str) -> list[dict]:
@@ -45,6 +49,11 @@ def parse_rows(text: str) -> list[dict]:
             "class": cls, "codes": code_list, "codes_cell": codes,
         })
     return rows
+
+
+def unresolved_bare_ids(text: str, ids: set[str]) -> list[str]:
+    """Bare full ASVS requirement IDs in `text` that are not inventory rows."""
+    return sorted({found for found in BARE_ID_RE.findall(text) if found not in ids})
 
 
 class DevsecopsAsvsCrosswalkTest(unittest.TestCase):
@@ -125,6 +134,25 @@ class DevsecopsAsvsCrosswalkTest(unittest.TestCase):
                             cited in ids or any(i.startswith(cited + ".") for i in ids),
                             f"{rel}: ASVS 5.0.0 {cited} is not an inventory ID or prefix",
                         )
+
+    def test_every_bare_requirement_id_outside_the_crosswalk_is_an_inventory_row(self) -> None:
+        ids = {row["id"] for row in self.rows}
+        cited = 0
+        for path in sorted(SECURITY_REF.glob("**/*.md")) + sorted(SKILL_DIR.glob("**/*.md")):
+            if path == CROSSWALK:
+                continue
+            text = path.read_text(encoding="utf-8")
+            cited += len(BARE_ID_RE.findall(text))
+            with self.subTest(file=str(path.relative_to(REPO_ROOT))):
+                self.assertEqual([], unresolved_bare_ids(text, ids))
+        self.assertGreaterEqual(cited, MIN_BARE_CITATIONS)
+
+    def test_unknown_bare_id_is_reported(self) -> None:
+        ids = {row["id"] for row in self.rows}
+        known = sorted(ids)[0]
+        self.assertEqual(
+            ["V99.9.9"], unresolved_bare_ids(f"see {known} and V99.9.9 here", ids),
+        )
 
 
 if __name__ == "__main__":
