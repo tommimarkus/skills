@@ -230,7 +230,8 @@ repository (`git worktree list --porcelain`, from `--repo-root` or the cwd
 toplevel) whose checked-out branch equals the leaf's `worktree_owner`; a
 mismatch names both values. `--create-from TARGET` runs `git worktree add -b
 <worktree_owner> <worktree> TARGET` only when that path is absent, and never
-moves or deletes a worktree. An identity, creation, readiness or packet failure
+moves or deletes a worktree; a failed creation removes only a branch that same attempt
+created and leaves a pre-existing branch untouched. An identity, creation, readiness or packet failure
 leaves the checkpoint unchanged. `init-v5` resolves a relative assignment
 worktree once against `--repo-root` (or the cwd toplevel) and stores it
 absolute. Dispatching the first member of an all-pending batch readies and

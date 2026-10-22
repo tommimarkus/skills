@@ -99,9 +99,18 @@ def verify_worktree_identity(
         path = repo / path
     owner = leaf["worktree_owner"]
     if not path.exists() and not path.is_symlink() and create_from:
+        ref = f"refs/heads/{owner}"
+        existed = git("rev-parse", "--verify", "--quiet", ref, cwd=repo).returncode == 0
+        target = git("rev-parse", "--verify", "--quiet", f"{create_from}^{{commit}}", cwd=repo)
         created = git("worktree", "add", "-b", owner, str(path), create_from, cwd=repo)
         if created.returncode:
-            raise Error(f"cannot create worktree {path}: {created.stderr.strip()[:200]}")
+            message = f"cannot create worktree {path}: {created.stderr.strip()[:200]}"
+            # Git may have made the branch before failing; drop only that ref, at that commit.
+            commit = target.stdout.strip()
+            if not existed and commit:
+                if git("update-ref", "-d", ref, commit, cwd=repo).returncode == 0:
+                    message += f" (removed branch {owner} created by this attempt)"
+            raise Error(message)
     registry = registered_worktrees(repo)
     if path.resolve() not in registry:
         raise Error(

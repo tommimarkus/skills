@@ -3,6 +3,7 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -286,6 +287,30 @@ class DispatchCommandTest(DispatchHarness):
         self.assertEqual(3, code)
         self.assertIn("cannot create worktree", result["error"])
         self.assertEqual(before, self.checkpoint_path().read_bytes())
+
+    @unittest.skipIf(os.geteuid() == 0, "root ignores directory permissions")
+    def test_failed_worktree_add_rolls_back_the_branch_it_created(self):
+        self.init([leaf("alpha", "leaf-alpha")])
+        registry = self.repo / ".git/worktrees"
+        registry.mkdir()
+        registry.chmod(0o555)
+        self.addCleanup(registry.chmod, 0o755)
+        before = self.checkpoint_path().read_bytes()
+        code, result = self.dispatch("alpha", "--create-from", "main")
+        self.assertEqual(3, code)
+        self.assertIn("cannot create worktree", result["error"])
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assertEqual("", git(self.repo, "branch", "--list", "leaf-alpha").stdout.strip())
+
+    def test_failed_create_from_keeps_a_pre_existing_owner_branch(self):
+        git(self.repo, "branch", "leaf-alpha")
+        old = git(self.repo, "rev-parse", "leaf-alpha").stdout.strip()
+        git(self.repo, "commit", "--allow-empty", "-m", "advance")
+        self.init([leaf("alpha", "leaf-alpha")])
+        code, result = self.dispatch("alpha", "--create-from", "main")
+        self.assertEqual(3, code)
+        self.assertIn("cannot create worktree", result["error"])
+        self.assertEqual(old, git(self.repo, "rev-parse", "leaf-alpha").stdout.strip())
 
     def test_unmet_dependency_is_refused_before_a_worktree_is_created(self):
         self.init([leaf("alpha", "leaf-alpha"), leaf("beta", "leaf-beta", ["alpha"])])
