@@ -198,6 +198,78 @@ class LandCommandTest(base.DispatchHarness):
         self.assertIn("parent", failed["error"])
         self.assertEqual(before, self.checkpoint_path().read_bytes())
 
+    def test_a_completed_step_without_a_returned_commit_is_refused_before_integration(self):
+        self.init([leaf("alpha", "leaf-alpha")])
+        _code, started = self.dispatch("alpha", "--create-from", "main")
+        self.finish(started["handoffs"][0], "src/alpha")
+        checkpoint = json.loads(self.checkpoint_path().read_text())
+        checkpoint["steps"]["alpha"]["returned_commit"] = ""
+        self.checkpoint_path().write_text(json.dumps(checkpoint))
+        before = self.checkpoint_path().read_bytes()
+        main_before = git(self.repo, "rev-parse", "main").stdout
+        with patch.object(gitops, "run_worktree_helper") as helper:
+            code, refused = self.land("alpha")
+        self.assertEqual(3, code)
+        self.assertIn("completed step has no returned commit to integrate", refused["error"])
+        helper.assert_not_called()
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assertEqual(main_before, git(self.repo, "rev-parse", "main").stdout)
+
+    def test_a_target_other_than_the_checked_out_branch_is_refused_and_leaves_state_unchanged(self):
+        self.init([leaf("alpha", "leaf-alpha")])
+        _code, started = self.dispatch("alpha", "--create-from", "main")
+        self.finish(started["handoffs"][0], "src/alpha")
+        git(self.repo, "branch", "elsewhere")
+        before = self.checkpoint_path().read_bytes()
+        main_before = git(self.repo, "rev-parse", "main").stdout
+        code, refused = self.land("alpha", target="elsewhere")
+        self.assertEqual(3, code, refused)
+        self.assertIn("integrate failed", refused["error"])
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assertEqual(main_before, git(self.repo, "rev-parse", "main").stdout)
+        self.assertFalse((self.repo / "src/alpha").exists())
+
+    def test_a_batch_member_with_an_invalid_artifact_mid_batch_leaves_every_member_completed(self):
+        members = [
+            leaf("first", "batch-owner", batch="group"),
+            leaf("second", "batch-owner", ["first"], batch="group"),
+        ]
+        units = [
+            {
+                "id": "unit",
+                "original_size": "medium",
+                "cohesive_outcome": "One batch outcome",
+                "decomposition": {
+                    "basis": "failure_isolation",
+                    "rationale": "Separate failure surfaces",
+                    "shape": "checkpointed",
+                },
+            }
+        ]
+        self.init(members, units, {"first": ".worktrees/batch", "second": ".worktrees/batch"})
+        _code, started = self.dispatch("first", "--create-from", "main")
+        first, second = started["handoffs"]
+        self.finish(first, "src/first")
+        self.finish(second, "src/second")
+        real = gitops.run_worktree_helper
+
+        def stale_second(*arguments):
+            value, ok = real(*arguments)
+            if arguments[0] == "integrate":
+                # The first member matches the artifact's source; the second, applied after it,
+                # names a different commit.
+                value["source_commit"] = value["batch_source_commits"]["first"]
+                value["batch_source_commits"]["second"] = "0" * 40
+            return value, ok
+
+        before = self.checkpoint_path().read_bytes()
+        with patch.object(gitops, "run_worktree_helper", side_effect=stale_second):
+            code, refused = self.land("second")
+        self.assertEqual(3, code, refused)
+        self.assertIn("integrated source does not match returned commit", refused["error"])
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
+        self.assertEqual({"completed"}, {item["status"] for item in self.steps().values()})
+
     def test_a_cleanup_failure_stays_integrated_and_a_retry_only_cleans(self):
         self.init([leaf("alpha", "leaf-alpha"), leaf("beta", "leaf-beta", ["alpha"])])
         _code, started = self.dispatch("alpha", "--create-from", "main")

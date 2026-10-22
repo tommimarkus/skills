@@ -259,6 +259,40 @@ class PlanningPolicyPersistenceTest(unittest.TestCase):
         self.assertFalse((target / "plan.json").exists())
         self.assertEqual([item.name for item in target.iterdir()], [])
 
+    def load_module(self, name):
+        import importlib.util
+
+        sys.path.insert(0, str(PERSIST.parent))
+        self.addCleanup(sys.path.remove, str(PERSIST.parent))
+        spec = importlib.util.spec_from_file_location(name, PERSIST)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        return module
+
+    def test_missing_directory_descriptor_support_refuses_before_creating_the_root(self):
+        module = self.load_module("persist_plan_no_dir_fd")
+        with mock.patch.object(module, "MKDIR_SUPPORTS_DIR_FD", False):
+            with self.assertRaises(module.PersistenceError) as raised:
+                module.publish(self.root, self.plan)
+        self.assertEqual(
+            "safe directory-descriptor publication is unavailable", str(raised.exception)
+        )
+        self.assertFalse(self.root.exists())
+
+    def test_a_published_plan_that_vanishes_mid_publication_is_refused_and_cleaned_up(self):
+        module = self.load_module("persist_plan_vanished")
+        # The first read finds nothing to reuse; the racing writer's file is gone by the
+        # recheck, so the link collision cannot be treated as an identical publication.
+        with mock.patch.object(module, "read_published", side_effect=[False, False]):
+            with mock.patch.object(module.os, "link", side_effect=FileExistsError):
+                with self.assertRaises(module.PersistenceError) as raised:
+                    module.publish(self.root, self.plan)
+        self.assertEqual("published plan disappeared during publication", str(raised.exception))
+        target = self.root / self.digest
+        self.assertFalse((target / "plan.json").exists())
+        self.assertEqual([], [item.name for item in target.iterdir()])
+
     def test_publication_creates_only_under_explicit_root(self):
         import importlib.util
 

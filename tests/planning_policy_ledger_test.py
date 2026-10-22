@@ -17,7 +17,7 @@ SPEC = importlib.util.spec_from_file_location("ledger", SCRIPT)
 ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
-from planningledger import contract  # noqa: E402
+from planningledger import contract, core  # noqa: E402
 
 
 class PlanningLedgerTest(unittest.TestCase):
@@ -1191,6 +1191,58 @@ class PlanningLedgerTest(unittest.TestCase):
                 self.assertEqual(0, code, collected)
                 self.assertEqual(unsupported, collected["unsupported_count"])
                 self.assertEqual(0, collected["counts"]["removed"])
+
+    def close_blocked(self, run):
+        code, closed = self.call(
+            *self.common, "close", "--actor", "parent", "--run-id", run,
+            "--outcome", "blocked", "--reason", "waiting",
+        )
+        self.assertEqual(0, code, closed)
+
+    def reopen(self, run):
+        return self.call(
+            *self.common, "reopen", "--actor", "parent", "--run-id", run, "--reason", "again"
+        )
+
+    def test_reopen_refuses_a_blocked_run_whose_retention_has_lapsed(self):
+        run = self.init2(count=1)
+        step = self.start(run)
+        self.assertEqual(
+            0, self.record(run, self.returned(step, "blocked", blockers=[self.blocker()]))[0]
+        )
+        self.close_blocked(run)
+        # Age the closure so its purge date is already past, keeping the stamp consistent.
+        path = self.root / "planning-policy/ledgers/plan" / run / "checkpoint.json"
+        data = json.loads(path.read_text())
+        data["closed_at"] = "2020-01-01T00:00:00Z"
+        data["purge_after"] = core.retained_until(data["closed_at"], "blocked")
+        path.write_text(json.dumps(data))
+        before = self.ledger_tree()
+        code, refused = self.reopen(run)
+        self.assertEqual(3, code, refused)
+        self.assertEqual("blocked run is no longer retained", refused["error"])
+        self.assertEqual(before, self.ledger_tree())
+
+    def test_reopen_refuses_a_blocked_run_with_no_retryable_step(self):
+        run = self.init2(count=1, max_attempts=1)
+        step = self.start(run)
+        self.assertEqual(
+            0,
+            self.record(
+                run,
+                self.returned(
+                    step, "failed", code=1, blockers=[self.blocker("failed:acceptance", "once")]
+                ),
+            )[0],
+        )
+        self.assertFalse(self.checkpoint(run)["steps"]["step0"]["retry_allowed"])
+        self.close_blocked(run)
+        before = self.ledger_tree()
+        code, refused = self.reopen(run)
+        self.assertEqual(3, code, refused)
+        self.assertEqual("blocked run has no retryable step", refused["error"])
+        self.assertEqual(before, self.ledger_tree())
+        self.assertEqual("closed", self.checkpoint(run)["run_status"])
 
     def test_a_retained_v2_run_is_refused_listed_and_never_collected(self):
         run = self.init2()
