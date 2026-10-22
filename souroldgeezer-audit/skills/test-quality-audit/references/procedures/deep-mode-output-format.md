@@ -162,13 +162,13 @@ deletion from coverage similarity alone. A retirement candidate needs
 distinct-contract review plus mutation, failure-attribution, or
 controlled-removal evidence; absent that evidence, use `verify-then-retire`.
 
-A `structure-coupled` record is the exception to similarity-grade evidence. It
-is a `tdd-policy` footer field naming an existing test that a
-behavior-preserving refactor had to edit. Read it only from accessible history
-(commit messages, PR/MR text) when the project keeps it there; when absent,
-report nothing and ask for no instrumentation. The named test is tied to
-structure below the seam, so make it a `verify-then-retire` candidate: rewrite
-it at the seam, then retire the original under the gate above. The record is
+A `structure-coupled` record is a `tdd-policy` footer field naming an existing
+test that a behavior-preserving refactor had to edit. Read it only from
+accessible history (commit messages, PR/MR text) when the project keeps it
+there; when it is absent, report nothing and ask for no instrumentation. The
+record is evidence that the named test is tied to structure below the seam, so
+make the test a `verify-then-retire` candidate whose first step is a rewrite at
+the seam, with the original retired under the gate above. The record is
 stronger than similarity or never-failed history because a behavior-preserving
 change broke the test, yet it never retires a test by itself.
 
