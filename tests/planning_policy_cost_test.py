@@ -151,6 +151,10 @@ class PlanningPolicyCostTest(unittest.TestCase):
             ],
             [row["file"] for row in fallback["rows"]],
         )
+        self.assertEqual(
+            [(None, "whole-file"), ("authoring-and-audit-reference", "heading-subtree")],
+            [(row["anchor"], row["resolution"]) for row in fallback["rows"]],
+        )
         self.assertGreater(agent_lookup["selection_metadata_total"], 0)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertIsNone(lookup["rows"][0].get("anchor"), "the whole entry file is charged")
