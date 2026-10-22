@@ -486,8 +486,7 @@ class NextOnlyRehydrationTest(LedgerHarness):
 
         block = self.assertCategory("remediate_failure")
         self.assertEqual(["retry"], block["retryable_step_ids"])
-        self.assertIn("--step-id retry --to ready --retry", block["command"])
-        self.assertIn("--retry-remediation-file", block["command"])
+        self.assertIn("--step-id retry --to ready --retry --retry-remediation-file", block["command"])
         self.retry("standard", "agent-retry-2", sid="retry")
 
         block = self.assertCategory("ready_pending")
