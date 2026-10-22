@@ -85,7 +85,10 @@ items in the existing disposition vocabulary, each with its gate:
   removal, mutation, or failure attribution evidence; similarity alone never
   closes this item.
 - `strengthen` — gate: the weak assertion or scope named in the per-test
-  finding is closed and the test still fails for the contract it claims.
+  finding is closed and the test still fails for the contract it claims; each
+  assertion the rewrite drops keeps a successor that still fails under a
+  controlled break of its clause (a parsed-payload check cannot see static
+  template text).
 - `keep` — recorded with its reason so the next Deep run does not re-judge it.
 
 ### 5. Runner levers
