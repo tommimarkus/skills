@@ -132,7 +132,9 @@ def safe_run_contents(directory: Path) -> None:
     if handoff.exists() and (handoff.is_symlink() or not handoff.is_file()):
         raise Error("unexpected series-handoff.json contents")
     safe_step_json_tree(directory / "returns", "returns", "return step id", "return attempt id")
-    safe_step_json_tree(directory / "verifies", "verifies", "verify step id", "verify id")
+    safe_step_json_tree(
+        directory / "verifies", "verifies", "verify step id", "verify id", "parent-review"
+    )
     safe_step_json_tree(directory / "handoffs", "handoffs", "handoff step id", "handoff attempt id")
     results = directory / "worktree-results"
     if results.exists():
@@ -168,8 +170,13 @@ def safe_run_contents(directory: Path) -> None:
         validate_usage_dir(usage)
 
 
-def safe_step_json_tree(root: Path, name: str, step_label: str, child_label: str) -> None:
-    """Fail closed unless `root` is absent or holds only step dirs of `<uuid4>.json` files."""
+def safe_step_json_tree(
+    root: Path, name: str, step_label: str, child_label: str, tag: str = ""
+) -> None:
+    """Fail closed unless `root` is absent or holds only step dirs of `<uuid4>.json` files.
+
+    With `tag`, a child may also be named `<uuid4>.<tag>.json`.
+    """
     if not root.exists():
         return
     if root.is_symlink() or not root.is_dir():
@@ -181,7 +188,7 @@ def safe_step_json_tree(root: Path, name: str, step_label: str, child_label: str
         for child in step_dir.iterdir():
             if child.is_symlink() or not child.is_file() or child.suffix != ".json":
                 raise Error(f"unexpected {name} contents")
-            uuid4(child.stem, child_label)
+            uuid4(child.stem.removesuffix(f".{tag}") if tag else child.stem, child_label)
 
 
 def validate_usage_dir(usage: Path) -> None:

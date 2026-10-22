@@ -77,6 +77,7 @@ __all__ = [
     "validate_verify_return",
     "verify_rejection_return",
     "reject_verified_step",
+    "check_parent_review",
     "record_verify",
 ]
 
@@ -459,17 +460,25 @@ def validate_verify_return(args: argparse.Namespace) -> JsonObject:
     }
 
 
-def verify_rejection_return(directory: Path, step: JsonObject, verify: JsonObject) -> JsonObject:
+def verify_rejection_return(
+    directory: Path, step: JsonObject, verify: JsonObject, parent_review: bool = False
+) -> JsonObject:
     """Synthesize the failed:verification return a reject stands for.
 
     The builder's changed paths, acceptance, and commit carry over; the blocker
     cites the stored verify return and its digest as evidence. The builder's own
     completed return is superseded; the note carries no digest so a repeated
-    reject keeps the same progress fingerprint.
+    reject keeps the same progress fingerprint. A parent-review reject names
+    itself in the summary and note instead of the verifier.
     """
     original = current_return(directory, step)
     stored = step["verify"]
     codes = ", ".join(dict.fromkeys(finding["code"] for finding in verify["findings"]))
+    rejected, reject = (
+        ("parent review rejected the verified build", "a parent-review reject")
+        if parent_review
+        else ("verifier rejected the build", "a verifier reject")
+    )
     return {
         "schema": "bounded-step-return-v1",
         "step_id": step["id"],
@@ -481,7 +490,7 @@ def verify_rejection_return(directory: Path, step: JsonObject, verify: JsonObjec
         "blockers": [
             {
                 "code": "failed:verification",
-                "summary": f"verifier rejected the build: {codes}"[:MAX_BLOCKER_SUMMARY],
+                "summary": f"{rejected}: {codes}"[:MAX_BLOCKER_SUMMARY],
                 "evidence_path": stored["path"],
                 "sha256": stored["sha256"],
             }
@@ -489,7 +498,7 @@ def verify_rejection_return(directory: Path, step: JsonObject, verify: JsonObjec
         "notes": [
             {
                 "type": "finding",
-                "message": "the builder's completed return was superseded by a verifier reject",
+                "message": f"the builder's completed return was superseded by {reject}",
             }
         ],
         "unstarted_remainder": [],
@@ -516,8 +525,27 @@ def reject_verified_step(
     return settle_return(data, step, failure, return_fingerprint(bare))
 
 
+def check_parent_review(data: JsonObject, step: JsonObject | None, value: JsonObject) -> None:
+    """Refuse a parent review unless it rejects the passing verdict of an unlanded step."""
+    if data.get("verify_policy") != "leaf_verify_v1":
+        raise Error("this run does not use leaf verification")
+    if step is None or step["status"] != "completed":
+        raise Error("only a completed step can be parent-reviewed")
+    if stored_verdict(step) not in VERIFY_PASSING:
+        raise Error("no passing verdict for the step's returned commit; wait for the verifier")
+    # The stored verdict's verify_id binds the review to the commit the verifier passed.
+    if step["verify"]["verify_id"] != value["verify_id"]:
+        raise Error("stale or foreign verify_id")
+    if value["verdict"] != "reject":
+        raise Error("a parent review records only a reject")
+
+
 def record_verify(args: argparse.Namespace) -> JsonObject:
-    """Store a verifier verdict bound to the step's returned commit."""
+    """Store a verifier verdict bound to the step's returned commit.
+
+    With --parent-review the parent's own reject supersedes a stored passing
+    verdict and takes the same reject routing; the verifier's file stays as stored.
+    """
     directory, data, plan, leafs = mutating_run(args)
     raw = read_bounded_input(args.return_file, MAX_VERIFY_RETURN, "verify return")
     try:
@@ -526,16 +554,19 @@ def record_verify(args: argparse.Namespace) -> JsonObject:
         raise Error("invalid verify return JSON") from exc
     sid = value["step_id"]
     step = data["steps"].get(sid)
-    if (
-        data.get("verify_policy") != "leaf_verify_v1"
-        or step is None
-        or step["status"] != "completed"
-    ):
-        raise Error("verify return is not for a completed step of a leaf-verification run")
-    if not step.get("verify_id") or step["verify_id"] != value["verify_id"]:
-        raise Error("stale or foreign verify_id")
-    if step.get("verify_commit") != step["returned_commit"]:
-        raise Error("the step's returned commit changed since verify-handoff")
+    if args.parent_review:
+        check_parent_review(data, step, value)
+    else:
+        if (
+            data.get("verify_policy") != "leaf_verify_v1"
+            or step is None
+            or step["status"] != "completed"
+        ):
+            raise Error("verify return is not for a completed step of a leaf-verification run")
+        if not step.get("verify_id") or step["verify_id"] != value["verify_id"]:
+            raise Error("stale or foreign verify_id")
+        if step.get("verify_commit") != step["returned_commit"]:
+            raise Error("the step's returned commit changed since verify-handoff")
     batches = step_batches(plan)
     group = batches.get(sid) or (sid,)
     # A batch shares one worktree, so its HEAD is the tip: the last completed member's commit.
@@ -545,7 +576,9 @@ def record_verify(args: argparse.Namespace) -> JsonObject:
     worktree = step["assignment"]["worktree"]
     if git_head(worktree, repository_top(args)) != tip or dirty_paths(worktree):
         raise Error("worktree changed since the returned commit: verifier mutation refused")
-    copy = directory / "verifies" / sid / f"{value['verify_id']}.json"
+    # The file name marks a parent review's source; the verifier's own file stays beside it.
+    stem = f"{value['verify_id']}.parent-review" if args.parent_review else value["verify_id"]
+    copy = directory / "verifies" / sid / f"{stem}.json"
     write(copy, value, MAX_VERIFY_RETURN)
     step["verify"] = {
         "verdict": value["verdict"],
@@ -558,9 +591,10 @@ def record_verify(args: argparse.Namespace) -> JsonObject:
     failure: JsonObject | None = None
     disposition = ""
     if value["verdict"] == "reject":
-        failure = verify_rejection_return(directory, step, value)
+        failure = verify_rejection_return(directory, step, value, args.parent_review)
         disposition = reject_verified_step(directory, data, step, failure)
-    event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"])
+    marker = {"source": "parent-review"} if args.parent_review else {}
+    event(directory, data, "record-verify", step_id=sid, verdict=value["verdict"], **marker)
     result = step_result("record-verify", args, sid, step, verdict=value["verdict"])
     if failure is not None:
         result["next"] = next_after_return(

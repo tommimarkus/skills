@@ -65,9 +65,15 @@ class VerifyHarness(ChangesetHarness):
         return self.call("validate-verify-return", "--handoff-file", str(handoff),
                          "--return-file", str(path))
 
-    def record_verify(self, path):
+    def record_verify(self, path, *flags):
         return self.call("record-verify", "--actor", "parent", "--run-id", self.run_id,
-                         "--return-file", str(path))
+                         "--return-file", str(path), *flags)
+
+    def parent_reviewed(self, verify, findings=None, verdict="reject", **override):
+        """Record the parent's own verdict on the verified step through the parent-review lane."""
+        findings = [self.finding()] if findings is None else findings
+        return self.record_verify(
+            self.verify_return(verify, verdict, findings, **override), "--parent-review")
 
     def land(self, step_id="alpha"):
         return self.call("land", "--actor", "parent", "--run-id", self.run_id,
@@ -97,13 +103,41 @@ class VerifyHarness(ChangesetHarness):
             (code, shown.get("next")),
         )
 
-    def verified(self, verdict="pass", findings=()):
-        packet, _ = self.completed()
+    def verified(self, verdict="pass", findings=(), **extra):
+        packet, _ = self.completed(**extra)
         code, issued = self.verify_handoff()
         self.assertEqual(0, code, issued)
         (verify,) = issued["handoffs"]
         code, result = self.record_verify(self.verify_return(verify, verdict, findings))
         return verify, code, result
+
+    def retry_flow(self, diagnosis=None, tier="standard"):
+        step = self.checkpoint()["steps"]["alpha"]
+        value = {
+            "schema": "retry-remediation-v1", "step_id": "alpha",
+            "prior_attempt_id": step["attempt_id"], "prior_return_sha256": step["return_sha256"],
+            "diagnosis": diagnosis or "the verifier rejected the build",
+            "remediation_action": "address each finding", "executor_mode": "reuse",
+            "next_agent_id": "worker", "next_harness": "claude-code", "target_portable_tier": tier,
+        }
+        path = self.scratch / "remediation.json"
+        path.write_text(json.dumps(value))
+        return self.dispatch("alpha", "--retry", "--retry-remediation-file", str(path))
+
+    def cited_diagnosis(self):
+        step = self.checkpoint()["steps"]["alpha"]
+        return f"verify {step['verify']['sha256'][:12]} rejected {step['verify']['commit'][:12]}"
+
+    def reverified(self):
+        """Retry the rejected step, rebuild, and issue the new commit's verify packet."""
+        code, retry = self.retry_flow(self.cited_diagnosis(), "standard")
+        self.assertEqual(0, code, retry)
+        self.commit_file("src/alpha/a.txt", "two\n")
+        self.returned(retry["handoffs"][0])
+        code, issued = self.verify_handoff()
+        self.assertEqual(0, code, issued)
+        (verify,) = issued["handoffs"]
+        return verify
 
 
 class VerifyHandoffTest(VerifyHarness):
@@ -418,34 +452,6 @@ class RejectRoutingTest(VerifyHarness):
         self.assertEqual(0, code, result)
         return verify, result
 
-    def retry_flow(self, diagnosis=None, tier="standard"):
-        step = self.checkpoint()["steps"]["alpha"]
-        value = {
-            "schema": "retry-remediation-v1", "step_id": "alpha",
-            "prior_attempt_id": step["attempt_id"], "prior_return_sha256": step["return_sha256"],
-            "diagnosis": diagnosis or "the verifier rejected the build",
-            "remediation_action": "address each finding", "executor_mode": "reuse",
-            "next_agent_id": "worker", "next_harness": "claude-code", "target_portable_tier": tier,
-        }
-        path = self.scratch / "remediation.json"
-        path.write_text(json.dumps(value))
-        return self.dispatch("alpha", "--retry", "--retry-remediation-file", str(path))
-
-    def cited_diagnosis(self):
-        step = self.checkpoint()["steps"]["alpha"]
-        return f"verify {step['verify']['sha256'][:12]} rejected {step['verify']['commit'][:12]}"
-
-    def reverified(self):
-        """Retry the rejected step, rebuild, and issue the new commit's verify packet."""
-        code, retry = self.retry_flow(self.cited_diagnosis(), "standard")
-        self.assertEqual(0, code, retry)
-        self.commit_file("src/alpha/a.txt", "two\n")
-        self.returned(retry["handoffs"][0])
-        code, issued = self.verify_handoff()
-        self.assertEqual(0, code, issued)
-        (verify,) = issued["handoffs"]
-        return verify
-
     def retried_and_returned(self, finding):
         """Retry the rejected step, rebuild, and reject the new commit with `finding`."""
         verify = self.reverified()
@@ -601,6 +607,104 @@ class RejectRoutingTest(VerifyHarness):
     def test_record_changeset_refuses_a_changeset_within_budget(self):
         self.completed()
         self.assert_record_changeset_refused()
+
+
+class ParentReviewTest(VerifyHarness):
+    """#147: after a verifier pass, the parent's own reject takes the verify reject routing."""
+
+    def assert_refused(self, error, verify, *args, **override):
+        """The parent review exits 3 with `error` and leaves the checkpoint byte-identical."""
+        before = self.checkpoint_path().read_bytes()
+        code, result = self.parent_reviewed(verify, *args, **override)
+        self.assertEqual((3, error), (code, result.get("error")), result)
+        self.assertEqual(before, self.checkpoint_path().read_bytes())
+
+    def test_a_reject_after_a_pass_fails_the_step_with_its_evidence_and_names_the_retry(self):
+        verify, _, _ = self.verified()
+        code, result = self.parent_reviewed(verify)
+        self.assertEqual(0, code, result)
+        run = self.checkpoint_path().parent
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual(("failed", True), (step["status"], step["retry_allowed"]))
+        evidence = f"verifies/alpha/{verify['verify_id']}.parent-review.json"
+        (blocker,) = step["blockers"]
+        self.assertEqual(
+            ("failed:verification", "parent review rejected the verified build: verify:coverage",
+             evidence, ledger.digest(json.loads((run / evidence).read_text()))),
+            (blocker["code"], blocker["summary"], blocker["evidence_path"], blocker["sha256"]),
+        )
+        self.assertEqual(("reject", evidence), (step["verify"]["verdict"], step["verify"]["path"]))
+        superseded = json.loads((run / step["return_path"]).read_text())
+        self.assertEqual("the builder's completed return was superseded by a parent-review reject",
+                         superseded["notes"][0]["message"])
+        verifier = json.loads((run / f"verifies/alpha/{verify['verify_id']}.json").read_text())
+        self.assertEqual("pass", verifier["verdict"])
+        event = json.loads((run / "events.jsonl").read_text().splitlines()[-1])
+        self.assertEqual(("record-verify", "reject", "parent-review"),
+                         (event["action"], event["verdict"], event.get("source")))
+        block = result["next"]
+        self.assertEqual(("reasoning", "failed:verification", "standard"),
+                         (block["retry_class"], block["outcome"], block["next_tier"]))
+        self.assertIn("--retry-remediation-file", block["command"])
+        # Checkpoint validation accepts the parent-review file beside the verifier's own, only.
+        self.assertEqual(0, self.call("validate", "--run-id", self.run_id)[0])
+        (run / f"verifies/alpha/{verify['verify_id']}.forged.json").write_text("{}")
+        code, result = self.call("validate", "--run-id", self.run_id)
+        self.assertEqual((3, "verify id must be canonical lowercase UUID4"),
+                         (code, result.get("error")))
+
+    def test_a_landed_step_refuses_a_parent_review(self):
+        verify, _, _ = self.verified()
+        self.assertEqual(0, self.land()[0])
+        self.assert_refused("only a completed step can be parent-reviewed", verify)
+
+    def test_a_parent_review_records_only_a_reject_from_a_clean_verified_tip(self):
+        verify, _, _ = self.verified()
+        refusals = {
+            "reject without a finding": ("a reject carries a finding and a pass carries none", []),
+            "pass": ("a parent review records only a reject", [], "pass"),
+            "inconclusive": ("a parent review records only a reject", [], "inconclusive"),
+        }
+        for name, (error, *args) in refusals.items():
+            with self.subTest(name):
+                self.assert_refused(error, verify, *args)
+        self.assert_refused("stale or foreign verify_id", verify,
+                            verify_id="0" * 8 + verify["verify_id"][8:])
+        (self.worktree / "src/alpha/a.txt").write_text("mutated\n")
+        self.assert_refused(
+            "worktree changed since the returned commit: verifier mutation refused", verify)
+
+    def test_an_identical_repeat_parent_review_reject_is_no_progress(self):
+        verify, _, _ = self.verified(leaves=[dict(leaf("alpha", "leaf-alpha"), max_attempts=3)])
+        self.assertEqual(0, self.parent_reviewed(verify)[0])
+        again = self.reverified()
+        self.assertEqual(0, self.record_verify(self.verify_return(again))[0])
+        code, result = self.parent_reviewed(again)
+        self.assertEqual(0, code, result)
+        step = self.checkpoint()["steps"]["alpha"]
+        self.assertEqual(("blocked", "blocked:no_progress"), (step["status"], step["reason"]))
+        self.assertFalse(result["next"]["retry_eligible"])
+
+    def test_a_parent_review_waits_for_a_verdict_and_needs_leaf_verification(self):
+        self.completed()
+        code, issued = self.verify_handoff()
+        (verify,) = issued["handoffs"]
+        self.assert_refused(
+            "no passing verdict for the step's returned commit; wait for the verifier", verify)
+        self.setUp()
+        self.completed(verification="closeout-only")
+        self.assert_refused("this run does not use leaf verification", verify)
+
+    def test_the_next_verify_packet_carries_the_parent_review_findings(self):
+        verify, _, _ = self.verified()
+        finding = self.finding(code="verify:decision")
+        self.assertEqual(0, self.parent_reviewed(verify, [finding])[0])
+        rejected_commit = self.checkpoint()["steps"]["alpha"]["returned_commit"]
+        self.assertEqual(
+            {"verify_id": verify["verify_id"], "rejected_commit": rejected_commit,
+             "findings": [finding]},
+            self.reverified()["prior_verify"],
+        )
 
 
 

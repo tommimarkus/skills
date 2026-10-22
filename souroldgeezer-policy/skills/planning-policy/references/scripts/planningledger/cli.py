@@ -113,6 +113,7 @@ def parse() -> argparse.ArgumentParser:
     record_verify_parser.add_argument("--actor", required=True)
     record_verify_parser.add_argument("--run-id", required=True)
     record_verify_parser.add_argument("--return-file", required=True)
+    record_verify_parser.add_argument("--parent-review", action="store_true")
     record_changeset_parser = commands.add_parser("record-changeset")
     record_changeset_parser.add_argument("--actor", required=True)
     record_changeset_parser.add_argument("--run-id", required=True)
