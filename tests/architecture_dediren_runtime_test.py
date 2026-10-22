@@ -598,6 +598,13 @@ class FetchTest(unittest.TestCase):
 
     URL = "https://example.invalid/SHA256SUMS"
 
+    def http_error(self, code: int, reason: str) -> Exception:
+        error = runtime.urllib.error.HTTPError(
+            self.URL, code, reason, email.message.Message(), io.BytesIO(b"")
+        )
+        self.addCleanup(error.close)
+        return error
+
     def patch_urlopen(self, behaviour: Any) -> mock.MagicMock:
         urlopen = mock.MagicMock(side_effect=behaviour)
         patcher = mock.patch.object(runtime.urllib.request, "urlopen", urlopen)
@@ -635,7 +642,7 @@ class FetchTest(unittest.TestCase):
             self.assertEqual(runtime.fetch(self.URL, 60.0), b"abcdef")
 
     def test_server_errors_retry_then_fail_after_every_attempt(self) -> None:
-        error = runtime.urllib.error.HTTPError(self.URL, 503, "busy", email.message.Message(), io.BytesIO(b""))
+        error = self.http_error(503, "busy")
         urlopen = self.patch_urlopen(error)
         with self.assertRaises(runtime.DedirenError) as caught:
             runtime.fetch(self.URL, 60.0)
@@ -646,7 +653,7 @@ class FetchTest(unittest.TestCase):
         self.assertEqual(self.sleep.call_count, runtime.DOWNLOAD_ATTEMPTS - 1)
 
     def test_client_error_fails_at_once_without_retry(self) -> None:
-        error = runtime.urllib.error.HTTPError(self.URL, 404, "gone", email.message.Message(), io.BytesIO(b""))
+        error = self.http_error(404, "gone")
         urlopen = self.patch_urlopen(error)
         with self.assertRaises(runtime.DedirenError) as caught:
             runtime.fetch(self.URL, 60.0)
