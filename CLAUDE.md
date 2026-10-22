@@ -211,7 +211,7 @@ git diff --check
 uv run python scripts/version_stamp.py guard
 ```
 
-The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
+The lean engine gate fails only on block findings, so its exit 0 proves only that no block is new. Info and warn findings already on the base stay advisory (run `lean-audit` periodically for them); compare the engine's findings on the paths a change touches against a base run, and fix each one the change introduced or declare it with a rationale.
 
 ### Gate order and evidence
 

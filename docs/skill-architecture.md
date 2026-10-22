@@ -85,6 +85,10 @@ mode eval that omits unrelated reference sections before claiming improvement.
 Keep the body compact enough that an agent can hold the whole workflow in active
 context while doing real work. Move taxonomies, examples, long rubrics, and
 stack-specific rules out of `SKILL.md` unless they are needed every time.
+Check the body's headroom under lean-audit's `LA-BLOAT-1` cap before adding
+lines. At the cap, put the addition in the on-demand reference that owns its
+topic; a reviewed `[[skill_budget]]` is for content every route needs, and
+joining lines to pass the count is not a fix.
 
 When shortening prose to meet a load budget, list each removed or shortened
 rule-bearing sentence in the handoff or commit and map its obligations to
