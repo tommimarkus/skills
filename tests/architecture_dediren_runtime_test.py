@@ -6,6 +6,7 @@ lane stays in `architecture_dediren_release_test.py` behind
 `DEDIREN_RUNTIME_SMOKE=1`.
 """
 
+import email.message
 import errno
 import hashlib
 import importlib.util
@@ -518,6 +519,47 @@ class ExtractionSafetyTest(unittest.TestCase):
             self.extract_archive(build)
         self.assertIn("non-file", str(caught.exception))
 
+    def assert_refused_and_nothing_extracted(
+        self, build: Callable[[tarfile.TarFile], None], phrase: str
+    ) -> None:
+        def build_with_benign_first(archive: tarfile.TarFile) -> None:
+            info = tarfile.TarInfo("bundle/ok.txt")
+            info.size = 2
+            archive.addfile(info, io.BytesIO(b"ok"))
+            build(archive)
+
+        with self.assertRaises(runtime.DedirenError) as caught:
+            self.extract_archive(build_with_benign_first)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn(phrase, str(caught.exception))
+        self.assertEqual(list(self.destination.iterdir()), [])
+
+    def test_fifo_member_is_refused_and_nothing_is_extracted(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            info = tarfile.TarInfo("bundle/pipe")
+            info.type = tarfile.FIFOTYPE
+            archive.addfile(info)
+
+        self.assert_refused_and_nothing_extracted(build, "non-file")
+
+    def test_hardlink_escaping_the_destination_is_refused(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            info = tarfile.TarInfo("bundle/evil")
+            info.type = tarfile.LNKTYPE
+            info.linkname = "../../../../etc/passwd"
+            archive.addfile(info)
+
+        self.assert_refused_and_nothing_extracted(build, "escapes the destination")
+
+    def test_absolute_hardlink_target_is_refused(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            info = tarfile.TarInfo("bundle/evil")
+            info.type = tarfile.LNKTYPE
+            info.linkname = "/etc/passwd"
+            archive.addfile(info)
+
+        self.assert_refused_and_nothing_extracted(build, "absolute path")
+
     def test_contained_symlink_is_allowed(self) -> None:
         # The guard must refuse escapes without breaking a legitimate bundle
         # that ships an internal relative symlink.
@@ -533,6 +575,108 @@ class ExtractionSafetyTest(unittest.TestCase):
 
         self.extract_archive(build)
         self.assertTrue((self.destination / "bundle" / "lib" / "alias.jar").is_symlink())
+
+
+class FakeResponse:
+    """Chunked urlopen response served from a fixed list of byte chunks."""
+
+    def __init__(self, chunks: list[bytes]) -> None:
+        self.chunks = list(chunks)
+
+    def __enter__(self) -> "FakeResponse":
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def read(self, _size: int = -1) -> bytes:
+        return self.chunks.pop(0) if self.chunks else b""
+
+
+class FetchTest(unittest.TestCase):
+    """The urllib lane, driven at the process boundary with no network or sleeps."""
+
+    URL = "https://example.invalid/SHA256SUMS"
+
+    def patch_urlopen(self, behaviour: Any) -> mock.MagicMock:
+        urlopen = mock.MagicMock(side_effect=behaviour)
+        patcher = mock.patch.object(runtime.urllib.request, "urlopen", urlopen)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        sleep = mock.patch.object(runtime.time, "sleep")
+        self.sleep = sleep.start()
+        self.addCleanup(sleep.stop)
+        return urlopen
+
+    def test_chunks_are_joined_into_the_payload(self) -> None:
+        self.patch_urlopen(lambda *_a, **_k: FakeResponse([b"ab", b"cd"]))
+        self.assertEqual(runtime.fetch(self.URL, 60.0), b"abcd")
+
+    def test_deadline_exceeded_mid_download_is_unavailable(self) -> None:
+        self.patch_urlopen(lambda *_a, **_k: FakeResponse([b"ab", b"cd"]))
+        # Deadline is start + 10; the first loop check is already past it.
+        with mock.patch.object(runtime.time, "monotonic", side_effect=[0.0, 11.0]):
+            with self.assertRaises(runtime.DedirenError) as caught:
+                runtime.fetch(self.URL, 10.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("download exceeded 10s", str(caught.exception))
+
+    def test_download_over_the_byte_ceiling_is_unavailable(self) -> None:
+        self.patch_urlopen(lambda *_a, **_k: FakeResponse([b"abcd", b"efgh"]))
+        with mock.patch.object(runtime, "MAX_DOWNLOAD_BYTES", 6):
+            with self.assertRaises(runtime.DedirenError) as caught:
+                runtime.fetch(self.URL, 60.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("6 byte ceiling", str(caught.exception))
+
+    def test_download_exactly_at_the_ceiling_is_accepted(self) -> None:
+        self.patch_urlopen(lambda *_a, **_k: FakeResponse([b"abcd", b"ef"]))
+        with mock.patch.object(runtime, "MAX_DOWNLOAD_BYTES", 6):
+            self.assertEqual(runtime.fetch(self.URL, 60.0), b"abcdef")
+
+    def test_server_errors_retry_then_fail_after_every_attempt(self) -> None:
+        error = runtime.urllib.error.HTTPError(self.URL, 503, "busy", email.message.Message(), io.BytesIO(b""))
+        urlopen = self.patch_urlopen(error)
+        with self.assertRaises(runtime.DedirenError) as caught:
+            runtime.fetch(self.URL, 60.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("download failed", str(caught.exception))
+        self.assertIn("503", str(caught.exception))
+        self.assertEqual(urlopen.call_count, runtime.DOWNLOAD_ATTEMPTS)
+        self.assertEqual(self.sleep.call_count, runtime.DOWNLOAD_ATTEMPTS - 1)
+
+    def test_client_error_fails_at_once_without_retry(self) -> None:
+        error = runtime.urllib.error.HTTPError(self.URL, 404, "gone", email.message.Message(), io.BytesIO(b""))
+        urlopen = self.patch_urlopen(error)
+        with self.assertRaises(runtime.DedirenError) as caught:
+            runtime.fetch(self.URL, 60.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("HTTP 404", str(caught.exception))
+        self.assertEqual(urlopen.call_count, 1)
+        self.sleep.assert_not_called()
+
+    def test_url_errors_retry_then_fail_after_every_attempt(self) -> None:
+        urlopen = self.patch_urlopen(runtime.urllib.error.URLError("unreachable"))
+        with self.assertRaises(runtime.DedirenError) as caught:
+            runtime.fetch(self.URL, 60.0)
+        self.assertEqual(caught.exception.code, runtime.EXIT_UNAVAILABLE)
+        self.assertIn("unreachable", str(caught.exception))
+        self.assertEqual(urlopen.call_count, runtime.DOWNLOAD_ATTEMPTS)
+
+    def test_connection_errors_retry_then_succeed(self) -> None:
+        urlopen = self.patch_urlopen(
+            [ConnectionResetError("reset"), FakeResponse([b"ok"])]
+        )
+        self.assertEqual(runtime.fetch(self.URL, 60.0), b"ok")
+        self.assertEqual(urlopen.call_count, 2)
+        self.sleep.assert_called_once()
+
+    def test_persistent_connection_errors_fail_after_every_attempt(self) -> None:
+        urlopen = self.patch_urlopen(ConnectionResetError("reset"))
+        with self.assertRaises(runtime.DedirenError) as caught:
+            runtime.fetch(self.URL, 60.0)
+        self.assertIn("reset", str(caught.exception))
+        self.assertEqual(urlopen.call_count, runtime.DOWNLOAD_ATTEMPTS)
 
 
 class JavaDiagnosticTest(unittest.TestCase):
