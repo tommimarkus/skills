@@ -1,6 +1,6 @@
 ---
 name: tdd-policy
-description: "Use when loaded repo guidance initializes tdd-policy, or when asked to inspect, adopt, or enforce test-driven development — test-first ordering, RED→GREEN→REFACTOR, behavioral-change vs refactor classification, RED test level and placement, execution scope, suite feedback budget, coverage floor, exceptions — before or while writing implementation code. Not for test-quality auditing or general code/module design."
+description: "Use when loaded repo guidance initializes tdd-policy, or when asked to inspect, adopt, or enforce test-driven development — test-first ordering, RED→GREEN→REFACTOR, the observable-behavior seam, behavioral-change vs refactor classification, RED test level and placement, execution scope, suite feedback budget, coverage floor, exceptions — before or while writing implementation code. Not for test-quality auditing or general code/module design."
 ---
 
 # TDD Policy
@@ -16,12 +16,13 @@ this skill supplies procedure, config, variants, and opt-out handling on demand.
 Inputs: request, repo guidance, initialized options/exceptions, the code about to
 change, the focused and full test commands, the lane's budget and current run
 time when readable, existing tests.
-Evidence: cite the initialization source or explicit request, the variant and
-scope in force, the change classification, the RED level (with its reason when
-above the cheapest), the execution scope run, exceptions/opt-outs applied, the
-failing-test → pass cycle or the blocker, the suite delta, the new test's
-duration, the stack idioms applied or n/a, and retired tests with their
-successors.
+Evidence: cite the initialization source or explicit request, the variant, the
+scope and the seam in force, the change classification, the RED level (with its
+reason when above the cheapest), the execution scope run, exceptions/opt-outs
+applied, the failing-test → pass cycle or the blocker, the suite delta, the new
+test's duration, mutation evidence when configured, the stack idioms applied or
+n/a, scaffold resolutions, structure-coupled tests, and retired tests with their
+successors or `behavior removed` / `characterization expired` markers.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
 enforcement, guidance edits, or adoption. When editing triggers, behavior, source
@@ -39,39 +40,45 @@ authoritative.
 Rules: do not enforce just because the plugin is installed. Enforce when loaded
 repo guidance initializes `tdd-policy`, or the user explicitly asks to enforce
 TDD. Treat an initialization line as current-task authority before implementation
-changes; the invariant is "new or changed behavior gets a focused failing test
-first, at the cheapest level that proves it; refactors run under existing passing
-tests; RED→GREEN→REFACTOR, and REFACTOR retires or consolidates superseded
-coverage; shipped behavior stays covered by at least one test that fails on
+changes; the invariant is "new or changed behavior at the seam gets a focused
+failing test first, at the cheapest level that proves it through the seam; a
+change with no effect at the seam is a refactor and runs under existing passing
+tests; trivial wiring, delegation, accessors, and declarative config get no RED
+of their own unless they change an observable outcome at the seam;
+RED→GREEN→REFACTOR, and REFACTOR retires or consolidates superseded coverage and
+resolves scaffold tests before GREEN lands; removing a behavior removes its
+tests; shipped behavior stays covered by at least one test that fails on
 regression." Classify the change, select RED, scope execution, and maintain the
 suite per the reference; write each test per "Writing the test" there. Apply
 initialized options; bare initialization uses the default profile in
-`references/core-workflow.md`. When implementation is
-delegated, each worker selects RED inside its own write set and the parent runs
-the suite step once across all workers' tests at integration, before final
-verification. Keep opt-out low-friction (disable line, one-phrase per-task
-override logged, scope/exception globs, `test-after` downgrade) — opt-out is
-where user choice lives. `test-after` relaxes the invariant and is an opt-out,
+`references/core-workflow.md`. When implementation is delegated, each worker
+selects RED and resolves its own scaffold tests inside its own write set, and
+the parent runs the suite step once across all workers' tests at integration,
+before final verification. Keep opt-out low-friction (disable line, one-phrase
+per-task override logged, scope/exception globs, `test-after` downgrade) —
+opt-out is where user choice lives. `test-after` relaxes the invariant and is an opt-out,
 never a variant. Delegate test adequacy and similarity/history retirement to
 `test-quality-audit`, code/module design and test-code idioms to
 `software-design`, commit/branch preflight to `git-workflow-policy`, PR/MR to
 `pr-ops`, issues to `issue-ops`.
 
-Ask vs continue: continue when scope, variant, exceptions, and the test command
-are clear. Stop and ask on ambiguous scope, an unlogged exception request, or when
-the test command cannot run and no substitute exists. Malformed or ambiguous
-adopting guidance → stop-and-ask or no-op; never mass-generate.
+Ask vs continue: continue when scope, seam, variant, exceptions, and the test
+command are clear. Stop and ask on ambiguous scope or seam, an unlogged exception
+request, or when the test command cannot run and no substitute exists. Malformed
+or ambiguous adopting guidance → stop-and-ask or no-op; never mass-generate.
 
 Enforcement honesty follows the posture core's limits rule (enforced-by-default
 posture, no mechanical guarantee; the only mechanical path is the optional
 `enforcement: model+gate` PreToolUse hook, deferred to phase 2).
 
-Stop before letting new or changed behavior land with no failing test first
-unless an explicit, logged exception applies; a behavior-preserving refactor
-under existing passing tests is not a breach. Stop before GREEN lands in a lane
-at or over its budget unless REFACTOR brings it back within budget or a logged
-exception applies. Stop if the required test run cannot happen and no documented
-substitute exists.
+Stop before letting new or changed behavior at the seam land with no failing test
+first unless an explicit, logged exception applies; a behavior-preserving
+refactor under existing passing tests is not a breach, and neither is trivial
+code that changes no observable outcome at the seam. Stop before GREEN lands in
+a lane at or over its budget unless REFACTOR brings it back within budget or a
+logged exception applies. Stop before GREEN lands with an unresolved scaffold
+test. Stop if the required test run cannot happen and no documented substitute
+exists.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
 repo's documented skill-architecture validation. End with the output footer from
