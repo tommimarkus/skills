@@ -707,7 +707,6 @@ class ParentReviewTest(VerifyHarness):
         )
 
 
-
 class IdNeutralCapTest(VerifyHarness):
     """#144: caps bound block structure, so a long id never turns a recorded step into ok:false."""
 
