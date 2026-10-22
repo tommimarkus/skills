@@ -1139,6 +1139,15 @@ def _text_report(report: dict[str, Any]) -> str:
     static = report["static"]
     lines.append(f"orchestrators: {len(static['orchestrators'])}")
     lines.append(f"hook registrations: {len(static['hook_cost']['registrations'])}")
+    source_skips = static.get("source_skips")
+    if isinstance(source_skips, dict) and source_skips.get("count"):
+        paths = source_skips.get("paths", [])
+        lines.append(
+            f"source skips: count={source_skips['count']} "
+            f"listed={len(paths)} "
+            f"truncated={str(source_skips.get('truncated', False)).lower()} "
+            f"paths={','.join(str(path) for path in paths)}"
+        )
     forecast = report.get("forecast")
     if isinstance(forecast, dict):
         lines.append(f"run verdict: {forecast['verdict']}")

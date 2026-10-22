@@ -322,6 +322,31 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
         self.assertIn("CLAUDE.md", files)
         self.assertEqual(skipped, ["AGENTS.md"])
 
+    def test_default_text_cli_reports_external_skip_without_canary(self) -> None:
+        canary = "OUTSIDE-WORKFLOW-TEXT-CANARY"
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            outside = parent / "outside.md"
+            outside.write_text(f"# {canary}\n", encoding="utf-8")
+            (root / "AGENTS.md").symlink_to(outside)
+            (root / "CLAUDE.md").write_text("# Local\n", encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(root)],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "source skips: count=1 listed=1 truncated=false paths=AGENTS.md",
+            result.stdout,
+        )
+        self.assertNotIn(canary, result.stdout + result.stderr)
+
 
 class ForecastTest(unittest.TestCase):
     def test_missing_core_evidence_is_indeterminate_with_sorted_completeness(self) -> None:
