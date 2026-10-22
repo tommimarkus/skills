@@ -535,6 +535,11 @@ in builder notes, and parent probes still caught one rewrite that had dropped
 guards. Packets therefore carry `approved_decisions`, and evidence that needs an
 independent check belongs in the acceptance command.
 
+A 2026-10-23 slice showed the opposite gap. A verifier passed a leaf whose test
+scoped its phrases to a whole document although the task named one section; the
+parent saw it only after the pass, when no lane led back. That motivated the
+parent-review reject lane and the check-1 enumeration of each named target.
+
 The synthetic `planning-policy-behavior-verify-*` cases cover pass, coverage-gap
 retry, silent removal, over-budget, outside write set, inconclusive, style-only,
 closeout-only, and batch dispatch. They test the documented workflow, not model

@@ -422,6 +422,48 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "re-run verify-handoff`.",
         ))
 
+    def test_parent_review_precedes_record_return_and_has_a_post_pass_lane(self) -> None:
+        base = "souroldgeezer-policy/skills/planning-policy/"
+        review = (
+            "Parent review of a returned leaf, including confirming in the diff each target the "
+            "leaf `task` names explicitly (file, heading, symbol, value), completes before "
+            "`record-return`"
+        )
+        assert_phrases(self, self.text(base + "references/ledger-contract.md"), (
+            review,
+            "the last point where a fix returns to the same builder within the attempt",
+            "`record-verify --actor parent --run-id R --return-file F --parent-review`",
+            "never an out-of-plan parent edit",
+            "the step is `completed` (so never `integrated` or `cleaned`)",
+            "a parent cannot up- or down-grade a verdict to a pass",
+            "a refusal changes nothing",
+            "`verifies/<sid>/<verify_id>.parent-review.json`",
+            "parent review rejected the verified build: <codes>",
+            "Without `--parent-review`, `record-verify` is unchanged.",
+        ), heading="### Retry policy, remediation, and terminal precedence")
+        assert_phrases(self, self.text(base + "references/worker-handoff.md"), (
+            "Parent review of the returned leaf, including each target its `task` names "
+            "explicitly, completes before that `record-return`",
+            "`--parent-review` lane",
+        ), heading="# Worker handoff and return preflight")
+        assert_phrases(self, self.text(base + "references/verify-handoff.md"), (
+            "Enumerate each explicit target `task` names (file, heading, symbol, value) and "
+            "confirm each in the diff; a target missing, or met more broadly or narrowly than "
+            "named (for example a check scoped to a whole document when the task names one "
+            "section), is a `verify:coverage` finding.",
+        ), heading="## Five checks")
+        assert_phrases(self, self.text(base + "references/verify-handoff.md"), (
+            "After a pass the parent may record a `--parent-review` reject",
+        ), heading="# Verifier handoff")
+        for adapter, heading in (("claude-code", "## Capability resolution"),
+                                 ("codex", "## Dispatch and model mapping")):
+            assert_phrases(self, self.text(base + f"extensions/{adapter}.md"), (
+                "Parent review of each returned leaf, including each target its `task` names, "
+                "completes before `record-return`; a deviation found after a verifier pass uses "
+                "the [ledger contract](../references/ledger-contract.md) "
+                "`record-verify --parent-review` lane.",
+            ), heading=heading)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -79,6 +79,11 @@ Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
 analytical and deep builds, as named by `verifier_tier`. Never pass builder
 context.
 
+Parent review of each returned leaf, including each target its `task` names,
+completes before `record-return`; a deviation found after a verifier pass uses
+the [ledger contract](../references/ledger-contract.md)
+`record-verify --parent-review` lane.
+
 If the selected mapping is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
 availability evidence; the parent reassigns the step or executes it locally.
