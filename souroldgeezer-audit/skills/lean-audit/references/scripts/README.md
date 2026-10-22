@@ -140,7 +140,7 @@ this guide does not redefine them.
   adds `coverage.declared_budgets` (`path`, `lines`, `body_lines`, `rationale`;
   sorted) for in-scope bodies above 250 yet within their budget, with one
   `declared budgets: count=<n>` line plus paths in text.
-- All automatic readers constrain resolved targets to their selected source root.
+- Automatic source readers constrain resolved targets to their selected source root.
   Markdown reports bounded skips on stderr so JSON stdout remains stable; clone
   and workflow reports add bounded `source_skips` evidence. Transitive load
   closure callers pass the selected repository/plugin root; the explicitly named
