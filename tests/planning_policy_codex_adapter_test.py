@@ -27,16 +27,6 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
         ):
             self.assertIn(marker, self.text)
 
-    def test_has_the_settled_model_and_effort_mapping(self):
-        for marker in (
-            "`plan-step-mechanical` | `gpt-5.6-luna` / `low`",
-            "`plan-step-standard` (default) | `gpt-5.6-terra` / `medium`",
-            "`plan-step-analytical` | `gpt-5.6-sol` / `high`",
-            "`plan-step-deep` | `gpt-5.6-sol` / `xhigh`",
-            "https://developers.openai.com/api/docs/guides/latest-model",
-        ):
-            self.assertIn(marker, self.text)
-
     def test_tier_table_and_verifier_models_equal_the_host_tier_map(self):
         host = json.loads(
             (REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/host-tiers.json").read_text()
@@ -48,6 +38,7 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
         flat = re.sub(r"\s+", " ", self.text)
         for entry in host["verifiers"].values():
             self.assertIn(f"`{entry['model']}` / `{entry['effort']}`", flat)
+        self.assertIn("https://developers.openai.com/api/docs/guides/latest-model", self.text)
 
     def test_requires_complete_handoff_and_honest_stops(self):
         for marker in (

@@ -1,5 +1,7 @@
+import contextlib
 import hashlib
 import copy
+import io
 import importlib.util
 import json
 import tempfile
@@ -114,9 +116,23 @@ class WorkflowReportTest(unittest.TestCase):
         records[1]["actors"][1]["usage"].update({"input_tokens": 5, "output_tokens": 5, "total_tokens": 10})
         report = self.report(records)
         self.assertTrue(report["comparison"]["comparable"])
-        self.assertIn("median_total_tokens", report["variants"]["baseline"])
-        self.assertIn("repeat_range_total_tokens", report["variants"]["baseline"])
-        self.assertEqual(len(report["comparison"]["paired_deltas"]), 2)
+        # Hand-derived: each baseline trial totals 30 + 15 = 45 tokens; candidate-1 was
+        # edited to 20 + 10 = 30 and candidate-2 keeps 45.
+        self.assertEqual(
+            {"trial_count": 2, "successful_count": 2, "median_total_tokens": 45, "repeat_range_total_tokens": [45, 45]},
+            report["variants"]["baseline"],
+        )
+        self.assertEqual(
+            {"trial_count": 2, "successful_count": 2, "median_total_tokens": 37.5, "repeat_range_total_tokens": [30, 45]},
+            report["variants"]["candidate"],
+        )
+        self.assertEqual(
+            [
+                {"pair": 1, "baseline_trial_id": "baseline-1", "candidate_trial_id": "candidate-1", "total_tokens_delta": -15},
+                {"pair": 2, "baseline_trial_id": "baseline-2", "candidate_trial_id": "candidate-2", "total_tokens_delta": 0},
+            ],
+            report["comparison"]["paired_deltas"],
+        )
 
     def test_unknown_counters_stay_null_and_output_is_bounded(self):
         record = trial("baseline-1", "baseline", 1)
@@ -194,23 +210,47 @@ class WorkflowReportTest(unittest.TestCase):
     def test_conflicting_identifiers_and_nonfinite_evidence_are_rejected(self):
         base = trial("baseline-1", "baseline", 1)
         candidate = trial("candidate-1", "candidate", 2)
-        for change in ("sequence", "actor", "revision", "nan", "content"):
+        # NaN never reaches the finite-elapsed guard: the allow_nan=False record encoding
+        # in _bounded_record rejects it first, so that guard is exercised by the negative case.
+        cases = {
+            "sequence": "duplicate trial sequence",
+            "actor": "duplicate actor identity",
+            "revision": "trial policy revision conflicts with variant identity",
+            "nan": "Out of range float values are not JSON compliant",
+            "negative": "execution.elapsed_seconds must be finite non-negative or null",
+            "content": "trial includes content-bearing fields",
+        }
+        for change, message in cases.items():
             row = copy.deepcopy(candidate)
             if change == "sequence": row["sequence"] = 1
             if change == "actor": row["actors"][0]["actor_id"] = base["actors"][0]["actor_id"]
             if change == "revision": row["policy_revision"] = "c" * 40
             if change == "nan": row["execution"]["elapsed_seconds"] = float("nan")
+            if change == "negative": row["execution"]["elapsed_seconds"] = -1
             if change == "content": row["actors"][0]["completions"] = ["private text"]
-            with self.subTest(change=change), self.assertRaises(ValueError):
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, message):
                 self.report([base, row])
 
     def test_cli_bounds_input_before_parsing_and_refuses_duplicate_json_keys(self):
+        valid = {"schema": "planning-policy-workflow-manifest/v1", "revisions": REVISIONS, "trials": [trial("baseline-1", "baseline", 1)]}
+        bomb = '{"a":' * 1500 + "0" + "}" * 1500
+        depth_bomb = json.dumps(valid).replace('"profile": "workspace-write"', '"profile": ' + bomb)
+        self.assertIn(bomb, depth_bomb)
+        cases = (
+            ('{"schema":"x","schema":"y"}', "duplicate JSON field"),
+            (" " * (16 * 64 * 1024 + 4097), "manifest exceeds bounded input size"),
+            (depth_bomb, "recursion"),
+        )
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "manifest.json"
             output = Path(temporary) / "report.json"
-            for contents in ('{"schema":"x","schema":"y"}', " " * (16 * 64 * 1024 + 4097), "[" * 1500 + "0" + "]" * 1500):
+            for contents, message in cases:
                 manifest.write_text(contents)
-                self.assertEqual(self.reporter.main(["--manifest", str(manifest), "--output", str(output)]), 2)
+                stderr = io.StringIO()
+                with contextlib.redirect_stderr(stderr):
+                    status = self.reporter.main(["--manifest", str(manifest), "--output", str(output)])
+                self.assertEqual(2, status)
+                self.assertRegex(stderr.getvalue(), r"^planning-policy-workflow-report: .*" + message)
                 self.assertFalse(output.exists())
 
 

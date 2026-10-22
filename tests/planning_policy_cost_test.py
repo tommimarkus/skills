@@ -126,12 +126,32 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # verify-loop contract docs: SKILL.md pointer and worker-handoff
         # budget/preflight (+70 measured; slack 5 kept).
         self.assertLessEqual(live_next["load_total"], 2700)
-        self.assertFalse(
-            any(row["file"].endswith("ledger-contract.md") for row in live_next["rows"])
+        base = "souroldgeezer-policy/skills/"
+        self.assertEqual(
+            [
+                base + "planning-policy/SKILL.md",
+                base + "planning-policy/references/core-workflow.md",
+                base + "planning-policy/references/plan-contract.md",
+                base + "git-workflow-policy/references/planning-worktree-closeout.md",
+            ],
+            [row["file"] for row in live_next["rows"]],
         )
-        self.assertTrue(
-            any(row["file"].endswith("ledger-contract.md") for row in fallback["rows"])
+        self.assertEqual(
+            ["whole-file", "heading-subtree", "heading-subtree", "whole-file"],
+            [row["resolution"] for row in live_next["rows"]],
         )
+        self.assertEqual(
+            [None, "approval-and-output", "parent-ledger-helper", None],
+            [row["anchor"] for row in live_next["rows"]],
+        )
+        self.assertEqual(
+            [
+                base + "planning-policy/SKILL.md",
+                base + "planning-policy/references/ledger-contract.md",
+            ],
+            [row["file"] for row in fallback["rows"]],
+        )
+        self.assertGreater(agent_lookup["selection_metadata_total"], 0)
         self.assertEqual(1, len(lookup["rows"]), "lookup must load only the entry surface")
         self.assertIsNone(lookup["rows"][0].get("anchor"), "the whole entry file is charged")
         for result, adapter in ((claude, "claude-code.md"), (codex, "codex.md")):

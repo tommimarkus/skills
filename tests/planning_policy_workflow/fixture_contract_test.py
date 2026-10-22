@@ -43,6 +43,10 @@ class FixtureContractTest(unittest.TestCase):
             (copied / "labels.py").write_text("def unique_labels(values):\n    return values\n", encoding="utf-8")
             rejected = subprocess.run([sys.executable, "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
             self.assertNotEqual(rejected.returncode, 0)
+            # One failing test per worker output: slug and labels, nothing else.
+            self.assertIn("FAILED (failures=2)", rejected.stderr)
+            self.assertIn("FAIL: test_slug_representative_edges", rejected.stderr)
+            self.assertIn("FAIL: test_labels_representative_edges", rejected.stderr)
             (copied / "slug.py").write_text(CORRECT_SLUG, encoding="utf-8")
             (copied / "labels.py").write_text(CORRECT_LABELS, encoding="utf-8")
             accepted = subprocess.run([sys.executable, "oracle_checks.py"], cwd=copied, capture_output=True, text=True)
