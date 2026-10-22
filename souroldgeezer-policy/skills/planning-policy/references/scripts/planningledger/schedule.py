@@ -20,7 +20,7 @@ from .core import (
     JsonObject,
     JsonValue,
     digest,
-    proxy_tokens,
+    next_tokens,
     read_bounded_json,
     read_json,
     rel,
@@ -89,7 +89,7 @@ Batches: TypeAlias = dict[str, list[str]]
 
 def trim_collection(value: JsonObject, trimmable: str) -> None:
     """Pop the trimmable collection's tail while the block is over budget, keeping one item."""
-    while proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
+    while next_tokens(value) > MAX_NEXT_TOKENS and trimmable and len(value.get(trimmable, [])) > 1:
         value[trimmable].pop()
         value["truncated"] = True
 
@@ -103,7 +103,7 @@ def bounded_next(
     second, so the eligibility or status a caller acts on always survives.
     """
     for key in droppable:
-        if proxy_tokens(value) <= MAX_NEXT_TOKENS:
+        if next_tokens(value) <= MAX_NEXT_TOKENS:
             return value
         value.pop(key, None)
     trim_collection(value, trimmable)
@@ -113,10 +113,10 @@ def bounded_next(
 def bounded_action_next(value: JsonObject, trimmable: str = "") -> JsonObject:
     """Keep the first legal command while trimming a convenience collection."""
     trim_collection(value, trimmable)
-    if proxy_tokens(value) > MAX_NEXT_TOKENS and trimmable:
+    if next_tokens(value) > MAX_NEXT_TOKENS and trimmable:
         value.pop(trimmable, None)
         value["truncated"] = True
-    if proxy_tokens(value) > MAX_NEXT_TOKENS:
+    if next_tokens(value) > MAX_NEXT_TOKENS:
         raise Error("next block exceeds 120 proxy tokens")
     return value
 
@@ -512,7 +512,7 @@ def with_concurrent(data: JsonObject, batches: Batches, block: JsonObject) -> Js
     ][:MAX_CONCURRENT]
     while others:
         trial = {**block, "concurrent": others}
-        if proxy_tokens(trial) <= MAX_NEXT_TOKENS:
+        if next_tokens(trial) <= MAX_NEXT_TOKENS:
             return trial
         others = others[:-1]
     return block

@@ -76,7 +76,7 @@ class LandCommandTest(base.DispatchHarness):
         self.assertEqual(["alpha"], landed["cleaned"])
         self.assertEqual(["beta"], landed["next"]["ready_step_ids"])
         self.assertIn(" dispatch ", landed["next"]["command"])
-        self.assertLessEqual(ledger.proxy_tokens(landed["next"]), ledger.MAX_NEXT_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(landed["next"]), ledger.MAX_NEXT_TOKENS)
         state = self.steps()["alpha"]
         self.assertTrue(state["integrated_commit"])
         self.assertTrue(state["integration_result_path"].startswith("worktree-results/alpha/"))

@@ -16,6 +16,9 @@ __all__ = [
     "MAX_USAGE_TOKENS",
     "MAX_NEXT_TOKENS",
     "MAX_NEXT_ONLY_TOKENS",
+    "NEXT_ID_PLACEHOLDER",
+    "NEXT_ID_KEYS",
+    "NEXT_ID_FLAG",
     "ID",
     "SHA",
     "SHA40",
@@ -129,6 +132,34 @@ MAX_NEXT_TOKENS = 120
 
 
 MAX_NEXT_ONLY_TOKENS = 240
+
+
+# The `next` caps bound block structure, not identifier length: the id grammar already
+# bounds identifiers, so each one is measured as this single placeholder token (#144).
+NEXT_ID_PLACEHOLDER = "ID"
+
+
+# Keys whose value in a `next` block or the next-only envelope is an identifier or a list of them.
+NEXT_ID_KEYS = frozenset(
+    {
+        "agent_id",
+        "attempt_id",
+        "await_step_id",
+        "blocked_step_ids",
+        "cleanup_step_id",
+        "concurrent",
+        "plan_id",
+        "ready_step_ids",
+        "retryable_step_ids",
+        "run_id",
+        "step_id",
+        "step_ids",
+    }
+)
+
+
+# An identifier flag and its value inside a `next` block's command strings.
+NEXT_ID_FLAG = re.compile(r"(--(?:plan|run|step|agent)-id) \S+")
 
 
 ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")

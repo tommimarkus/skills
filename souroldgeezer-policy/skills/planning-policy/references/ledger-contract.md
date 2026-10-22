@@ -193,7 +193,11 @@ name `dispatch` as that command, `integrated` leads with the dispatch of an
 unblocked dependent and keeps its own cleanup as `cleanup_step_id`, and the
 record-return `completed` block and the next-only integrate and cleanup
 categories name `land`. These results are derived after the checkpoint is
-written.
+written. Caps measure block structure, each identifier at one fixed placeholder
+token, so the full block fits for every admissible id and no `next` refuses
+after a write. `record-return` rejecting an over-8-KiB or out-of-write-set
+return is the one refusal that follows a recorded change (the step becomes
+`oversized`), and its error is itself authoritative.
 
 ### Composite land
 

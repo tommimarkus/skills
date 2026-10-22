@@ -118,7 +118,7 @@ class ConcurrentActionsTest(RetainedRunHarness):
         self.finished("alpha")
         block = self.next_only()
         self.assertEqual(names[:ledger.MAX_CONCURRENT], block["concurrent"])
-        self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(block), ledger.MAX_NEXT_TOKENS)
 
     def test_a_block_that_already_names_every_startable_step_adds_nothing(self):
         self.init([leaf("alpha", "leaf-alpha"), leaf("gamma", "leaf-gamma")])

@@ -78,6 +78,8 @@ def batch_leaves():
 
 
 class DispatchHarness(unittest.TestCase):
+    plan_id = "plan"
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -101,7 +103,7 @@ class DispatchHarness(unittest.TestCase):
     def call(self, *arguments):
         with contextlib.redirect_stdout(io.StringIO()) as stream:
             code = ledger.main(
-                ["--repo-root", str(self.repo), "--plan-id", "plan", *arguments]
+                ["--repo-root", str(self.repo), "--plan-id", self.plan_id, *arguments]
             )
         return code, json.loads(stream.getvalue())
 
@@ -176,7 +178,7 @@ class DispatchHarness(unittest.TestCase):
     def checkpoint_path(self):
         common = Path(git(self.repo, "rev-parse", "--git-common-dir").stdout.strip())
         common = common if common.is_absolute() else self.repo / common
-        return common / "planning-policy/ledgers/plan" / self.run_id / "checkpoint.json"
+        return common / "planning-policy/ledgers" / self.plan_id / self.run_id / "checkpoint.json"
 
     def dispatch(self, step_id, *extra):
         return self.call(

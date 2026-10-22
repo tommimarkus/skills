@@ -37,6 +37,7 @@ from .core import (
     canon,
     digest,
     ident,
+    next_tokens,
     parent,
     proxy_tokens,
     retained_until,
@@ -565,7 +566,7 @@ def show(args: argparse.Namespace) -> JsonObject:
             "run_id": data["run_id"],
             "next": checkpoint_next(directory, data, step_batches(plan), plan),
         }
-        if proxy_tokens(result) > MAX_NEXT_ONLY_TOKENS:
+        if next_tokens(result) > MAX_NEXT_ONLY_TOKENS:
             raise Error("show --next-only exceeds 240 proxy tokens")
         return result
     if args.step_id:

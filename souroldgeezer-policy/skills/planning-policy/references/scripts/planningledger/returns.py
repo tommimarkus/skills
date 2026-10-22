@@ -120,6 +120,11 @@ def reject_return(
     code: str,
     summary: str,
 ) -> None:
+    """Record the step `oversized`; the caller then refuses the return.
+
+    This is the one deliberate refusal that follows a recorded change, so its error
+    is itself authoritative.
+    """
     stop_step(step, "oversized", reason, code, summary)
     event(directory, data, "record-return", step_id=sid, status="oversized")
 

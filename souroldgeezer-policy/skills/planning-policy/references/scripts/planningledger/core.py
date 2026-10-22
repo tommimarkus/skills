@@ -13,7 +13,16 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeAlias
 
-from .vocabulary import ID, MAX_PATH, PROXY_TOKEN_RE, RETENTION_DAYS, SHA
+from .vocabulary import (
+    ID,
+    MAX_PATH,
+    NEXT_ID_FLAG,
+    NEXT_ID_KEYS,
+    NEXT_ID_PLACEHOLDER,
+    PROXY_TOKEN_RE,
+    RETENTION_DAYS,
+    SHA,
+)
 
 __all__ = [
     "Error",
@@ -38,6 +47,8 @@ __all__ = [
     "required_file",
     "require_sha256",
     "proxy_tokens",
+    "id_neutral",
+    "next_tokens",
     "UsageError",
     "SCRIPTS_DIR",
     "LEDGER_SCRIPT",
@@ -238,6 +249,34 @@ def require_sha256(value: object, message: str) -> None:
 def proxy_tokens(value: object) -> int:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
     return len(PROXY_TOKEN_RE.findall(encoded))
+
+
+def id_neutral(value: object, key: str = "") -> object:
+    """A copy of a `next` block with every identifier replaced by the one placeholder.
+
+    It replaces the value of an id-bearing key and the value after an id flag inside a
+    command string. A list keeps its length, so a collection still trims by count.
+    """
+    if key in NEXT_ID_KEYS:
+        if isinstance(value, list):
+            return [NEXT_ID_PLACEHOLDER] * len(value)
+        return NEXT_ID_PLACEHOLDER if isinstance(value, str) else value
+    if isinstance(value, dict):
+        return {name: id_neutral(item, name) for name, item in value.items()}
+    if isinstance(value, list):
+        return [id_neutral(item) for item in value]
+    if isinstance(value, str):
+        return NEXT_ID_FLAG.sub(rf"\1 {NEXT_ID_PLACEHOLDER}", value)
+    return value
+
+
+def next_tokens(value: object) -> int:
+    """The proxy tokens a `next` cap measures: block structure, each identifier at one token.
+
+    The id grammar bounds identifiers, so a block within its cap by this measure fits
+    whole for every admissible id and never has to refuse after a write.
+    """
+    return proxy_tokens(id_neutral(value))
 
 
 class UsageError(Error):

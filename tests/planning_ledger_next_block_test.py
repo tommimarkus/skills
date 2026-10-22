@@ -18,7 +18,12 @@ import unittest
 from pathlib import Path
 
 from tests.planning_ledger_dispatch_test import leaf as git_leaf
-from tests.planning_ledger_verify_test import VerifyHarness
+from tests.planning_ledger_verify_test import (
+    MAX_AGENT_ID,
+    MAX_PLAN_ID,
+    MAX_STEP_ID,
+    VerifyHarness,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts"
@@ -40,6 +45,12 @@ FAIL = {"code": "failed:acceptance", "summary": "acceptance exited 1"}
 HIGHER = {"code": "blocked:needs_higher_tier", "summary": "needs deeper reasoning"}
 OTHER = {"code": "blocked:missing_input", "summary": "missing a load-bearing input"}
 SCOPE = {"code": "oversized:scope", "summary": "work outgrew its size band"}
+RUN_ID = "7d6c608b-0925-47cf-9c31-cc5867295b0e"
+
+
+def long_ids(count: int) -> list[str]:
+    """Distinct 64-character step ids, the grammar's maximum, with 63 proxy tokens each."""
+    return [f"{chr(97 + n // 10)}{n % 10}" + "-a" * 30 + "-b" for n in range(count)]
 
 
 def canonical_sha256(value: object) -> str:
@@ -316,7 +327,7 @@ class LedgerHarness(unittest.TestCase):
         )
 
     def assertBounded(self, block: dict) -> None:
-        self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(block), ledger.MAX_NEXT_TOKENS)
 
 
 class InitNextBlockTest(LedgerHarness):
@@ -452,7 +463,7 @@ class ExternalDependencyGateTest(unittest.TestCase):
 
 class NextOnlyRehydrationTest(LedgerHarness):
     def assertEnvelopeBounded(self, result: dict) -> None:
-        self.assertLessEqual(ledger.proxy_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
         self.assertBounded(result["next"])
 
     def assertCategory(self, expected: str) -> dict:
@@ -899,7 +910,7 @@ class SeriesOverlayNextBlockTest(LedgerHarness):
         self.assertEqual(0, code, next_only)
         self.assertTrue(next_only["next"]["series_end"])
         self.assertBounded(next_only["next"])
-        self.assertLessEqual(ledger.proxy_tokens(next_only), ledger.MAX_NEXT_ONLY_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(next_only), ledger.MAX_NEXT_ONLY_TOKENS)
 
     def test_final_series_close_command_carries_the_marker_not_the_flag(self):
         self.init(series=series_block(final=True))
@@ -946,8 +957,8 @@ class VerifyNextBlockTest(VerifyHarness):
     def category(self):
         code, result = self.call("show", "--run-id", self.run_id, "--next-only")
         self.assertEqual(0, code, result)
-        self.assertLessEqual(ledger.proxy_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
-        self.assertLessEqual(ledger.proxy_tokens(result["next"]), ledger.MAX_NEXT_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(result), ledger.MAX_NEXT_ONLY_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(result["next"]), ledger.MAX_NEXT_TOKENS)
         return result["next"]["category"]
 
     def test_verify_pending_precedes_land_and_land_precedes_retry(self):
@@ -969,6 +980,112 @@ class VerifyNextBlockTest(VerifyHarness):
         code, result = self.call("show", "--run-id", self.run_id, "--next-only")
         self.assertEqual("remediate_failure", result["next"]["category"])
         self.assertEqual(["alpha", "beta"], result["next"]["retryable_step_ids"])
+
+
+
+class IdNeutralCapLedgerTest(LedgerHarness):
+    """#144: the full block fits for every admissible id; collections still trim by count."""
+
+    plan_id = MAX_PLAN_ID
+
+    def test_maximal_ids_keep_the_full_init_and_transition_next(self):
+        sid = MAX_STEP_ID
+        result = self.init([leaf(sid, [])])
+        scope = f"--plan-id {self.plan_id}"
+        self.assertEqual(
+            {"ready_step_ids": [sid], "command": (
+                f"{scope} dispatch --actor parent --run-id {self.run_id} "
+                f"--step-id {sid} --agent-id <agent-id>")},
+            result["next"],
+        )
+        code, readied = self.transition(sid, "ready", "--agent-id", MAX_AGENT_ID)
+        command = (f"{scope} transition --actor parent --run-id {self.run_id} "
+                   f"--step-id {sid} --to in_progress")
+        self.assertEqual((0, {"command": command}), (code, readied.get("next")))
+        code, started = self.transition(sid, "in_progress")
+        attempt = self.checkpoint()["steps"][sid]["attempt_id"]
+        self.assertEqual(
+            (0, {"await_step_id": sid, "agent_id": MAX_AGENT_ID, "attempt_id": attempt}),
+            (code, started.get("next")),
+        )
+
+    def test_long_ids_still_cap_the_concurrent_list_by_count(self):
+        names = long_ids(8)
+        self.init([leaf(name, []) for name in names])
+        self.start(names[0])
+        self.give("completed", sid=names[0])
+        code, shown = self.show_next()
+        land = (f"--plan-id {self.plan_id} land --actor parent --run-id {self.run_id} "
+                f"--step-id {names[0]} --target <target-branch>")
+        self.assertEqual(
+            (0, {"category": "integrate_completed", "step_ids": names[:1], "command": land,
+                 "concurrent": names[1:1 + ledger.MAX_CONCURRENT]}),
+            (code, shown.get("next")),
+        )
+
+
+class IdNeutralMeasureTest(unittest.TestCase):
+    """The one measure every next cap uses counts each identifier as one placeholder."""
+
+    def test_every_identifier_becomes_the_placeholder_and_structure_stays(self):
+        block = {
+            "category": "remediate_failure",
+            "retry_class": "reasoning",
+            "retryable_step_ids": [MAX_STEP_ID, "b"],
+            "agent_id": MAX_AGENT_ID,
+            "command": ledger.dispatch_command(MAX_PLAN_ID, RUN_ID, MAX_STEP_ID),
+        }
+        self.assertEqual(
+            {
+                "category": "remediate_failure",
+                "retry_class": "reasoning",
+                "retryable_step_ids": ["ID", "ID"],
+                "agent_id": "ID",
+                "command": "--plan-id ID dispatch --actor parent --run-id ID --step-id ID "
+                "--agent-id ID",
+            },
+            ledger.id_neutral(block),
+        )
+
+    def test_the_same_structure_measures_equal_for_short_and_maximal_ids(self):
+        def blocks(plan_id: str, step_id: str, agent_id: str) -> list[dict]:
+            data = {"plan_id": plan_id, "run_id": RUN_ID}
+            return [
+                {"retry_eligible": False, "outcome": "completed",
+                 **ledger.verify_commands(data, step_id)},
+                {"category": "integrate_completed", "step_ids": [step_id],
+                 "command": ledger.land_command(data, step_id), "concurrent": [step_id] * 4},
+                {"category": "remediate_failure", "retryable_step_ids": [step_id],
+                 "command": ledger.retry_command(plan_id, RUN_ID, step_id)},
+                {"await_step_id": step_id, "agent_id": agent_id, "attempt_id": RUN_ID},
+                {"category": "rerecord_return", "step_id": step_id},
+                {"category": "terminal_blocked", "blocked_step_ids": [step_id] * 3},
+                {"ok": True, "action": "show-next", "plan_id": plan_id, "run_id": RUN_ID,
+                 "next": {"ready_step_ids": [step_id], "cleanup_step_id": step_id,
+                          "command": ledger.dispatch_command(plan_id, RUN_ID, step_id)}},
+            ]
+
+        short = blocks("p", "s", "w")
+        maximal = blocks(MAX_PLAN_ID, MAX_STEP_ID, MAX_AGENT_ID)
+        self.assertEqual([ledger.next_tokens(block) for block in short],
+                         [ledger.next_tokens(block) for block in maximal])
+        self.assertGreater(ledger.proxy_tokens(maximal[0]), ledger.MAX_NEXT_TOKENS)
+
+    def test_a_collection_trims_to_the_same_count_for_short_and_maximal_ids(self):
+        def trimmed(plan_id: str, ids: list[str]) -> dict:
+            return ledger.bounded_action_next(
+                {"category": "ready_pending", "ready_step_ids": ids,
+                 "command": ledger.dispatch_command(plan_id, RUN_ID, ids[0])},
+                "ready_step_ids",
+            )
+
+        short_ids = [f"s{n}" for n in range(30)]
+        short, maximal = trimmed("p", short_ids), trimmed(MAX_PLAN_ID, long_ids(30))
+        kept = len(short["ready_step_ids"])
+        self.assertLess(kept, 30)
+        self.assertEqual((True, short_ids[:kept]), (short["truncated"], short["ready_step_ids"]))
+        self.assertEqual((True, long_ids(30)[:kept]),
+                         (maximal["truncated"], maximal["ready_step_ids"]))
 
 
 if __name__ == "__main__":

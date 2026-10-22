@@ -7,7 +7,16 @@ from unittest.mock import patch
 from tests.planning_ledger_changeset_test import ChangesetHarness
 from tests.planning_ledger_dispatch_test import batch_leaves, git, leaf, ledger
 
+from planningledger import dispatch as ledger_dispatch
 from planningledger import gitops
+
+# Issue #144: 33 characters whose hyphens pushed the raw gate block past the 120 cap.
+LONG_PLAN_ID = "tqa-audit-2026-10-22-slice-1-of-2"
+# The most token-heavy ids the grammar admits: 128-character plan and agent ids and a
+# 64-character step id, each separator a proxy token of its own.
+MAX_PLAN_ID = "a" + "-" * 127
+MAX_STEP_ID = "a" + "-a" * 31 + "a"
+MAX_AGENT_ID = "a" + "-" * 127
 
 
 class VerifyHarness(ChangesetHarness):
@@ -63,6 +72,30 @@ class VerifyHarness(ChangesetHarness):
         return self.call("land", "--actor", "parent", "--run-id", self.run_id,
                          "--step-id", step_id, "--target", "main")
 
+    def gate(self, step_id="alpha"):
+        """The full leaf-verify gate the ledger names for a completed step."""
+        scope = f"--plan-id {self.plan_id}"
+        return {
+            "command": f"{scope} check-changeset --run-id {self.run_id} --step-id {step_id}",
+            "then": (
+                f"{scope} verify-handoff --actor parent --run-id {self.run_id} --step-id {step_id}"
+            ),
+        }
+
+    def assert_full_gate(self, packet, step_id="alpha"):
+        """record-return and show --next-only both exit 0 and name the whole gate."""
+        code, recorded = self.record_return_file(self.return_file(packet))
+        self.assertEqual(
+            (0, {"retry_eligible": False, "outcome": "completed", **self.gate(step_id)}),
+            (code, recorded.get("next")),
+        )
+        self.assertEqual("completed", self.checkpoint()["steps"][step_id]["status"])
+        code, shown = self.call("show", "--run-id", self.run_id, "--next-only")
+        self.assertEqual(
+            (0, {"category": "verify_pending", "step_ids": [step_id], **self.gate(step_id)}),
+            (code, shown.get("next")),
+        )
+
     def verified(self, verdict="pass", findings=()):
         packet, _ = self.completed()
         code, issued = self.verify_handoff()
@@ -75,11 +108,9 @@ class VerifyHarness(ChangesetHarness):
 class VerifyHandoffTest(VerifyHarness):
     def test_completed_return_names_the_gate_then_verify_handoff_instead_of_land(self):
         _, result = self.completed()
-        command = result["next"]["command"]
-        self.assertIn(" check-changeset ", command)
-        self.assertIn(" verify-handoff ", result["next"]["then"])
-        self.assertNotIn(" land ", json.dumps(result["next"]))
-        self.assertLessEqual(ledger.proxy_tokens(result["next"]), ledger.MAX_NEXT_TOKENS)
+        self.assertEqual(
+            {"retry_eligible": False, "outcome": "completed", **self.gate()}, result["next"]
+        )
 
     def test_closeout_only_completed_return_still_names_land(self):
         _, result = self.completed(verification="closeout-only")
@@ -436,7 +467,7 @@ class RejectRoutingTest(VerifyHarness):
         self.assertEqual(("reasoning", "failed:verification", "standard"),
                          (block["retry_class"], block["outcome"], block["next_tier"]))
         self.assertIn("--retry-remediation-file", block["command"])
-        self.assertLessEqual(ledger.proxy_tokens(block), ledger.MAX_NEXT_TOKENS)
+        self.assertLessEqual(ledger.next_tokens(block), ledger.MAX_NEXT_TOKENS)
         self.assertEqual(3, self.land()[0])
 
     def test_workers_cannot_return_the_verifier_only_code(self):
@@ -569,6 +600,47 @@ class RejectRoutingTest(VerifyHarness):
     def test_record_changeset_refuses_a_changeset_within_budget(self):
         self.completed()
         self.assert_record_changeset_refused()
+
+
+
+class IdNeutralCapTest(VerifyHarness):
+    """#144: caps bound block structure, so a long id never turns a recorded step into ok:false."""
+
+    def test_a_long_plan_id_records_the_return_and_names_the_full_gate(self):
+        self.plan_id = LONG_PLAN_ID
+        packet = self.started()
+        self.commit_file("src/alpha/a.txt", "one\n")
+        self.assert_full_gate(packet)
+
+    def test_maximal_ids_keep_every_full_next_block_through_land(self):
+        self.plan_id, sid = MAX_PLAN_ID, MAX_STEP_ID
+        self.init([leaf(sid, "leaf-owner")])
+        # The worker prompt's own 1,200-character bound counts paths, not next-block
+        # tokens; lifting it lets dispatch reach the next caps under test.
+        with patch.object(ledger_dispatch, "MAX_WORKER_PROMPT", 4096):
+            code, started = self.call("dispatch", "--actor", "parent", "--run-id", self.run_id,
+                                      "--step-id", sid, "--agent-id", MAX_AGENT_ID,
+                                      "--create-from", "main")
+        attempt = self.checkpoint()["steps"][sid]["attempt_id"]
+        self.assertEqual(
+            (0, {"await_step_id": sid, "agent_id": MAX_AGENT_ID, "attempt_id": attempt}),
+            (code, started.get("next")),
+        )
+        self.worktree = self.repo / ".worktrees" / sid
+        self.commit_file(f"src/{sid}/a.txt", "one\n")
+        self.assert_full_gate(started["handoffs"][0], sid)
+        code, issued = self.verify_handoff(sid)
+        self.assertEqual(0, code, issued)
+        code, verdict = self.record_verify(self.verify_return(issued["handoffs"][0]))
+        scope = f"--plan-id {self.plan_id}"
+        land = f"{scope} land --actor parent --run-id {self.run_id} --step-id {sid}"
+        self.assertEqual((0, {"command": f"{land} --target <target-branch>"}),
+                         (code, verdict.get("next")))
+        code, landed = self.land(sid)
+        self.assertEqual(
+            (0, [sid], [sid], {"command": f"{scope} validate --run-id {self.run_id} --closeout"}),
+            (code, landed.get("integrated"), landed.get("cleaned"), landed.get("next")),
+        )
 
 
 if __name__ == "__main__":

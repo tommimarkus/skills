@@ -80,7 +80,7 @@ class PrecisionReturnTest(PrecisionHarness):
         self.assertEqual(8, len(self.checkpoint()["steps"]["alpha"]["scope_notes"]))
         self.assertEqual((12, 12), (self.checkpoint()["steps"]["alpha"]["scope_notes_count"],
                                     result["scope_notes_count"]))
-        self.assertLessEqual(ledger.proxy_tokens(result["next"]), 120)
+        self.assertLessEqual(ledger.next_tokens(result["next"]), ledger.MAX_NEXT_TOKENS)
 
     def test_strict_and_unstamped_runs_keep_the_hard_scope_rejection(self):
         for start in (lambda: self.started(precision="strict"), self.started_unstamped):
