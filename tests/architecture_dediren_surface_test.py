@@ -312,9 +312,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         )
 
     def test_lead_ea_modeling_feedback_is_documented(self) -> None:
-        # The lead-EA modeling feedback lives canonically in architecture.md §5 and
-        # is exercised by the behavioral evals. output-format.md cites §5 rather
-        # than duplicating the prose (refactor ad4db28).
+        # The lead-EA modeling feedback is split across architecture.md: interface and
+        # handoff rules in §5, the view-concern rule in §7, tool-issue routing in §3
+        # (Package JSON Generation); the behavioral evals exercise it. output-format.md
+        # cites §5 rather than duplicating the prose (refactor ad4db28).
         evals = ARCH_REFS / "evals" / "behavior-cases.jsonl"
         output_format = ARCH_REFS / "output-format.md"
         view_concern = "define the view concern, allowed element types, and relationship types"
@@ -414,6 +415,8 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         evals = ARCH_REFS / "evals" / "behavior-cases.jsonl"
         seed_kinds = "Seed diagram kinds are starter coverage, not the full ArchiMate viewpoint mechanism"
         self._assert_sections(
+            (ARCH_DOC, "## 6. Supported Diagram Kinds", (seed_kinds,)),
+            (ARCH_DOC, "### Custom Viewpoint Path", ("Custom viewpoint path",)),
             (ARCH_DOC, ARCH_EXTRACTION, (
                 "Layout-only groups are not ArchiMate Grouping elements",
                 "semantic-boundary",
@@ -422,6 +425,10 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             (ARCH_DOC, "### Relationship Connectors And Junctions", (
                 "relationship connectors and junctions",
                 "unsupported in dediren package source",
+            )),
+            (ARCH_DOC, "## 11. Customization Profile", (
+                "Customization profile",
+                "profile, attribute, and specialization choices",
             )),
             (workflow, None, (
                 "Layout-only groups are not ArchiMate Grouping elements",
@@ -446,12 +453,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "unsupported in dediren package source",
                 seed_kinds,
                 "Custom viewpoint path",
-                "Customization profile",
-                "profile, attribute, and specialization choices",
-            )),
-            (ARCH_DOC, "## 6. Supported Diagram Kinds", (seed_kinds,)),
-            (ARCH_DOC, "### Custom Viewpoint Path", ("Custom viewpoint path",)),
-            (ARCH_DOC, "## 11. Customization Profile", (
                 "Customization profile",
                 "profile, attribute, and specialization choices",
             )),
