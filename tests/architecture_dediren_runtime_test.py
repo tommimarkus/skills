@@ -381,14 +381,20 @@ class ProvisioningTest(unittest.TestCase):
         runtime.fetch = stub_fetch(payload, checksums)
         target = runtime.bundle_dir(self.home, version)
         replace = runtime.os.replace
+        published_targets: list[object] = []
 
         def assert_staged_launcher_is_executable(source: object, destination: object) -> None:
             if Path(destination) == target:
+                published_targets.append(destination)
                 self.assertTrue(os.access(Path(source) / "bin" / "dediren", os.X_OK))
             replace(source, destination)
 
         with mock.patch.object(runtime.os, "replace", side_effect=assert_staged_launcher_is_executable):
             runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertEqual(
+            len(published_targets), 1, "the staged tree must be published to the target"
+        )
 
     def test_publish_failure_restores_quarantined_incomplete_target(self) -> None:
         version = runtime.DEDIREN_VERSION_DEFAULT
@@ -694,14 +700,35 @@ class ResolutionOrderTest(unittest.TestCase):
 
 class LauncherContractTest(unittest.TestCase):
     def test_launcher_delegates_resolution_to_the_runtime_module(self) -> None:
-        script = MCP_LAUNCHER.read_text(encoding="utf-8")
-        self.assertIn("dediren_runtime.py", script)
-        self.assertIn("--exec-upstream", script)
-        # Resolution and provisioning live in one tested place, so the shell
-        # launcher must not grow a second copy of either.
-        self.assertNotIn("DEDIREN_COMMAND", script)
-        self.assertNotIn("curl", script)
-        self.assertNotIn("XDG_CACHE_HOME", script)
+        # Resolution and provisioning live in dediren_runtime.py, so the launcher
+        # must hand --upstream to it. Observable through the executed lane: an
+        # explicit DEDIREN_COMMAND is resolved by the runtime module and exec'd
+        # with the workspace, which the shell launcher could not do itself.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            probe = root / "probe-dediren"
+            probe.write_text('#!/bin/sh\nprintf "probe-args:%s\\n" "$*"\n', encoding="utf-8")
+            probe.chmod(0o755)
+            env = {
+                **os.environ,
+                "DEDIREN_COMMAND": str(probe),
+                "DEDIREN_HOME": str(root / "home"),
+                "DEDIREN_AUTO_INSTALL": "0",
+            }
+
+            result = subprocess.run(
+                ["bash", str(MCP_LAUNCHER), "--upstream", str(workspace)],
+                text=True,
+                capture_output=True,
+                timeout=60,
+                env=env,
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("probe-args:mcp --root", result.stdout)
+        self.assertIn(str(workspace.resolve()), result.stdout)
 
     def test_router_lane_answers_initialize_without_resolving_dediren(self) -> None:
         # Codex's Agent Plugins lane has no MCP startup-timeout field and falls

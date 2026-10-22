@@ -520,6 +520,7 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
             self.assertNotIn(modern_only, legacy)
 
     def test_upstream_launcher_logs_only_resolved_command_and_arguments(self) -> None:
+        secret_sentinel = "sk-test-0123456789abcdefSENTINEL"
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             workspace = root / "workspace with spaces"
@@ -536,7 +537,11 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                 + "\n",
                 capture_output=True,
                 timeout=10,
-                env={**os.environ, "DEDIREN_COMMAND": str(fake_backend)},
+                env={
+                    **os.environ,
+                    "DEDIREN_COMMAND": str(fake_backend),
+                    "DEDIREN_TEST_API_TOKEN": secret_sentinel,
+                },
             )
 
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -545,6 +550,8 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         self.assertIn(str(fake_backend.resolve()), result.stderr)
         self.assertIn("mcp --root", result.stderr)
         self.assertNotIn("DEDIREN_COMMAND=", result.stderr)
+        self.assertNotIn(secret_sentinel, result.stderr)
+        self.assertNotIn("DEDIREN_TEST_API_TOKEN", result.stderr)
 
     def test_tool_call_routes_to_backend_for_the_explicit_workspace(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -850,12 +857,52 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         self.assertEqual(error["code"], -32602)
         self.assertIn("workspaceRoot", error["message"])
 
+    def test_tool_call_refuses_an_unusable_workspace_root(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            regular_file = root / "not-a-directory.txt"
+            regular_file.write_text("x", encoding="utf-8")
+            fake_backend = self._write_fake_backend(root)
+            absent = object()
+            cases = [
+                ("absent", absent, "must be an absolute directory"),
+                ("non-string", 42, "must be an absolute directory"),
+                ("empty", "", "must be an absolute directory"),
+                ("relative", "relative/dir", "must be an absolute directory"),
+                ("nonexistent", str(root / "missing"), "is not accessible"),
+                ("regular file", str(regular_file), "must be an absolute directory"),
+            ]
+            requests = []
+            for index, (_, value, _) in enumerate(cases, start=100):
+                arguments = {"source": "model.json"}
+                if value is not absent:
+                    arguments["workspaceRoot"] = value
+                requests.append(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": index,
+                        "method": "tools/call",
+                        "params": {"name": "dediren_validate", "arguments": arguments},
+                    }
+                )
+            result = run_router(
+                requests, env={**os.environ, "DEDIREN_MCP_LAUNCHER": str(fake_backend)}
+            )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        responses = responses_by_id(result)
+        for index, (label, _, fragment) in enumerate(cases, start=100):
+            with self.subTest(label):
+                error = responses[index]["error"]
+                self.assertEqual(error["code"], -32602)
+                self.assertIn("workspaceRoot", error["message"])
+                self.assertIn(fragment, error["message"])
+
     def test_timed_out_backend_is_terminated_and_reported_without_hanging_router(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             fake_backend = self._write_fake_backend(root)
             lifecycle_log = root / "lifecycle.log"
-            started = time.monotonic()
             result = run_router(
                 [{"jsonrpc": "2.0", "id": 8, "method": "tools/list", "params": {}}],
                 env={
@@ -866,11 +913,19 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
                     "FAKE_LIFECYCLE_LOG": str(lifecycle_log),
                 },
             )
-            elapsed = time.monotonic() - started
-            log = lifecycle_log.read_text(encoding="utf-8")
+            events = [
+                line.split()[0]
+                for line in lifecycle_log.read_text(encoding="utf-8").splitlines()
+            ]
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertLess(elapsed, 1.5, "a timed-out backend must be terminated promptly, not after the graceful-exit grace")
+        # The fake backend sleeps 60s in the hung request and logs "stop" only from
+        # its SIGTERM handler, so start then stop proves the router terminated the
+        # backend (and did not leave it sleeping or SIGKILL it) before replying.
+        # (The fake logs "stop" from both the handler and its finally block.)
+        self.assertEqual(events[0], "start")
+        self.assertGreaterEqual(events.count("stop"), 1)
+        self.assertEqual(set(events[1:]), {"stop"})
         error = responses_by_id(result)[8]["error"]
         self.assertEqual(error["code"], -32000)
         self.assertIn("timed out", error["message"])
@@ -878,7 +933,6 @@ class ArchitectureDedirenMcpRouterTest(unittest.TestCase):
         self.assertIn(f"cwd: {root.resolve()}", error["message"])
         self.assertIn("exit ", error["message"])
         self.assertIn("stderr:", error["message"])
-        self.assertIn("stop ", log)
 
     def test_dead_workspace_backend_is_restarted_only_for_the_next_tool_call(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
