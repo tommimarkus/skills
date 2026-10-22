@@ -442,25 +442,20 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "Without `--parent-review`, `record-verify` is unchanged.",
         ), heading="### Retry policy, remediation, and terminal precedence")
         assert_phrases(self, self.text(base + "references/worker-handoff.md"), (
-            "Parent review of the returned leaf, including each target its `task` names "
-            "explicitly, completes before that `record-return`",
+            "Parent review, including each target the `task` names, precedes that "
+            "`record-return`",
             "`--parent-review` lane",
         ), heading="# Worker handoff and return preflight")
         assert_phrases(self, self.text(base + "references/verify-handoff.md"), (
-            "Enumerate each explicit target `task` names (file, heading, symbol, value) and "
-            "confirm each in the diff; a target missing, or met more broadly or narrowly than "
-            "named (for example a check scoped to a whole document when the task names one "
-            "section), is a `verify:coverage` finding.",
+            "confirm in the diff each target it names (file, heading, symbol, value): one "
+            "missing, or met more broadly or narrowly than named, is `verify:coverage`.",
         ), heading="## Five checks")
-        assert_phrases(self, self.text(base + "references/verify-handoff.md"), (
-            "After a pass the parent may record a `--parent-review` reject",
-        ), heading="# Verifier handoff")
         for adapter, heading in (("claude-code", "## Capability resolution"),
                                  ("codex", "## Dispatch and model mapping")):
             assert_phrases(self, self.text(base + f"extensions/{adapter}.md"), (
-                "Parent review of each returned leaf, including each target its `task` names, "
-                "completes before `record-return`; a deviation found after a verifier pass uses "
-                "the [ledger contract](../references/ledger-contract.md) "
+                "Parent review, including each target the `task` names, precedes "
+                "`record-return`; after a verifier pass, use the "
+                "[ledger contract](../references/ledger-contract.md) "
                 "`record-verify --parent-review` lane.",
             ), heading=heading)
 

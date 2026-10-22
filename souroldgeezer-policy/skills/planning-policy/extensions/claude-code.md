@@ -87,9 +87,8 @@ deep builds, as named by the packet's `verifier_tier`. Make one `Agent` call per
 context or notes. An unavailable agent is `blocked:model_unavailable`; never
 downgrade.
 
-Parent review of each returned leaf, including each target its `task` names,
-completes before `record-return`; a deviation found after a verifier pass uses
-the [ledger contract](../references/ledger-contract.md)
+Parent review, including each target the `task` names, precedes `record-return`;
+after a verifier pass, use the [ledger contract](../references/ledger-contract.md)
 `record-verify --parent-review` lane.
 
 Never substitute a versioned model identifier for an alias and never silently

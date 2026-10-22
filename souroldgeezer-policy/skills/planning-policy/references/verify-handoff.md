@@ -10,8 +10,7 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `acceptance_command`, `cohesive_outcome`, `acceptance_exit_code`,
 `base_commit`, `returned_commit`, `budget`, `changeset`, `outside_write_set`,
 `prior_verify` (null unless a retry: `verify_id`, `rejected_commit`,
-`findings`), and `return_schema`. After a pass the parent may record a
-`--parent-review` reject, so a `prior_verify` may come from parent review.
+`findings`), and `return_schema`.
 
 ## Inputs and reads
 
@@ -28,11 +27,9 @@ in the leaf's acceptance command, whose exit code the packet carries.
 
 ## Five checks
 
-1. Task coverage: every part of `task` is done. Enumerate each explicit target
-   `task` names (file, heading, symbol, value) and confirm each in the diff; a
-   target missing, or met more broadly or narrowly than named (for example a
-   check scoped to a whole document when the task names one section), is a
-   `verify:coverage` finding.
+1. Task coverage: every part of `task` is done; confirm in the diff each target
+   it names (file, heading, symbol, value): one missing, or met more broadly or
+   narrowly than named, is `verify:coverage`.
 2. Decisions: each `settled_decisions` entry and each `approved_decisions`
    entry that applies to this leaf is respected.
 3. Silent removal: no behavior, rule, test, or assertion was removed without

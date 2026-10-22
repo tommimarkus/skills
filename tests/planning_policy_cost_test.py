@@ -107,7 +107,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # on every route loading it; rounded up to 10).
         # #135/#137 write-set closure: core-workflow.md names the pins the literal
         # pin scan cannot see (+52 measured on every route loading it; rounded up to 10).
-        self.assertLessEqual(claude["load_total"], 8840)
+        # #147: parent review before record-return and the --parent-review lane in the
+        # Claude adapter plus shared contract text (+54 measured; rounded up to 10).
+        self.assertLessEqual(claude["load_total"], 8900)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -122,7 +124,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # verify-loop contract docs: same shared additions plus codex verifier dispatch
         # (+287 measured; slack 5 kept). #143: same plan-contract.md sentence (+35).
         # #135/#137: same core-workflow.md write-set closure sentence (+52).
-        self.assertLessEqual(codex["load_total"], 8720)
+        # #147: the same parent-review sentences in the Codex adapter and shared
+        # contract text (+54 measured; rounded up to 10).
+        self.assertLessEqual(codex["load_total"], 8780)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -173,7 +177,11 @@ class PlanningPolicyCostTest(unittest.TestCase):
         for name, agent, handoff, budget in (
             # #143: verify-handoff.md names approved_decisions, widens check 2, and
             # states the builder-notes evidence limit (+87 measured; rounded up to 10).
-            ("worker", "step", "worker", 2450), ("verifier", "verify", "verify", 1190),
+            # #147: worker-handoff.md states parent review precedes record-return
+            # (+45 measured on the worker route; rounded up to 10).
+            # #147: check 1 enumerates each named target, the coverage fact a live
+            # verifier missed (+37 measured; rounded up to 10).
+            ("worker", "step", "worker", 2500), ("verifier", "verify", "verify", 1220),
         ):
             result = self.measure(f"planning-policy-{name}")
             files = [row["file"] for row in result["rows"]]
@@ -217,7 +225,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # verify-loop contract docs: same shared core-workflow/SKILL.md additions (+287
         # measured; slack 5 kept). #143: plan-contract.md sentence (+35).
         # #135/#137: core-workflow.md write-set closure sentence (+52).
-        self.assertLessEqual(result["load_total"], 9830)
+        # #147: the same parent-review sentences (+54 measured; rounded up to 10).
+        self.assertLessEqual(result["load_total"], 9880)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))
