@@ -55,12 +55,18 @@ def skill_md_for(name: str):
 
 
 @functools.lru_cache(maxsize=None)
-def current_inventory(name: str):
+def _inventory_json(name: str) -> str:
+    """Cache canonical text, never a mutable dict, so no caller can alias shared state."""
     patterns = json.loads(CODE_PATTERNS.read_text(encoding="utf-8"))
     files = slc.resolve_closure(skill_md_for(name))
-    return slc.union_inventory(
+    inventory = slc.union_inventory(
         [slc.extract_inventory(f.read_text(encoding="utf-8"), patterns) for f in files]
     )
+    return json.dumps(inventory)
+
+
+def current_inventory(name: str):
+    return json.loads(_inventory_json(name))
 
 
 def committed_baselines() -> list[str]:
