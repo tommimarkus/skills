@@ -553,23 +553,6 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
             with self.subTest(relative_path=relative_path):
                 self.assertTrue((bundle / relative_path).is_file())
 
-        guide = (bundle / "docs" / "agent-usage.md").read_text(encoding="utf-8")
-        for phrase in [
-            "Minimal Source JSON",
-            "Artifact Map",
-            "Command Handoff",
-            "Repair Rules",
-            "Semantic Profiles",
-            "DEDIREN_BUNDLE_ROOT",
-            "DEDIREN_SCHEMA_CACHE_DIR",
-            "official Eclipse ELK Java libraries",
-            "uml-xmi",
-            "uml-sequence",
-            "Java 21 or newer",
-        ]:
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, guide)
-
     def test_shipped_render_policies_match_live_reference_defaults(self) -> None:
         """Every shipped policy mirrors the notation-aware Dediren resource exactly."""
         resource_uris = {

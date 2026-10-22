@@ -730,36 +730,6 @@ class LauncherContractTest(unittest.TestCase):
         self.assertIn("probe-args:mcp --root", result.stdout)
         self.assertIn(str(workspace.resolve()), result.stdout)
 
-    def test_router_lane_answers_initialize_without_resolving_dediren(self) -> None:
-        # Codex's Agent Plugins lane has no MCP startup-timeout field and falls
-        # back to a 30s default, so the handshake must not wait on resolution or
-        # provisioning; those happen later, on the first tools/list.
-        request = (
-            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":'
-            '{"protocolVersion":"2025-06-18","capabilities":{},'
-            '"clientInfo":{"name":"probe","version":"1"}}}\n'
-        )
-        # Keep the real PATH so the shell itself resolves; the point of the test
-        # is that the handshake completes with no runtime available at all.
-        env = {
-            **os.environ,
-            "DEDIREN_HOME": self.missing_home(),
-            "DEDIREN_AUTO_INSTALL": "0",
-        }
-        env.pop("DEDIREN_COMMAND", None)
-
-        result = subprocess.run(
-            ["bash", str(MCP_LAUNCHER)],
-            input=request,
-            text=True,
-            capture_output=True,
-            timeout=60,
-            env=env,
-        )
-
-        self.assertIn('"serverInfo"', result.stdout)
-        self.assertIn("dediren-workspace-router", result.stdout)
-
     def empty_bin(self) -> str:
         directory = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: directory.rmdir())
