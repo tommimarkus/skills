@@ -15,15 +15,16 @@
 # tool, parse failure, or non-repo context exits 0 (allow). It denies only when
 # ALL of these hold:
 #   * the command creates/amends a commit via `git commit`;
-#   * no explicit override token `ALLOW_MAIN_COMMIT=1` is present;
+#   * that commit segment carries no leading `ALLOW_MAIN_COMMIT=1` assignment
+#     and no real --dry-run / -h / --help argument (quoted text never counts);
 #   * the effective git dir is the PRIMARY checkout (git-dir == git-common-dir);
 #   * the current branch is `main`;
 #   * at least one linked worktree exists;
 #   * the repo is this marketplace (root has `.claude-plugin/marketplace.json`).
 #
 # Deliberate integration onto main (e.g. the update-ref fallback used when the
-# primary checkout is writable) is allowed by prefixing the command with
-# `ALLOW_MAIN_COMMIT=1`. Fast-forward merges (`git merge --ff-only`) create no
+# primary checkout is writable) is allowed by prefixing the commit segment with
+# `ALLOW_MAIN_COMMIT=1` (optionally after `env`). Fast-forward merges (`git merge --ff-only`) create no
 # commit and are unaffected.
 
 set -euo pipefail
@@ -43,16 +44,30 @@ cmd=$(jq -r 'if (.tool_input.command | type) == "string" then .tool_input.comman
 cwd=$(jq -r 'if (.cwd | type) == "string" then .cwd else "" end' <<<"$input")
 [[ -n "$cwd" ]] || cwd="$PWD"
 
-# 1) Does the command create/amend a commit via `git commit`? Match
-#    `git commit` and `git -C <path> commit`, requiring `commit` at a word
-#    boundary (so `git commit-graph` / `commit-tree` do not match). Exclude
-#    dry-run and help.
-grep -Eq '(^|[;&|[:space:]])git([[:space:]]+-C[[:space:]]+[^[:space:];&|]+)?[[:space:]]+commit([[:space:]]|$)' <<<"$cmd" || exit 0
-grep -Eq '(^|[[:space:]])--dry-run([[:space:]]|=|$)' <<<"$cmd" && exit 0
-grep -Eq '(^|[[:space:]])(-h|--help)([[:space:]]|$)' <<<"$cmd" && exit 0
-
-# 2) Explicit override for deliberate integration onto main.
-grep -Eq '(^|[[:space:]])ALLOW_MAIN_COMMIT=1([[:space:]]|$)' <<<"$cmd" && exit 0
+# 1) Which command segments create/amend a commit via `git commit`? Quoted
+#    spans become a `Q` placeholder first, so text inside a message never counts
+#    as an override token or a flag; then the command splits on `;`, `&` and `|`
+#    (covers `&&`, `||`) and newlines. A segment matches `git commit` and
+#    `git -C <path> commit`, with `commit` at a word boundary (so
+#    `git commit-graph` / `commit-tree` do not match).
+commit_re='(^|[[:space:]])git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+commit([[:space:]]|$)'
+# A segment is exempt when the commit is only a dry run / help request (a real
+# argument of that segment), or when ALLOW_MAIN_COMMIT=1 is a leading NAME=value
+# assignment (optionally after `env`) of that same segment: the explicit
+# override for deliberate integration onto main.
+flag_re='(^|[[:space:]])(--dry-run([[:space:]=]|$)|-h([[:space:]]|$)|--help([[:space:]]|$))'
+override_re='^[[:space:]]*(env[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*ALLOW_MAIN_COMMIT=1[[:space:]]+([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*git[[:space:]]'
+stripped=$(sed -E "s/\"[^\"]*\"|'[^']*'/Q/g" <<<"$cmd" | sed -E 's/[;&|]+/\n/g') || exit 0
+saw_commit=0
+guarded=0
+while IFS= read -r segment; do
+  [[ "$segment" =~ $commit_re ]] || continue
+  saw_commit=1
+  [[ "$segment" =~ $flag_re ]] && continue
+  [[ "$segment" =~ $override_re ]] && continue
+  guarded=1
+done <<<"$stripped"
+[[ "$saw_commit" -eq 1 && "$guarded" -eq 1 ]] || exit 0
 
 # 3) Resolve the effective directory the commit would run in: first a leading
 #    `cd <path> &&|;` prefix (the recommended dispatch pattern), then a

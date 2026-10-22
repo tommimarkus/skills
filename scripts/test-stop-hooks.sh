@@ -57,8 +57,24 @@ hook_input() {
 assert_block() {
   local output=$1
   local needle=$2
-  [[ "$(jq -r '.decision' <<<"$output")" == "block" ]]
-  jq -e --arg needle "$needle" '.reason | contains($needle)' <<<"$output" >/dev/null
+  if [[ "$(jq -r '.decision' <<<"$output")" != "block" ]]; then
+    printf 'FAIL: assert_block expected decision "block" for needle %q, got:\n%s\n' "$needle" "$output" >&2
+    return 1
+  fi
+  if ! jq -e --arg needle "$needle" '.reason | contains($needle)' <<<"$output" >/dev/null; then
+    printf 'FAIL: assert_block reason lacks needle %q in:\n%s\n' "$needle" "$output" >&2
+    return 1
+  fi
+}
+
+# `! cmd` is exempt from `set -e`, so a negative must be an explicit check.
+assert_reason_lacks() {
+  local output=$1
+  local needle=$2
+  if jq -e --arg needle "$needle" '.reason | contains($needle)' <<<"$output" >/dev/null; then
+    printf 'FAIL: assert_reason_lacks found forbidden needle %q in:\n%s\n' "$needle" "$output" >&2
+    return 1
+  fi
 }
 
 assert_empty() {
@@ -287,8 +303,8 @@ arch_skill_claude=$(hook_input "$skill_fixture" "arch-skill-claude" false |
   CLAUDECODE=1 AGENT_HOOK_DEBUG=1 bash "$skill_fixture/scripts/agent-hooks/stop-skill-architecture.sh")
 assert_block "$arch_skill_claude" 'Skill or plugin surfaces changed'
 assert_block "$arch_skill_claude" 'skill-architecture-report'
-! jq -e '.reason | contains("plugin-eval")' <<<"$arch_skill_claude" >/dev/null
-! jq -e '.reason | contains("plugin-dev")' <<<"$arch_skill_claude" >/dev/null
+assert_reason_lacks "$arch_skill_claude" 'plugin-eval'
+assert_reason_lacks "$arch_skill_claude" 'plugin-dev'
 
 # Once-per-session marker suppresses a repeat in the same session.
 arch_repeat=$(hook_input "$skill_fixture" "arch-skill-hooks" false |

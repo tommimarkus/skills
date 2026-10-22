@@ -164,6 +164,81 @@ class WorktreeCommitGuardTest(unittest.TestCase):
         _git(primary, "checkout", "-b", "topic")
         self.assertIsNone(_run_guard('git commit -m "wip"', primary))
 
+    # --- override and flag semantics (token counts only as a leading assignment) ---
+
+    def _denied_cases(self, commands: list[str], cwd: Path) -> None:
+        for command in commands:
+            with self.subTest(command=command):
+                self._assert_denied(_run_guard(command, cwd))
+
+    def _allowed_cases(self, commands: list[str], cwd: Path) -> None:
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertIsNone(_run_guard(command, cwd))
+
+    def test_blocks_override_token_only_inside_message_or_after_git(self) -> None:
+        primary = self._make_repo()
+        self._add_worktree(primary)
+        self._denied_cases(
+            [
+                'git commit -m "ALLOW_MAIN_COMMIT=1"',
+                "git commit -m 'note ALLOW_MAIN_COMMIT=1 here'",
+                "git commit -m wip ALLOW_MAIN_COMMIT=1",
+                'echo ALLOW_MAIN_COMMIT=1; git commit -m wip',
+                "ALLOW_MAIN_COMMIT=1 git status && git commit -m wip",
+            ],
+            primary,
+        )
+
+    def test_blocks_dry_run_or_help_only_inside_quoted_message(self) -> None:
+        primary = self._make_repo()
+        self._add_worktree(primary)
+        self._denied_cases(
+            [
+                'git commit -m "explain --dry-run"',
+                "git commit -m 'use -h for usage'",
+                'git commit -m "see --help"',
+            ],
+            primary,
+        )
+
+    def test_allows_flags_as_real_arguments_of_the_commit(self) -> None:
+        primary = self._make_repo()
+        self._add_worktree(primary)
+        self._allowed_cases(
+            ["git commit --dry-run", "git commit -h", "git commit --help"], primary
+        )
+
+    def test_allows_leading_override_assignment_forms(self) -> None:
+        primary = self._make_repo()
+        self._add_worktree(primary)
+        self._allowed_cases(
+            [
+                'env ALLOW_MAIN_COMMIT=1 git commit -m "integrate"',
+                'git status && ALLOW_MAIN_COMMIT=1 git commit -m "integrate"',
+                'git status; ALLOW_MAIN_COMMIT=1 git commit -m "integrate"',
+                'false || ALLOW_MAIN_COMMIT=1 git commit -m "integrate"',
+            ],
+            primary,
+        )
+
+    def test_blocks_chained_and_am_commit_forms(self) -> None:
+        primary = self._make_repo()
+        self._add_worktree(primary)
+        self._denied_cases(
+            [
+                'git add -A && git commit -m "wip"',
+                'git add -A; git commit -m "wip"',
+                'git commit -am "wip"',
+            ],
+            primary,
+        )
+
+    def test_dash_c_primary_from_worktree_cwd_is_denied(self) -> None:
+        primary = self._make_repo()
+        wt = self._add_worktree(primary)
+        self._assert_denied(_run_guard(f'git -C {primary} commit -m "wip"', wt))
+
 
 if __name__ == "__main__":
     unittest.main()
