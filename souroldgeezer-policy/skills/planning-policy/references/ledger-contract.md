@@ -539,13 +539,12 @@ only after a verifier pass goes through
 `record-verify --actor parent --run-id R --return-file F --parent-review`, never
 an out-of-plan parent edit.
 
-`F` is a `bounded-verify-return-v1` `reject` with at
-least one finding, whose `verify_id` equals the stored passing verdict's. It
-refuses unless the policy is `leaf_verify_v1`, the step is `completed` (so never
-`integrated` or `cleaned`), a stored `pass` or `inconclusive` verdict binds the
-returned commit, the return's verdict is `reject` (the lane only
-rejects), and HEAD is the returned tip with a clean
-worktree; a refusal changes nothing. It stores `F` at
+`F` is a `bounded-verify-return-v1` `reject` with at least one finding, whose
+`verify_id` equals the stored passing verdict's. It refuses unless the policy is
+`leaf_verify_v1`, the step is `completed` (so never `integrated` or `cleaned`),
+a stored `pass` or `inconclusive` verdict binds the returned commit, the
+return's verdict is `reject` (the lane only rejects), and HEAD is the returned
+tip with a clean worktree; a refusal changes nothing. It stores `F` at
 `verifies/<sid>/<verify_id>.parent-review.json`, leaves the verifier's file
 untouched, replaces the stored verdict with that reject, and settles it as a
 `record-verify` reject: `failed:verification` with the summary
