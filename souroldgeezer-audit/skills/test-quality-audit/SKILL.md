@@ -187,7 +187,8 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
   effectiveness conclusion.
 - `tdd-policy` owns RED→GREEN→REFACTOR, the behavioral-change/refactor
   classification, RED-test level and placement, and in-cycle retirement of a
-  test the new test supersedes. This audit judges the accumulated suite;
+  superseded test, the cycle's own scaffold and characterization tests, and a
+  removed behavior's tests. This audit judges the accumulated suite;
   retirement from similarity or history stays `verify-then-retire` here; test
   count, test-to-code ratio, and “never failed” history are informational alone.
 - The suite recovery program is advisory: the audit edits, deletes,

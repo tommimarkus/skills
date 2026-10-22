@@ -44,6 +44,14 @@ data changes that need no code/module, API/schema, IaC, security, test, or
 other sibling-owned decision. It validates the named content operation directly
 and returns before loading normal design guidance.
 
+`tdd-policy` measures observable behavior at a declared seam, by default each
+module's public API. An internal refactor or trivial wiring therefore adds no
+test, a scaffold test below the seam is rewritten at the seam or deleted before
+GREEN lands, and removing a behavior removes its tests in the same change. Tests
+that a behavior-preserving refactor had to edit are listed as
+`structure-coupled`, which `test-quality-audit` reads as `verify-then-retire`
+evidence, never as grounds for deletion on its own.
+
 `tdd-policy` stays stack-neutral about how a test is written: tests reuse the
 suite's shared helpers, share only immutable setup, avoid fixed sleeps and real
 clocks, give the same result under any machine locale or timezone, and run RED

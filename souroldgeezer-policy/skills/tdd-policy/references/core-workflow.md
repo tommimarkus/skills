@@ -222,12 +222,9 @@ tests this cycle wrote, touched, or made redundant:
 - **Structure-coupled tests.** When a behavior-preserving refactor in this
   cycle needed edits to existing tests, those tests are structure-coupled. List
   them in the footer's `structure-coupled:` field, and rewrite each at the seam
-  where the cycle's scope allows; otherwise leave it. The record is evidence for `test-quality-audit`'s
-  `verify-then-retire`, stronger than similarity or history because a change
-  that preserved behavior still broke the test, but it never retires a test by
-  itself. It adds no telemetry: the footer is the record, and the audit reads
-  it from accessible history (commit messages, PR/MR text) when the project
-  keeps it there.
+  where the cycle's scope allows; otherwise leave it. The footer is the record,
+  with no new telemetry: `test-quality-audit` weighs it as `verify-then-retire`
+  evidence, and it never retires a test by itself.
 - **Shared setup.** Fold duplicated setup code into the suite's shared helpers.
   When the project configures a duplication detector, run it on the test files
   touched this cycle and fold its findings into shared helpers.

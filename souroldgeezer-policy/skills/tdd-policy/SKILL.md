@@ -56,8 +56,8 @@ selects RED and resolves its own scaffold tests inside its own write set, and
 the parent runs the suite step once across all workers' tests at integration,
 before final verification. Keep opt-out low-friction (disable line, one-phrase
 per-task override logged, scope/exception globs, `test-after` downgrade) —
-opt-out is where user choice lives. `test-after` relaxes the invariant and is an opt-out,
-never a variant. Delegate test adequacy and similarity/history retirement to
+opt-out is where user choice lives. `test-after` relaxes the invariant and is an
+opt-out, never a variant. Delegate test adequacy and similarity/history retirement to
 `test-quality-audit`, code/module design and test-code idioms to
 `software-design`, commit/branch preflight to `git-workflow-policy`, PR/MR to
 `pr-ops`, issues to `issue-ops`.

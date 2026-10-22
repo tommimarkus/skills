@@ -456,7 +456,7 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `pr-ops` | `souroldgeezer-ops` | Explicit PR/MR operations and prepared branches; provider-agnostic core + GitHub™ / GitLab™ extensions |
 | `git-workflow-policy` | `souroldgeezer-policy` | Passive developer git workflow policy; standing enforcement once initialized in target-repo guidance |
 | `release-policy` | `souroldgeezer-policy` | Passive distribution policy (versions, changelog, tags, publication); standing enforcement once initialized |
-| `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path; behavioral-change/refactor classification, cost-aware RED selection, execution-scope ladder, REFACTOR retires superseded tests |
+| `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path; a declared observable-behavior seam (default: each module's public API); behavioral / refactor / trivial / requirement-change / behavior-removal classification, cost- and retention-aware RED selection, execution-scope ladder; REFACTOR resolves scaffold tests and retires superseded, expired-characterization, and removed-behavior tests |
 | `planning-policy` | `souroldgeezer-policy` | Active opt-out plan-first policy; install-passive, enforced-by-default once initialized; opens plan mode (EnterPlanMode) and runs a light brainstorm before work covered by the standing line, approving the approach via ExitPlanMode with no spec file; low-friction opt-out |
 | `scope-policy` | `souroldgeezer-policy` | Passive change-footprint policy; bounds a change to a declared level (`targeted` / `balanced` / `open`), records out-of-level findings instead of doing them, and escalates one rung only when a level is insurmountable; bare initialization defaults to `balanced` |
 | `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain, and evidence-backed .NET / Python / JavaScript/TypeScript application-security paths, with an on-demand ASVS 5.0.0 crosswalk for declared levels; cost stance from `config.yaml` or the target repository's `AGENTS.md` / `CLAUDE.md` guidance |
@@ -470,18 +470,22 @@ One row per published skill. **Each skill's own `SKILL.md` is its binding contra
 | `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, shareable HTML gallery, drift, reverse lookup |
 
 Inspect existing tests before selecting the RED test, and classify the change
-first: new or changed observable behavior needs a focused failing test at the
-cheapest level that proves it; a behavior-preserving refactor runs under
-existing passing tests, adding bounded characterization coverage only where
-protection is missing. Extend a suitable cohesive scenario without weakening
-coverage; create a new test when the scenario is distinct or reuse would weaken
-clarity or regression coverage, reusing existing fixtures. A pre-existing
-failure counts as RED only when it precisely represents the intended behavior.
-Run the focused scenario per RED/GREEN step and the full suite at the declared
-cadence. REFACTOR includes the suite: retire or consolidate a test the new one
-supersedes, naming its successor. Reuse `tests/surface_test_lib.py` helpers before
-defining new ones; share only immutable setup; no fixed sleeps, real clocks, or
-reliance on the machine's locale or timezone. Budget full-suite: 35s for the closeout
+first by its effect at the seam (by default each module's public API): new or
+changed observable behavior there needs a focused failing test at the cheapest
+level that proves it through the seam; a change with no effect at the seam is a
+behavior-preserving refactor and runs under existing passing tests, adding
+bounded characterization coverage only where protection is missing; trivial
+wiring, delegation, accessors, and declarative config get no RED of their own.
+Extend a suitable cohesive scenario without weakening coverage; create a new
+test when the scenario is distinct or reuse would weaken clarity or regression
+coverage, reusing existing fixtures. A pre-existing failure counts as RED only
+when it precisely represents the intended behavior. Run the focused scenario per
+RED/GREEN step and the full suite at the declared cadence. REFACTOR includes the
+suite: retire or consolidate a test the new one supersedes, naming its
+successor; rewrite at the seam or delete any scaffold test below it before GREEN
+lands; removing a behavior removes its tests. Reuse `tests/surface_test_lib.py`
+helpers before defining new ones; share only immutable setup; no fixed sleeps,
+real clocks, or reliance on the machine's locale or timezone. Budget full-suite: 35s for the closeout
 `unittest discover` lane (measured 32.9 s on 2026-10-15 after the second
 suite-recovery batch, down from 47.6 s; re-record the budget to the latest
 measured run after each landed batch, target 30s).
@@ -492,7 +496,7 @@ Design and audit skills share the Build / Extract / Review / Lookup (design) and
 - `software-design` → `app-design` (frontend), `api-design` (HTTP), `infra-design` (IaC), `architecture-design` (ArchiMate®/UML® drift), `devsecops-audit` (security), `test-quality-audit` (test adequacy).
 - `app-design` / `api-design` / `infra-design` / `software-design` → `architecture-design` drift review via the paired package at `docs/architecture/<feature>.dediren/`; `app-design` ↔ `api-design` at the frontend/API boundary.
 - `git-workflow-policy` → `pr-ops`, `issue-ops`, `release-policy`; `release-policy` applies `git-workflow-policy` preflight then → `pr-ops`; `issue-ops` ↔ `pr-ops` handoff.
-- `tdd-policy` → `test-quality-audit` (test adequacy, similarity/history retirement), `software-design` (design, and language test-code idioms by skill name), `git-workflow-policy` preflight; siblings hand test-first enforcement to `tdd-policy`.
+- `tdd-policy` → `test-quality-audit` (test adequacy, similarity/history retirement, `structure-coupled` records as `verify-then-retire` evidence), `software-design` (design, splitting code that is both complex and highly connected, and language test-code idioms by skill name), `git-workflow-policy` preflight; siblings hand test-first enforcement to `tdd-policy`.
 - `planning-policy` → the design skills (`software-design`, `app-design`, `api-design`, `infra-design`), `architecture-design`, the audits, and `pr-ops` / `issue-ops` once the approach is approved; composes with `tdd-policy` (plan first, then test-first); siblings hand pre-implementation approach planning to `planning-policy`. A plan states the declared scope level and escalation mode among its settled decisions; each leaf's existing `boundary`/`write_set` materializes it, with no new plan field.
 - `lean-audit` → `devsecops-audit` (security), `test-quality-audit` (tests), `ip-hygiene` (copyright / marks / licence), the design skills (code / structure); sibling skills may hand duplication / waste assessment to `lean-audit`.
 - `scope-policy` → `issue-ops` (record out-of-level findings), the design skills' project assimilation (existing-code disposition), `lean-audit` (duplication / waste), `software-design` (solution minimalism and design), `planning-policy` (plan-first approach), `tdd-policy` (test-first), `git-workflow-policy` (commit/branch); siblings hand change-footprint bounding to `scope-policy`.

@@ -180,18 +180,22 @@ authorization responsibilities.
   keep that root file free of `env` and `cwd`, as documented above.
 
 Inspect existing tests before selecting the RED test, and classify the change
-first: new or changed observable behavior needs a focused failing test at the
-cheapest level that proves it; a behavior-preserving refactor runs under
-existing passing tests, adding bounded characterization coverage only where
-protection is missing. Extend a suitable cohesive scenario without weakening
-coverage; create a new test when the scenario is distinct or reuse would weaken
-clarity or regression coverage, reusing existing fixtures. A pre-existing
-failure counts as RED only when it precisely represents the intended behavior.
-Run the focused scenario per RED/GREEN step and the full suite at the declared
-cadence. REFACTOR includes the suite: retire or consolidate a test the new one
-supersedes, naming its successor. Reuse `tests/surface_test_lib.py` helpers before
-defining new ones; share only immutable setup; no fixed sleeps, real clocks, or
-reliance on the machine's locale or timezone.
+first by its effect at the seam (by default each module's public API): new or
+changed observable behavior there needs a focused failing test at the cheapest
+level that proves it through the seam; a change with no effect at the seam is a
+behavior-preserving refactor and runs under existing passing tests, adding
+bounded characterization coverage only where protection is missing; trivial
+wiring, delegation, accessors, and declarative config get no RED of their own.
+Extend a suitable cohesive scenario without weakening coverage; create a new
+test when the scenario is distinct or reuse would weaken clarity or regression
+coverage, reusing existing fixtures. A pre-existing failure counts as RED only
+when it precisely represents the intended behavior. Run the focused scenario per
+RED/GREEN step and the full suite at the declared cadence. REFACTOR includes the
+suite: retire or consolidate a test the new one supersedes, naming its
+successor; rewrite at the seam or delete any scaffold test below it before GREEN
+lands; removing a behavior removes its tests. Reuse `tests/surface_test_lib.py`
+helpers before defining new ones; share only immutable setup; no fixed sleeps,
+real clocks, or reliance on the machine's locale or timezone.
 
 ## Runtime parity
 
