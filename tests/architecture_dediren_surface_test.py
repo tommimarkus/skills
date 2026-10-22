@@ -1,16 +1,22 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, assert_phrases, read_jsonl
+from tests.surface_test_lib import REPO_ROOT, assert_phrases, compact, load_script_module, read_jsonl
 
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
 ARCH_DOC = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
 ARCH_REFS = ARCH_PLUGIN / "skills" / "architecture-design" / "references"
+ARCH_SKILL = ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md"
+ARCH_RELATIONSHIPS = "## 5. Relationship Discipline"
+ARCH_VIEW_RULES = "## 7. View Design Rules"
+ARCH_EXTRACTION = "## 8. Extraction And Source Evidence"
+ARCH_RUNTIME = "## 9. Runtime Evidence"
 ACTIVE_SURFACES = [
     REPO_ROOT / "README.md",
     REPO_ROOT / "CLAUDE.md",
@@ -73,6 +79,14 @@ def raw_file(path: Path) -> str:
 
 
 class ArchitectureDedirenSurfaceTest(unittest.TestCase):
+    def _assert_sections(self, *expectations) -> None:
+        """For each (surface, heading, phrases): the phrases appear in that heading's
+        section of the surface; heading None scopes to the whole document (a file with
+        no sub-sections, or text before its first heading)."""
+        for surface, heading, phrases in expectations:
+            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
+                assert_phrases(self, raw_file(surface), phrases, heading=heading)
+
     def _assert_phrase_in_surfaces(self, surfaces: list, phrase: str) -> None:
         """One phrase, checked (compacted) across a list of surfaces."""
         for surface in surfaces:
@@ -302,67 +316,50 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 self.assertIn(expected_path, surface.read_text(encoding="utf-8"))
 
     def test_extract_guidance_requires_source_backed_groups(self) -> None:
-        expected_phrase = "source-backed groups"
-
-        for surface in EXTRACT_GROUP_SURFACES:
-            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                self.assertIn(expected_phrase, surface.read_text(encoding="utf-8"))
+        procedures = ARCH_REFS / "procedures"
+        self._assert_sections(
+            (ARCH_SKILL, "## Modes", ("source-backed groups",)),
+            (procedures / "architecture-operational-workflow.md", None, ("source-backed groups",)),
+            (procedures / "lifting-rules-dotnet.md", "## Package Output", ("source-backed groups",)),
+            (procedures / "lifting-rules-bicep.md", "## Package Output", ("source-backed groups",)),
+            (procedures / "lifting-rules-gha.md", "## Package Output", ("source-backed groups",)),
+            (procedures / "lifting-rules-process.md", "## Evidence", ("source-backed groups",)),
+            (ARCH_REFS / "output-format.md", "## Footer", ("source-backed groups",)),
+            (ARCH_REFS / "evals" / "behavior-cases.jsonl", None, ("source-backed groups",)),
+        )
 
     def test_extract_group_guidance_names_generic_graph_model_location(self) -> None:
-        expected_phrase = "model.json` under `plugins.generic-graph.views[].groups`, not `package.json`"
-        surfaces = [
-            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-        ]
-
-        self._assert_phrase_in_surfaces(surfaces, expected_phrase)
+        phrase = "model.json` under `plugins.generic-graph.views[].groups`, not `package.json`"
+        self._assert_sections(
+            (ARCH_SKILL, "## Modes", (phrase,)),
+            (ARCH_REFS / "procedures" / "architecture-operational-workflow.md", None, (phrase,)),
+            (ARCH_DOC, ARCH_EXTRACTION, (phrase,)),
+        )
 
     def test_process_lifting_guidance_prevents_overgrouping_small_linear_views(self) -> None:
-        expected_phrase = (
+        phrase = (
             "Do not add groups to small linear process views unless a participant, "
             "system responsibility, trust boundary, or orchestration boundary "
             "changes the architectural reading."
         )
-        surfaces = [
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "lifting-rules-process.md",
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-        ]
-
-        self._assert_phrase_in_surfaces(surfaces, expected_phrase)
+        self._assert_sections(
+            (ARCH_REFS / "procedures" / "lifting-rules-process.md", "## Evidence", (phrase,)),
+            (ARCH_DOC, ARCH_EXTRACTION, (phrase,)),
+        )
 
     def test_grouped_layout_guidance_requires_validation_fallback(self) -> None:
         # The grouped-layout validation fallback prose lives canonically in
         # architecture.md §9. output-format.md and the operational workflow cite
         # that section instead of duplicating the prose (refactor ad4db28).
-        canonical = ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        self._assert_phrases_in_surfaces([canonical], [
-            "In Build or Extract, if grouped layout validation returns connector-through-node, invalid-route, or group-boundary diagnostics",
-            "rerun the same view without groups",
-            "use the cleaner layout as evidence and report the grouped-layout regression",
-        ])
-
-        self._assert_phrases_in_surfaces(
-            [
-                ARCH_PLUGIN
-                / "skills"
-                / "architecture-design"
-                / "references"
-                / "procedures"
-                / "architecture-operational-workflow.md",
-                ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ],
-            ["architecture.md` §9", "grouped-layout fallback", "report the regression"],
+        citing = ["architecture.md` §9", "grouped-layout fallback", "report the regression"]
+        self._assert_sections(
+            (ARCH_DOC, ARCH_RUNTIME, (
+                "In Build or Extract, if grouped layout validation returns connector-through-node, invalid-route, or group-boundary diagnostics",
+                "rerun the same view without groups",
+                "use the cleaner layout as evidence and report the grouped-layout regression",
+            )),
+            (ARCH_REFS / "procedures" / "architecture-operational-workflow.md", None, citing),
+            (ARCH_REFS / "output-format.md", None, citing),
         )
 
     def test_lead_ea_modeling_feedback_is_documented(self) -> None:
@@ -406,36 +403,24 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         # and output-format cite §5 component-interface ownership rather than
         # restating it (refactor ad4db28). The forbidden phrasing is barred
         # everywhere.
-        canonical_surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-        ]
-        for surface in canonical_surfaces:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
+        canonical = (
+            "Application Component to Application Interface Realization",
+            "do not report it as endpoint-illegal",
+            "Prefer Composition or Aggregation for component-interface ownership",
+        )
+        forbidden = "Application Components must not realize Application Interfaces"
+        workflow = ARCH_REFS / "procedures" / "architecture-operational-workflow.md"
+        output_format = ARCH_REFS / "output-format.md"
+        evals = ARCH_REFS / "evals" / "behavior-cases.jsonl"
+        self._assert_sections(
+            (ARCH_DOC, ARCH_RELATIONSHIPS, canonical),
+            (evals, None, canonical),
+            (workflow, None, ("architecture.md` §5", "component-interface ownership")),
+            (output_format, None, ("architecture.md` §5", "component-interface ownership")),
+        )
+        for surface in (ARCH_DOC, evals, workflow, output_format):
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                self.assertIn("Application Component to Application Interface Realization", content)
-                self.assertIn("do not report it as endpoint-illegal", content)
-                self.assertIn(
-                    "Prefer Composition or Aggregation for component-interface ownership",
-                    content,
-                )
-                self.assertNotIn("Application Components must not realize Application Interfaces", content)
-
-        citing_surfaces = [
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-        ]
-        for surface in citing_surfaces:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
-            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                self.assertIn("architecture.md` §5", content)
-                self.assertIn("component-interface ownership", content)
-                self.assertNotIn("Application Components must not realize Application Interfaces", content)
+                self.assertNotIn(forbidden, compact_file(surface))
 
     def test_basic_fixture_uses_application_interface_service_split(self) -> None:
         fixture_model = json.loads(
@@ -469,11 +454,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertEqual(relationships["orders-service-serves-client"]["type"], "Serving")
 
     def test_business_layer_guidance_names_representation(self) -> None:
-        architecture_reference = (
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("Representation", architecture_reference)
+        self._assert_sections((ARCH_DOC, "## 4. ArchiMate Layers And Aspects", ("Representation",)))
 
     def test_grouping_connectors_viewpoints_and_customization_guidance_is_documented(self) -> None:
         architecture_reference = (
@@ -528,43 +509,23 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             self.assertIn("profile, attribute, and specialization choices", normalized)
 
     def test_archimate_32_conformance_boundary_and_source_valid_semantics(self) -> None:
-        architecture_reference = (
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        ).read_text(encoding="utf-8")
-        self_check = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "self-check.md"
-        ).read_text(encoding="utf-8")
-        output_format = (
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
-        ).read_text(encoding="utf-8")
-        source_grounding = (
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("ArchiMate-aware modeling skill", architecture_reference)
-        self.assertIn("not a certified or complete conforming ArchiMate tool", architecture_reference)
-        self.assertIn(
-            "schema plus semantic-profile validation",
-            architecture_reference,
+        # self-check.md drives semantic validation through the MCP tool with a profile;
+        # output-format.md cites architecture.md §9 for the source-valid tools rather
+        # than restating them.
+        self._assert_sections(
+            (ARCH_DOC, "## 1. Operating Contract", (
+                "ArchiMate-aware modeling skill",
+                "not a certified or complete conforming ArchiMate tool",
+            )),
+            (ARCH_DOC, "## 2. Quality Levels", ("schema plus semantic-profile validation",)),
+            (ARCH_DOC, ARCH_RUNTIME, ('dediren_validate {workspaceRoot, source, profile: "archimate"}',)),
+            (ARCH_REFS / "procedures" / "self-check.md", "## Validate", ("dediren_validate", 'profile: "archimate"')),
+            (ARCH_REFS / "output-format.md", None, ("`source-valid` validation", "`architecture.md` §9")),
+            (ARCH_REFS / "source-grounding.md", None, (
+                "The standards review notes are local, ignored working notes",
+                "agent-friendly extracted ArchiMate 3.2 reference",
+            )),
         )
-        self.assertIn(
-            'dediren_validate {workspaceRoot, source, profile: "archimate"}',
-            architecture_reference,
-        )
-        # self-check.md drives semantic validation through the MCP tool with a profile.
-        self.assertIn("dediren_validate", self_check)
-        self.assertIn('profile: "archimate"', self_check)
-        # output-format.md cites architecture.md §9 for the source-valid tools
-        # rather than restating them.
-        self.assertIn("`source-valid` validation", output_format)
-        self.assertIn("`architecture.md` §9", output_format)
-        self.assertIn("The standards review notes are local, ignored working notes", source_grounding)
-        self.assertIn("agent-friendly extracted ArchiMate 3.2 reference", source_grounding)
 
     def test_dediren_external_runtime_contract_is_documented(self) -> None:
         expectations = {
@@ -657,31 +618,45 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self._assert_phrases_per_surface(expectations)
 
     def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
+        """A version named as the pin or the floor is the runtime module's own value.
+
+        Historical release mentions ("Dediren 2026.08.8 adds ...", "<= 2026.07.0") are
+        allowed; only a CalVer version introduced as the pin or the support floor must
+        equal DEDIREN_VERSION_DEFAULT / DEDIREN_VERSION_FLOOR."""
+        runtime = load_script_module(
+            "dediren_runtime_for_version_pins", ARCH_REFS / "scripts" / "dediren_runtime.py"
+        )
         surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md",
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "self-check.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
+            ARCH_DOC,
+            ARCH_REFS / "procedures" / "architecture-operational-workflow.md",
+            ARCH_REFS / "procedures" / "self-check.md",
+            ARCH_REFS / "output-format.md",
+            ARCH_REFS / "source-grounding.md",
+            ARCH_REFS / "evals" / "behavior-cases.jsonl",
             REPO_ROOT / "CLAUDE.md",
         ]
-
+        introduced = re.compile(r"\b(pin|pinned|floor)\b")
+        calver = re.compile(r"\b20\d{2}\.\d{2}\.\d{1,2}\b")
+        seen = {"pin": 0, "floor": 0}
         for surface in surfaces:
+            content = compact_file(surface)
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                content = surface.read_text(encoding="utf-8")
                 for version in ["0.10.0", "0.11.1", "0.11.2"]:
                     self.assertNotIn(version, content)
+                for found in calver.finditer(content):
+                    before = re.split(r"[;.] ", content[max(0, found.start() - 40) : found.start()])[-1]
+                    kinds = introduced.findall(before)
+                    if kinds and "baseline" not in before[before.rindex(kinds[-1]) :]:
+                        kind = "floor" if kinds[-1] == "floor" else "pin"
+                        expected = runtime.DEDIREN_VERSION_FLOOR if kind == "floor" else runtime.DEDIREN_VERSION_DEFAULT
+                        self.assertEqual(found.group(), expected, f"{kind} context: ...{before}{found.group()}")
+                        seen[kind] += 1
+                    elif content[found.end() : found.end() + 30].startswith(" or newer"):
+                        self.assertEqual(found.group(), runtime.DEDIREN_VERSION_FLOOR)
+                        seen["floor"] += 1
+        # a vacuous scan (no pin or floor context found) must not pass
+        self.assertGreater(seen["pin"], 0)
+        self.assertGreater(seen["floor"], 0)
 
     def test_self_check_documents_mcp_tool_calls(self) -> None:
         self_check = (
@@ -723,25 +698,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self.assertIn('<skill-dir>/references/scripts/dediren_runtime.py', self_check)
 
     def test_guidance_points_to_dediren_guide_tool(self) -> None:
-        self_check = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "self-check.md"
-        ).read_text(encoding="utf-8")
-        architecture_reference = (
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        ).read_text(encoding="utf-8")
-
-        for content in [self_check, architecture_reference]:
-            with self.subTest():
-                normalized = " ".join(content.split())
-                self.assertIn("dediren_guide", content)
-                self.assertIn("Minimal Source JSON", normalized)
-                self.assertIn("Command Handoff", normalized)
-                self.assertIn("Repair Rules", normalized)
+        guide = ("dediren_guide", "Minimal Source JSON", "Command Handoff", "Repair Rules")
+        self._assert_sections(
+            (ARCH_REFS / "procedures" / "self-check.md", "## Format guide", guide),
+            (ARCH_DOC, ARCH_RUNTIME, guide),
+        )
 
     def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
         expectations = {
@@ -1415,40 +1376,32 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         that the runtime is upstream-owned: no vendored tree, and no revival of
         the deleted downloader by name.
         """
-        maintenance_guidance = (
-            REPO_ROOT / "docs" / "maintenance-procedures.md"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn("pinned, checksum-verified", maintenance_guidance)
-        self.assertIn("DEDIREN_VERSION_DEFAULT", maintenance_guidance)
-        self.assertIn("DEDIREN_VERSION_FLOOR", maintenance_guidance)
-        self.assertIn("DEDIREN_AUTO_INSTALL=0", maintenance_guidance)
-        self.assertIn("Java is\nnever downloaded", maintenance_guidance)
+        maintenance = REPO_ROOT / "docs" / "maintenance-procedures.md"
+        self._assert_sections((maintenance, "## Dediren upstream release adoption", (
+            "pinned, checksum-verified",
+            "DEDIREN_VERSION_DEFAULT",
+            "DEDIREN_VERSION_FLOOR",
+            "DEDIREN_AUTO_INSTALL=0",
+            "Java is never downloaded",
+        )))
+        maintenance_guidance = raw_file(maintenance)
         # Java stays a host prerequisite, and the runtime is still not ours to
         # modify or vendor.
         self.assertNotIn("dediren-release.sh", maintenance_guidance)
         self.assertNotRegex(maintenance_guidance, r"(?m)^tools/dediren-(linux|macos)/")
 
     def test_dediren_operator_guidance_matches_the_adopted_schema_fetcher(self) -> None:
-        install_guidance = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "dediren-install.md"
-        ).read_text(encoding="utf-8")
-        readme = (REPO_ROOT / "docs" / "runtime-support.md").read_text(encoding="utf-8")
+        readme = raw_file(REPO_ROOT / "docs" / "runtime-support.md")
 
         self.assertIn(
             "](../souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)",
             readme,
         )
-        normalized_install = " ".join(install_guidance.split())
-        self.assertIn("Java HTTP client", normalized_install)
-        self.assertIn("ALL_PROXY", normalized_install)
-        self.assertIn("`curl` or `wget`", normalized_install)
-        self.assertIn("release downloads", normalized_install)
+        self._assert_sections((
+            ARCH_REFS / "procedures" / "dediren-install.md",
+            "## Optional: offline and proxied export validation",
+            ("Java HTTP client", "ALL_PROXY", "`curl` or `wget`", "release downloads"),
+        ))
 
     def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
         pin = "2026.10.0"
@@ -1562,7 +1515,11 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
             "Dediren issue #71", "export-result.schema.v2", ".data.assurance", "kind_taxonomy",
             "validation_evidence", "independently verifies",
             "package-build-result does not surface assurance",
+            "class/data-only", "XMI envelope only", "UML-content schema", "importer validated",
         ), heading="# Source Grounding")
+        self.assertNotIn(
+            "conformant UML 2.5.1 abstract syntax for whatever view kind", compact(source_grounding)
+        )
 
     def test_archimate_layer_aspect_and_viewpoint_stance(self) -> None:
         architecture = raw_file(ARCH_DOC)

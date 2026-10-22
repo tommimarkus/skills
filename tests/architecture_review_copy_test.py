@@ -73,24 +73,37 @@ class ArchitectureReviewCopyTest(unittest.TestCase):
             self.assertEqual((verified["status"], code), ("unchanged", 0))
 
     def test_prepare_rejects_absolute_escape_missing_and_colliding_paths(self) -> None:
+        # each case: (package field, value, the review-copy.py CopyError it must raise)
         cases = {
-            "absolute source": ("models", [{"id": "m", "source": "/tmp/model.json"}]),
-            "escaping source": ("models", [{"id": "m", "source": "../../model.json"}]),
-            "missing source": ("models", [{"id": "m", "source": "missing.json"}]),
+            "absolute source": (
+                "models", [{"id": "m", "source": "/tmp/model.json"}],
+                r"source must be workspace-relative: /tmp/model\.json",
+            ),
+            "escaping source": (
+                "models", [{"id": "m", "source": "../../model.json"}],
+                r"source escapes workspace: \.\./\.\./model\.json",
+            ),
+            "missing source": (
+                "models", [{"id": "m", "source": "missing.json"}],
+                r"missing required input: pkg/missing\.json",
+            ),
             "package output": (
                 "views", [{"id": "v", "render_policy": "../outside-policy.json",
                            "outputs": {"diagram": "package.json"}}],
+                r"input/output path collision: pkg/package\.json and pkg/package\.json",
             ),
             "input ancestor output": (
                 "views", [{"id": "v", "render_policy": "../outside-policy.json",
                            "outputs": {"diagram": "model.json/diagram.svg"}}],
+                r"input/output path collision: pkg/model\.json and pkg/model\.json/diagram\.svg",
             ),
             "output ancestor output": (
                 "views", [{"id": "v", "render_policy": "../outside-policy.json",
                            "outputs": {"diagram": "generated", "layout": "generated/v.json"}}],
+                r"declared output path collision: pkg/generated and pkg/generated/v\.json",
             ),
         }
-        for label, (field, value) in cases.items():
+        for label, (field, value, message) in cases.items():
             with self.subTest(label=label), tempfile.TemporaryDirectory() as temp:
                 base = Path(temp)
                 source = base / "source"
@@ -100,7 +113,7 @@ class ArchitectureReviewCopyTest(unittest.TestCase):
                 package = json.loads(package_path.read_text(encoding="utf-8"))
                 package[field] = value
                 package_path.write_text(json.dumps(package), encoding="utf-8")
-                with self.assertRaises(review_copy.CopyError):
+                with self.assertRaisesRegex(review_copy.CopyError, message):
                     review_copy.prepare(source, "pkg/package.json", base / "copy")
 
     def test_prepare_rejects_reserved_path_and_its_ancestors_or_descendants(self) -> None:

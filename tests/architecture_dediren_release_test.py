@@ -10,6 +10,7 @@ import unittest
 from functools import lru_cache
 from pathlib import Path
 
+from tests.surface_test_lib import assert_phrases
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ARCH_PLUGIN = REPO_ROOT / "souroldgeezer-architecture"
@@ -1442,29 +1443,23 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertTrue(contents[0]["text"].strip(), "diagnostics catalog resource is empty")
 
     def test_release_guidance_reads_the_xmi_assurance_contract(self) -> None:
-        """Guidance must derive XMI claims from assurance without overstating them."""
-        grounding = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md").read_text(encoding="utf-8")
+        """The handoff procedure derives XMI claims from assurance without overstating them.
+
+        The source-grounding half of this check is carried by the surface test
+        test_export_assurance_claims_are_source_grounded."""
         handoff = (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "external-validation-handoff.md").read_text(encoding="utf-8")
-        for text in (grounding, handoff):
-            normalized = " ".join(text.split())
-            with self.subTest(surface=text[:40]):
-                self.assertIn("export-result.schema.v2", normalized)
-                self.assertIn(".data.assurance", normalized)
-                self.assertIn("kind_taxonomy", normalized)
-                self.assertIn("validation_evidence", normalized)
-                self.assertIn("coverage", normalized)
-                self.assertIn("Dediren issue #71", normalized)
-                self.assertIn("XMI envelope only", normalized)
-                self.assertIn("UML-content schema", normalized)
-                self.assertIn("importer validated", normalized)
-        self.assertIn("independently verifies", grounding)
-        self.assertIn("class/data-only", grounding)
-        for text in (grounding, handoff):
-            self.assertIn(
-                "package-build-result does not surface assurance",
-                " ".join(text.split()),
-            )
-        self.assertNotIn("conformant UML 2.5.1 abstract syntax for whatever view kind", grounding)
+        assert_phrases(self, handoff, (
+            "export-result.schema.v2",
+            ".data.assurance",
+            "kind_taxonomy",
+            "validation_evidence",
+            "coverage",
+            "Dediren issue #71",
+            "XMI envelope only",
+            "UML-content schema",
+            "importer validated",
+            "package-build-result does not surface assurance",
+        ), heading="## Required fidelity disclosures")
 
 
 class ArchitectureReviewContractRuntimeTest(unittest.TestCase):
