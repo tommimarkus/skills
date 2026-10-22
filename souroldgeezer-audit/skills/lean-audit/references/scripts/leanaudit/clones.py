@@ -22,6 +22,7 @@ from pathlib import Path
 
 from leanaudit.cli import add_shared_flags
 from leanaudit.discovery import repo_paths
+from leanaudit.source_boundary import SourceBoundary, SourceSkipEvidence
 
 # lean-audit:dup-intentional:end
 
@@ -464,12 +465,18 @@ def _is_excluded(rel: str) -> bool:
     )
 
 
-def read_sources(root: Path, exts: tuple[str, ...], exempt: tuple[str, ...]) -> dict[str, str]:
+def read_sources(
+    root: Path,
+    exts: tuple[str, ...],
+    exempt: tuple[str, ...],
+    *,
+    skipped: list[str] | None = None,
+    boundary: SourceBoundary | None = None,
+) -> dict[str, str]:
     files: dict[str, str] = {}
+    source_boundary = boundary or SourceBoundary(root)
     in_repo = repo_paths(root)  # reused via sibling import (see file header)
     for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
         rel = path.relative_to(root).as_posix()
         if in_repo is not None and rel not in in_repo:
             continue
@@ -477,12 +484,18 @@ def read_sources(root: Path, exts: tuple[str, ...], exempt: tuple[str, ...]) -> 
             continue
         if any(fnmatch.fnmatch(rel, pat) for pat in exempt):
             continue
+        if not source_boundary.allows(path):
+            continue
+        if not path.is_file():
+            continue
         text = path.read_text(encoding="utf-8", errors="replace")
         # Only the whole-file marker form drops a file here. A file carrying just
         # region markers stays in the corpus; scan_dir post-filters its clones.
         if _has_whole_file_marker(text, profile_for(path.suffix)):
             continue
         files[rel] = text
+    if skipped is not None:
+        skipped.extend(source_boundary.reported_paths())
     return files
 
 
@@ -501,10 +514,16 @@ def _region_suppressed(clone: Clone, regions: dict[str, _LineSpans]) -> bool:
     return inside(clone.lines, clone.path) or inside(clone.matched_lines, clone.matched_path)
 
 
-def scan_dir(root: Path, min_tokens: int, registry: Path | None) -> list[Clone]:
+def scan_dir(
+    root: Path,
+    min_tokens: int,
+    registry: Path | None,
+    *,
+    boundary: SourceBoundary | None = None,
+) -> list[Clone]:
     reg = registry if registry is not None else root / ".lean-audit.toml"
     exempt, exts = load_config(reg)
-    sources = read_sources(root, exts, exempt)
+    sources = read_sources(root, exts, exempt, boundary=boundary)
     streams: dict[str, list[tuple[str, int]]] = {}
     regions: dict[str, _LineSpans] = {}
     for rel, text in sources.items():
@@ -516,10 +535,21 @@ def scan_dir(root: Path, min_tokens: int, registry: Path | None) -> list[Clone]:
 
 # The two engines preserve parallel, engine-specific emitters instead of a generic CLI layer.
 # lean-audit:dup-intentional:begin
-def _emit(clones: list[Clone], fmt: str) -> None:
+def _emit(clones: list[Clone], fmt: str, source_skips: SourceSkipEvidence) -> None:
     if fmt == "json":
-        print(json.dumps({"findings": [dataclasses.asdict(c) for c in clones]}, indent=2))
+        print(
+            json.dumps(
+                {"findings": [dataclasses.asdict(c) for c in clones], "source_skips": source_skips},
+                indent=2,
+            )
+        )
     else:
+        if source_skips["count"]:
+            print(
+                f"source skips: count={source_skips['count']} "
+                f"listed={len(source_skips['paths'])} "
+                f"truncated={str(source_skips['truncated']).lower()}"
+            )
         for c in clones:
             print(
                 f"{c.code} [{c.severity}] {c.path}:{c.lines} == "
@@ -548,11 +578,12 @@ def main(argv: list[str]) -> int:
         scope = Path(args.scope).resolve()
         root = scope if scope.is_dir() else scope.parent
         registry = Path(args.registry) if args.registry else None
-        clones = scan_dir(root, args.min_tokens, registry)
+        source_boundary = SourceBoundary(root)
+        clones = scan_dir(root, args.min_tokens, registry, boundary=source_boundary)
     except (OSError, tomllib.TOMLDecodeError, ValueError) as exc:
         print(f"lean-audit code_lens: {exc}", file=sys.stderr)
         return 2
-    _emit(clones, args.format)
+    _emit(clones, args.format, source_boundary.evidence())
     return 1 if any(c.severity == "block" for c in clones) else 0
 
 

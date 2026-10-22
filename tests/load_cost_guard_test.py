@@ -153,6 +153,30 @@ class GuardDecisionTest(unittest.TestCase):
                 "expected deny when edit introduces a dangling pointer")
             self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
 
+    def test_external_link_target_is_not_read_for_fidelity(self):
+        with tempfile.TemporaryDirectory() as d:
+            parent = Path(d)
+            root = parent / "repo"
+            root.mkdir()
+            skill_md, base, patterns = self._fixture(
+                root, "# S\n[out](../outside.md)\n", codes=[], sections=["S"], patterns=[]
+            )
+            (parent / "outside.md").write_text("# OUTSIDE-GUARD-CANARY\n", encoding="utf-8")
+
+            decision = guard.decide(
+                target=skill_md,
+                new_content=skill_md.read_text(encoding="utf-8"),
+                skill_md=skill_md,
+                baseline=base,
+                patterns=patterns,
+                source_root=root,
+            )
+
+        self.assertIsNotNone(decision)
+        reason = decision["hookSpecificOutput"]["permissionDecisionReason"]
+        self.assertIn("pointer", reason)
+        self.assertNotIn("OUTSIDE-GUARD-CANARY", reason)
+
 
 # ---------------------------------------------------------------------------
 # cost_warn_decision

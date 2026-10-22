@@ -304,6 +304,24 @@ class StaticWorkflowLedgerTest(unittest.TestCase):
         self.assertIn(".codex/hooks.json", files)
         self.assertIn(".claude/settings.json", files)
 
+    def test_workflow_source_reader_skips_external_symlink(self) -> None:
+        mod = load_workflow_cost()
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            outside = parent / "outside.md"
+            outside.write_text("# OUTSIDE-WORKFLOW-CANARY\n", encoding="utf-8")
+            (root / "AGENTS.md").symlink_to(outside)
+            (root / "CLAUDE.md").write_text("# Local\n", encoding="utf-8")
+            skipped = []
+
+            files = mod.read_workflow_sources(root, skipped=skipped)
+
+        self.assertNotIn("AGENTS.md", files)
+        self.assertIn("CLAUDE.md", files)
+        self.assertEqual(skipped, ["AGENTS.md"])
+
 
 class ForecastTest(unittest.TestCase):
     def test_missing_core_evidence_is_indeterminate_with_sorted_completeness(self) -> None:

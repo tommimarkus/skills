@@ -51,7 +51,12 @@ def _owning_skill_md(path: Path, repo_root: Path) -> Path | None:
     # closure file cannot make its owning skill disappear from the Stop check.
     target = path.resolve()
     for skill_md in repo_root.glob("**/SKILL.md"):
-        if target in slc.resolve_closure_with_overrides(skill_md, {target: ""}):
+        if target in slc.resolve_closure_with_overrides(
+            skill_md,
+            {target: ""},
+            source_root=repo_root,
+            explicit_entry=False,
+        ):
             return skill_md
     return None
 
@@ -76,6 +81,7 @@ def decide(
     skill_md: Path,
     baseline: Path,
     patterns: Path,
+    source_root: Path | None = None,
 ) -> dict[str, Any] | None:
     """Return a deny-decision dict, or None to allow. Pure; fail-open is the caller's."""
     pats = json.loads(Path(patterns).read_text(encoding="utf-8"))
@@ -84,7 +90,13 @@ def decide(
     skill_md_p = Path(skill_md)
     # Build closure with link-removal awareness (Fix C): a pending edit that
     # removes a Load-Map link actually shrinks the reachable set.
-    closure = slc.resolve_closure_with_overrides(skill_md_p, {target_p: new_content})
+    authorized_root = source_root or skill_md_p.parent
+    closure = slc.resolve_closure_with_overrides(
+        skill_md_p,
+        {target_p: new_content},
+        source_root=authorized_root,
+        explicit_entry=False,
+    )
     invs = []
     for f in closure:
         text = new_content if f.resolve() == target_p else f.read_text(encoding="utf-8")
@@ -96,7 +108,11 @@ def decide(
         tgt_file = pointer.split("#", 1)[0]
         if not tgt_file or tgt_file.startswith(("http://", "https://", "mailto:")):
             continue
-        if not (target_p.parent / tgt_file).resolve().exists():
+        pointer_target = (target_p.parent / tgt_file).resolve()
+        if (
+            not pointer_target.is_relative_to(authorized_root.resolve())
+            or not pointer_target.exists()
+        ):
             problems.append(f"{target_p}: dangling pointer in pending edit: {pointer}")
     if not problems:
         return None
@@ -164,7 +180,10 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
         base = json.loads(Path(bl).read_text(encoding="utf-8"))
         # On-disk closure — Stop fires after all session edits are written;
         # no content override needed (the working tree already reflects them).
-        closure = slc.resolve_closure(skill_md)
+        closure = slc.resolve_closure(
+            skill_md,
+            source_root=repo_root,
+        )
         existing = [f for f in closure if f.exists()]
         invs = [slc.extract_inventory(f.read_text(encoding="utf-8"), pats) for f in existing]
         problems = slc.diff_inventory(base, slc.union_inventory(invs))
@@ -276,7 +295,14 @@ def main() -> int:
         patterns = repo_root / "tests" / "skill_load_cost" / "code_patterns.json"
         if not patterns.exists():
             return 0
-        decision = decide(target, new_content, skill_md, baseline, patterns)
+        decision = decide(
+            target,
+            new_content,
+            skill_md,
+            baseline,
+            patterns,
+            source_root=repo_root,
+        )
         if decision is not None:
             print(json.dumps(decision))
         scenarios = _load_scenarios(repo_root) if decision is None else None

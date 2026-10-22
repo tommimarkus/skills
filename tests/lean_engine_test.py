@@ -1073,6 +1073,44 @@ class GitAwareReadRepo(unittest.TestCase):
             self.assertIn("aud/skills/s1/SKILL.md", files)
             self.assertNotIn(".worktrees/b/SKILL.md", files)
 
+    def test_cli_skips_tracked_symlink_outside_source_root(self):
+        canary = "OUTSIDE-SOURCE-CANARY"
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            (root / "README.md").write_text("# Local\n", encoding="utf-8")
+            outside = parent / "outside.md"
+            outside.write_text(f"# {canary}\n", encoding="utf-8")
+            (root / "AGENTS.md").symlink_to(outside)
+            run_git(root, "init", "-q")
+            run_git(root, "add", "README.md", "AGENTS.md")
+
+            result = run_engine(str(root), "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn(canary, result.stdout + result.stderr)
+        self.assertIn("source skips: count=1 paths=AGENTS.md truncated=false", result.stderr)
+
+    def test_all_refused_corpus_remains_empty_scope_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            outside = parent / "outside.md"
+            outside.write_text("# Outside\n", encoding="utf-8")
+            (root / "AGENTS.md").symlink_to(outside)
+            run_git(root, "init", "-q")
+            run_git(root, "add", "AGENTS.md")
+
+            result = run_engine(str(root), "--format", "json")
+
+        self.assertEqual(result.returncode, 2)
+        coverage = json.loads(result.stdout)["coverage"]
+        self.assertEqual(coverage["in_scope_files"], 0)
+        self.assertIn("source skips: count=1 paths=AGENTS.md truncated=false", result.stderr)
+        self.assertIn("no eligible in-scope Markdown files", result.stderr)
+
 
 class GitEnumerationParityTest(unittest.TestCase):
     """The bundled lean engine cannot import repo tooling, so the git ls-files

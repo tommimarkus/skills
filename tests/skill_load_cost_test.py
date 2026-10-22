@@ -474,6 +474,28 @@ class ResolveClosureTest(unittest.TestCase):
             got = {p.name for p in slc.resolve_closure(root / "SKILL.md")}
             self.assertEqual(got, {"SKILL.md"})
 
+    def test_explicit_source_root_keeps_internal_link_and_rejects_external_link(self):
+        with tempfile.TemporaryDirectory() as d:
+            parent = Path(d)
+            root = parent / "plugin"
+            skill = root / "skills" / "demo" / "SKILL.md"
+            sibling = root / "docs" / "inside.md"
+            outside = parent / "outside.md"
+            skill.parent.mkdir(parents=True)
+            sibling.parent.mkdir(parents=True)
+            sibling.write_text("# Inside\n", encoding="utf-8")
+            outside.write_text("# OUTSIDE-CLOSURE-CANARY\n", encoding="utf-8")
+            skill.write_text(
+                "[inside](../../docs/inside.md) [outside](../../../outside.md)\n",
+                encoding="utf-8",
+            )
+            skipped = []
+
+            closure = slc.resolve_closure(skill, source_root=root, skipped=skipped)
+
+        self.assertEqual({path.name for path in closure}, {"SKILL.md", "inside.md"})
+        self.assertEqual(skipped, ["skills/demo/../../../outside.md"])
+
 
 class ResolveClosureCliTest(unittest.TestCase):
     def _fixture_entry(self, root: Path) -> Path:

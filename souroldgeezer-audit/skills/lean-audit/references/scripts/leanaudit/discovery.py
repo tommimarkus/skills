@@ -6,7 +6,10 @@ from __future__ import annotations
 
 import fnmatch
 import subprocess
+import sys
 from pathlib import Path
+
+from leanaudit.source_boundary import SourceBoundary
 
 __all__ = ["git_worktree_root", "is_guarded", "read_repo", "repo_paths"]
 
@@ -108,11 +111,18 @@ def git_worktree_root(path: Path) -> Path | None:
     return Path(toplevel).resolve()
 
 
-def read_repo(root: Path, scope: Path, *, include: Path | None = None) -> dict[str, str]:
+def read_repo(
+    root: Path,
+    scope: Path,
+    *,
+    include: Path | None = None,
+    boundary: SourceBoundary | None = None,
+) -> dict[str, str]:
     # Source readers deliberately share the git-membership/read loop shape.
     # lean-audit:dup-intentional:begin
     files: dict[str, str] = {}
     base = scope if scope.is_dir() else scope.parent
+    source_boundary = boundary or SourceBoundary(base)
     repo_root = git_worktree_root(base) or root
     in_repo = repo_paths(repo_root)
     for path in sorted(path for path in base.rglob("*") if path.suffix.lower() == ".md"):
@@ -123,7 +133,17 @@ def read_repo(root: Path, scope: Path, *, include: Path | None = None) -> dict[s
             continue
         if in_repo is not None and git_rel not in in_repo:
             continue
+        if not source_boundary.allows(path):
+            continue
         if is_guarded(rel) or is_guarded(scope_rel) or path == include:
             files[rel] = path.read_text(encoding="utf-8", errors="replace")
+    evidence = source_boundary.evidence()
+    if evidence["count"]:
+        print(
+            "lean-audit source skips: "
+            f"count={evidence['count']} paths={','.join(evidence['paths'])} "
+            f"truncated={str(evidence['truncated']).lower()}",
+            file=sys.stderr,
+        )
     return files
     # lean-audit:dup-intentional:end

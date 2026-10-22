@@ -46,6 +46,11 @@ Inputs: a scope (the whole repo, a file, a set of named files, or a diff) and an
 surface, or requested edits lack a safe default. For false-positive discipline,
 fact-vs-inference, and severity, see
 [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2–§3.
+Automatic readers resolve the selected directory or repository as their source
+root and skip linked or enumerated targets that escape it, including symlinks.
+They report bounded authored-path evidence without reading or echoing the target.
+An explicitly selected file authorizes that file itself; links authored inside it
+remain constrained to the caller-selected source root.
 
 ## One adaptive path (no mode dispatch)
 

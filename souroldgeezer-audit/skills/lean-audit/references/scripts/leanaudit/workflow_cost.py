@@ -25,6 +25,7 @@ from leanaudit.hook_cost import (
     read_hook_fixture_file,
 )
 from leanaudit.load_cost import estimate_tokens
+from leanaudit.source_boundary import SourceBoundary
 
 __all__ = [
     "Scenario",
@@ -642,18 +643,26 @@ def analyze_sources(
     }
 
 
-def read_workflow_sources(root: Path) -> dict[str, str]:
+def read_workflow_sources(
+    root: Path,
+    *,
+    skipped: list[str] | None = None,
+    boundary: SourceBoundary | None = None,
+) -> dict[str, str]:
     """Read tracked/unignored workflow surfaces and local JSON tool schemas."""
     root = root.resolve()
+    source_boundary = boundary or SourceBoundary(root)
     in_repo = repo_paths(root)
     paths: list[Path]
     if in_repo is None:
-        paths = [path for path in root.rglob("*") if path.is_file()]
+        paths = list(root.rglob("*"))
     else:
         paths = [root / rel for rel in sorted(in_repo)]
     files: dict[str, str] = {}
     for path in paths:
-        if path.suffix not in {".md", ".json"} or not path.is_file():
+        if path.suffix not in {".md", ".json"}:
+            continue
+        if not source_boundary.allows(path) or not path.is_file():
             continue
         try:
             if path.stat().st_size > 1_000_000:
@@ -669,6 +678,8 @@ def read_workflow_sources(root: Path) -> dict[str, str]:
             or "input_schema" in text
         ):
             files[rel] = text
+    if skipped is not None:
+        skipped.extend(source_boundary.reported_paths())
     return files
 
 
@@ -1191,10 +1202,12 @@ def main(argv: list[str] | None = None) -> int:
         hook_fixture_metadata: list[dict[str, Any]] = []
         for fixture_path in args.hook_fixture:
             hook_fixture_metadata.extend(read_hook_fixture_file(Path(fixture_path)))
+        source_boundary = SourceBoundary(root)
         static = analyze_sources(
-            read_workflow_sources(root),
+            read_workflow_sources(root, boundary=source_boundary),
             hook_fixture_metadata=hook_fixture_metadata,
         )
+        static["source_skips"] = source_boundary.evidence()
         forecast: dict[str, Any] | None = None
         scenario: Scenario | None = None
         if args.scenario:

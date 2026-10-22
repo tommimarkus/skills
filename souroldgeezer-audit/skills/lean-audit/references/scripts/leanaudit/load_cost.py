@@ -15,6 +15,9 @@ from pathlib import Path
 from typing import Any, NotRequired, TypedDict
 from urllib.parse import unquote
 
+from leanaudit.discovery import git_worktree_root
+from leanaudit.source_boundary import SourceBoundary
+
 __all__ = [
     "COST_TOLERANCE",
     "Inventory",
@@ -132,7 +135,13 @@ def _display_path(path: Path, root: Path) -> str:
         return str(path)
 
 
-def _scenario_text(path: Path, overrides: dict[Path, str]) -> str:
+def _scenario_text(
+    path: Path,
+    overrides: dict[Path, str],
+    boundary: SourceBoundary,
+) -> str:
+    if not boundary.allows(path):
+        raise ValueError(f"source path escapes authorized root: {boundary.reported_paths()[-1]}")
     resolved = path.resolve()
     if resolved in overrides:
         return overrides[resolved]
@@ -145,6 +154,7 @@ def _measure_load_routes(
     if not isinstance(routes, list):
         raise ValueError("load_routes: expected a list")
     units: dict[tuple[Path, str | None], dict[str, Any]] = {}
+    boundary = SourceBoundary(root)
     for index, raw_route in enumerate(routes):
         if not isinstance(raw_route, dict):
             raise ValueError(f"load_routes[{index}]: expected an object")
@@ -155,7 +165,7 @@ def _measure_load_routes(
         if not rel.strip():
             raise ValueError(f"load_routes[{index}].target: expected a file before #anchor")
         path = (root / rel.strip()).resolve()
-        text = _scenario_text(path, overrides)
+        text = _scenario_text(path, overrides, boundary)
         anchor: str | None = None
         resolution = "whole-file"
         measured = text
@@ -226,6 +236,7 @@ def measure_scenario(
     predicate. Identical resolved units count once across entries.
     """
     override_map = {Path(path).resolve(): text for path, text in (overrides or {}).items()}
+    boundary = SourceBoundary(root)
     if "files" in scenario and "load_routes" in scenario:
         raise ValueError("scenario: use files or load_routes, not both")
     if "load_routes" in scenario:
@@ -238,7 +249,7 @@ def measure_scenario(
         for rel in files:
             if not isinstance(rel, str) or not rel.strip():
                 raise ValueError("scenario.files: every file must be a non-empty string")
-            tokens = estimate_tokens(_scenario_text((root / rel).resolve(), override_map))
+            tokens = estimate_tokens(_scenario_text(root / rel, override_map, boundary))
             rows.append({"file": rel, "tokens": tokens})
     metadata_rows = _measure_selection_metadata(scenario.get("selection_metadata"))
     load_total = sum(int(row["tokens"]) for row in rows)
@@ -288,13 +299,30 @@ def _local_target(link: str) -> str | None:
     return target
 
 
-def resolve_closure(skill_md: Path) -> list[Path]:
+def resolve_closure(
+    skill_md: Path,
+    *,
+    source_root: Path | None = None,
+    skipped: list[str] | None = None,
+) -> list[Path]:
     """Files a skill loads, via transitive Load-Map markdown links from SKILL.md.
     Deterministic (link-following only); the per-mode subset is judgment, not this."""
-    return resolve_closure_with_overrides(skill_md, {})
+    return resolve_closure_with_overrides(
+        skill_md,
+        {},
+        source_root=source_root,
+        skipped=skipped,
+    )
 
 
-def resolve_closure_with_overrides(skill_md: Path, overrides: dict[Path, str]) -> list[Path]:
+def resolve_closure_with_overrides(
+    skill_md: Path,
+    overrides: dict[Path, str],
+    *,
+    source_root: Path | None = None,
+    skipped: list[str] | None = None,
+    explicit_entry: bool = True,
+) -> list[Path]:
     """Like resolve_closure but uses overrides[path] as the link text when reading
     a file, instead of reading from disk.  This makes a pending edit's link removals
     actually shrink the closure (e.g. when decide() tests a not-yet-written edit).
@@ -302,15 +330,21 @@ def resolve_closure_with_overrides(skill_md: Path, overrides: dict[Path, str]) -
     overrides: mapping of absolute Path -> str (the would-be content of that file).
     Files not in overrides are read from disk as normal.
     Non-existent files without an override entry are skipped (fail-open)."""
-    skill_md = skill_md.resolve()
+    selected_entry = Path(skill_md)
+    authorized_root = source_root or git_worktree_root(selected_entry) or selected_entry.parent
+    boundary = SourceBoundary(authorized_root)
+    skill_md = selected_entry.resolve()
+    override_map = {Path(path).resolve(): text for path, text in overrides.items()}
     seen: set[Path] = set()
-    queue = [skill_md]
+    queue = [(skill_md, explicit_entry)]
     while queue:
-        cur = queue.pop()
+        cur, explicit = queue.pop()
         if cur in seen:
             continue
-        if cur in overrides:
-            text = overrides[cur]
+        if not boundary.allows(cur, explicit=explicit):
+            continue
+        if cur in override_map:
+            text = override_map[cur]
         elif cur.exists():
             text = cur.read_text(encoding="utf-8")
         else:
@@ -320,11 +354,16 @@ def resolve_closure_with_overrides(skill_md: Path, overrides: dict[Path, str]) -
             target = _local_target(link)
             if target is None:
                 continue
-            nxt = (cur.parent / target).resolve()
+            candidate = cur.parent / target
+            if not boundary.allows(candidate):
+                continue
+            nxt = candidate.resolve()
             if nxt.suffix == ".md" and nxt not in seen:
                 # Accept override-provided files even if not on disk
-                if nxt in overrides or nxt.exists():
-                    queue.append(nxt)
+                if nxt in override_map or nxt.exists():
+                    queue.append((nxt, False))
+    if skipped is not None:
+        skipped.extend(boundary.reported_paths())
     return sorted(seen)
 
 
@@ -569,8 +608,21 @@ def _cmd_snapshot(args: argparse.Namespace) -> int:
 
 
 def _cmd_resolve_closure(args: argparse.Namespace) -> int:
-    paths = [str(p) for p in resolve_closure(Path(args.entry))]
+    skipped: list[str] = []
+    paths = [
+        str(p)
+        for p in resolve_closure(
+            Path(args.entry),
+            source_root=Path(args.source_root) if args.source_root else None,
+            skipped=skipped,
+        )
+    ]
     print(json.dumps(paths, indent=2) if args.json else "\n".join(paths))
+    if skipped:
+        print(
+            f"skill-load-cost source skips: count={len(skipped)} paths={','.join(skipped)}",
+            file=sys.stderr,
+        )
     return 0
 
 
@@ -611,6 +663,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rc = sub.add_parser("resolve_closure")
     rc.add_argument("entry")
+    rc.add_argument("--source-root")
     rc.add_argument("--json", action="store_true")
     rc.set_defaults(func=_cmd_resolve_closure)
 

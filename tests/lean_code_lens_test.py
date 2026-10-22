@@ -219,6 +219,25 @@ class Discovery(unittest.TestCase):
         files = self._discover(lens, {"r.py": marker(":begin") + "y = 2\n" + marker(":end")})
         self.assertIn("r.py", files)
 
+    def test_source_boundary_skips_external_links_and_keeps_internal_links(self):
+        lens = load_lens()
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            (root / "real.py").write_text("inside = 1\n", encoding="utf-8")
+            (root / "inside.py").symlink_to(root / "real.py")
+            outside = parent / "outside.py"
+            outside.write_text("outside_canary = 2\n", encoding="utf-8")
+            (root / "outside.py").symlink_to(outside)
+            skipped = []
+
+            files = lens.read_sources(root, lens.DEFAULT_EXTENSIONS, (), skipped=skipped)
+
+        self.assertIn("inside.py", files)
+        self.assertNotIn("outside.py", files)
+        self.assertEqual(skipped, ["outside.py"])
+
     def test_load_config_defaults_when_no_registry(self):
         lens = load_lens()
         exempt, exts = lens.load_config(None)
@@ -244,6 +263,24 @@ class Cli(unittest.TestCase):
             r = run_lens(d, "--min-tokens", "8", "--format", "json")
             self.assertEqual(r.returncode, 0)
             self.assertEqual(json.loads(r.stdout)["findings"], [])
+
+    def test_external_source_skip_evidence_is_bounded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parent = Path(tmp)
+            root = parent / "repo"
+            root.mkdir()
+            outside = parent / "outside.py"
+            outside.write_text("outside = 1\n", encoding="utf-8")
+            for index in range(55):
+                (root / f"outside-{index:02}.py").symlink_to(outside)
+
+            result = run_lens(str(root), "--format", "json")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        evidence = json.loads(result.stdout)["source_skips"]
+        self.assertEqual(evidence["count"], 55)
+        self.assertEqual(len(evidence["paths"]), 50)
+        self.assertTrue(evidence["truncated"])
 
     def test_malformed_registry_exits_2(self):
         with tempfile.TemporaryDirectory() as d:

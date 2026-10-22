@@ -72,11 +72,12 @@ Three facts are load-bearing when you touch a shim:
 
 ## Module map of `leanaudit/`
 
-Fourteen files (`__init__.py` + thirteen modules). No import cycles. Eight
+Fifteen files (`__init__.py` + fourteen modules). No import cycles. Nine
 foundational **leaves**, three analysis **engines**, two hook **drivers**:
 
 ```
 hook_envelope ─┐                              (leaf: envelope parse / decision shaping)
+source_boundary┤                              (leaf: resolved source-root containment)
 discovery ─────┼─▶ engine  ─▶ guard_lean       (markdown dup engine + its PreToolUse guard)
 registry ──────┘   clones                      (code-clone engine)
 cli ───────────────▲ ▲                         (leaf: the two engines' shared CLI flags)
@@ -88,22 +89,23 @@ discovery ─────┤
 load_cost ─────┘
 ```
 
-Three leaves back no shim of their own (`hook_envelope`, `cli`, `json_rows`) —
+Four leaves back no shim of their own (`hook_envelope`, `source_boundary`, `cli`, `json_rows`) —
 they exist to single-source contracts shared by sibling modules.
 
 | Module | Role | Responsibility | Depends on |
 |---|---|---|---|
 | [`hook_envelope.py`](leanaudit/hook_envelope.py) | leaf | Parse the PreToolUse/Stop hook JSON payload, shape the `permissionDecision` envelope Claude Code™ reads, and log one fail-open diagnostic line to stderr. Public: `HookPayload`, `read_payload`, `permission_decision`, `fail_open_log`. | stdlib |
-| [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | stdlib |
+| [`source_boundary.py`](leanaudit/source_boundary.py) | leaf | Resolve one caller-authorized source root, reject automatic reads through traversal or escaping symlinks, and retain bounded authored-path skip evidence without exposing target content. Public: `SourceBoundary`, `SourceSkipEvidence`. | stdlib |
+| [`discovery.py`](leanaudit/discovery.py) | leaf | Git-aware repo enumeration (tracked + untracked-not-ignored) and the "is this markdown a *guarded* surface" predicate. Public: `is_guarded`, `repo_paths`, `read_repo`. **Its git-enumeration block is a *declared* intentional twin of `scripts/skill_architecture_report.py`, pinned by `GitEnumerationParityTest` — change both together.** | `source_boundary` |
 | [`registry.py`](leanaudit/registry.py) | leaf | Load `.lean-audit.toml` canonical homes / carve-outs (with optional per-entry `except` globs) / exempt paths / the optional `[verbosity]` thresholds, plus the built-in defaults and the `sync-intentional` and `verbose-intentional` overrides. Public: `Registry` (incl. `skill_budgets`), `VerbosityConfig`, `load_registry`, `carve_out_rule`, `carved_out`, `path_exempt`, `has_override`, `has_verbose_override`. | stdlib |
 | [`cli.py`](leanaudit/cli.py) | leaf | The argparse flags both engine CLIs accept identically (`--registry`, `--format`), single-sourced so the two declarations cannot drift; call it after a CLI's own flags to keep `--help` ordering. Public: `add_shared_flags`. | stdlib |
-| [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | stdlib |
+| [`load_cost.py`](leanaudit/load_cost.py) | leaf | Per-use load-cost measurement and the fidelity-baseline model: closure resolution; declared multi-entry load routes with predicates and heading anchors; separate selection-metadata measurement; inventory extraction/diff; committed-snapshot and pending-edit marginal checks; plus the `guard_tokens` deterministic closed-token gate (G2v) backing minify's `tighten` class. Backs the `skill_load_cost.py` CLI. Public: `resolve_closure`, `measure_scenario`, `marginal_cost_regressions`, `extract_inventory`, `diff_inventory`, `cost_regressions`, `guard_tokens`, `main`, … | `discovery`, `source_boundary` |
 | [`context_trace.py`](leanaudit/context_trace.py) | leaf | Stream JSONL; normalize provider/host usage metadata; report coverage/calibration eligibility; and aggregate bounded native-Codex lifecycle/output-byte counters without retaining raw content. Public: `UsageEvent`, `normalize_trace_records`, `read_trace_file`, `summarize_trace`, `summarize_trace_records`. | stdlib |
 | [`json_rows.py`](leanaudit/json_rows.py) | leaf | Read JSON object/list or JSONL evidence rows, including one optional nested-list key, while requiring every returned row to be an object. Public: `read_json_rows`. | stdlib |
 | [`hook_cost.py`](leanaudit/hook_cost.py) | leaf | Inventory recognized Claude/Codex hook registrations without returning or executing opaque commands; join optional content-free fixture metadata; multiply only evidenced enabled, model-visible frequency × proxy-token rows. Unknown and unsupported values remain explicit. Public: `analyze_hook_registrations`, `is_hook_config_path`, `read_hook_fixture_file`. | stdlib |
 | [`engine.py`](leanaudit/engine.py) | engine | The deterministic **markdown** duplication/waste engine: normalize→shingle→containment scoring, section index, the emitters for `LA-DUP-*`, `LA-STALE-1`, `LA-DEAD-1`, `LA-BLOAT-1`, and the `LA-VERBOSE-1` verbosity nominator (`filler_density` / `scaffold_count` / `repeat_ratio`, composite ≥ 2-signal gate). `evaluate_added_block` is shared by the CLI and the PreToolUse guard. | `cli`, `discovery`, `registry` |
-| [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery` |
-| [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema and hook-registration inventory, static retry/progress/scope/checkpoint controls, three-lane stage simulation, fixed + per-item output forecast, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `hook_cost`, `discovery`, `load_cost` |
+| [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery`, `source_boundary` |
+| [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema and hook-registration inventory, static retry/progress/scope/checkpoint controls, three-lane stage simulation, fixed + per-item output forecast, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `hook_cost`, `discovery`, `load_cost`, `source_boundary` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
 | [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
 | `__init__.py` | — | Package docstring: states the stdlib-only / Py3.11+ runtime and that the entry paths are the published contract. | — |
@@ -138,6 +140,11 @@ this guide does not redefine them.
   adds `coverage.declared_budgets` (`path`, `lines`, `body_lines`, `rationale`;
   sorted) for in-scope bodies above 250 yet within their budget, with one
   `declared budgets: count=<n>` line plus paths in text.
+- All automatic readers constrain resolved targets to their selected source root.
+  Markdown reports bounded skips on stderr so JSON stdout remains stable; clone
+  and workflow reports add bounded `source_skips` evidence. Transitive load
+  closure callers pass the selected repository/plugin root; the explicitly named
+  closure entry may itself be outside that root, but its authored links may not.
 - **`code_lens.py <dir>`** — source-code copy-paste clones. Emits
   `LA-CODE-DUP-1/2`. Flags: `--min-tokens` (default 20), `--registry`,
   `--format {text,json}`. Same exit-code convention (2 also on `--min-tokens < 1`).
