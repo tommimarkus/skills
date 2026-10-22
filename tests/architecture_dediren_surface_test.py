@@ -437,7 +437,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
                 "relationship connectors and junctions",
                 "unsupported in dediren package source",
             )),
-            (output_format, None, (
+            (output_format, "## Footer", (
                 "layout-only groups are not ArchiMate Grouping elements",
                 "semantic-boundary",
                 "semantic_source_id",
