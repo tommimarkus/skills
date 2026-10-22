@@ -163,6 +163,8 @@ class BuildHtmlTest(unittest.TestCase):
         self.assertEqual({v["group"]["title"] for v in data},
                          {"ArchiMate views", "Structure & data", "Sequences"})
         self.assertEqual({v["density"] for v in data}, {"below-threshold"})
+        for finnish in ("tiheä", "asettelu", "Konteksti", "solmua"):
+            self.assertNotIn(finnish, self.html)
 
     def test_counts_from_render_metadata(self):
         # Each view's node/edge counts are read from its own render-metadata,
@@ -435,6 +437,19 @@ class SheetDerivationTest(unittest.TestCase):
         self.assertNotIn("status", dense)
         self.assertIn('data-dediren-edge-label-for="e0"', sparse_html)
         self.assertIn('data-dediren-edge-id="e49"', dense_html)
+        # the rendered hint is static template JS: anchor on the two
+        # assignment statements rather than pinning the whole HTML
+        density = re.search(r"q\('#p-density'\)\.textContent\s*=\s*([^;\n]+);", sparse_html)
+        note = re.search(r"q\('#p-note'\)\.textContent\s*=\s*([^;\n]+;?[^\n]*)", sparse_html)
+        self.assertIsNotNone(density, "#p-density assignment not found")
+        self.assertIsNotNone(note, "#p-note assignment not found")
+        self.assertIn("'dense by edge count'", density.group(1))
+        self.assertIn("'below density threshold'", density.group(1))
+        self.assertIn("edge-count heuristic", note.group(1))
+        self.assertIn("assess layout quality from build diagnostics and the SVG", note.group(1))
+        for stmt in (density.group(0), note.group(0)):
+            self.assertNotIn("layout ok", stmt.casefold())
+            self.assertNotIn("konteksti", stmt.casefold())
         # the payload carries a density bucket and counts only; it never
         # asserts layout quality for either view
         for view in (sparse, dense):
