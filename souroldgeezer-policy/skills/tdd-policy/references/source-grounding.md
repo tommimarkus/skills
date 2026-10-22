@@ -76,6 +76,83 @@ rationale per rule:
   scanned it. Hence reuse-before-define, the duplication-detector step in
   REFACTOR, and naming the shared support paths in delegated reads.
 
+## Seam and Retention Rationale
+
+The size brake works inside each cycle: a test is retained only if it pins
+behavior at the declared seam and would survive a behavior-preserving refactor.
+Sources are linked and paraphrased; none of their text is bundled.
+
+- The seam. Ian Cooper's talk, as
+  [distilled by Herberto Graca](https://herbertograca.com/2018/08/27/distillation-of-tdd-where-did-it-all-go-wrong/),
+  argues that the unit under test is a module rather than a class or method and
+  that a new test is triggered by a new requirement, not by a new function. The
+  default seam, the public API of each module or package, follows from that;
+  the project may declare another rule, and the language's visibility markers
+  derive it otherwise.
+- Retention check. Vladimir Khorikov's four properties of a good test
+  (regression protection, resistance to refactoring, fast feedback,
+  maintainability), in
+  [one reader's notes](https://olano.dev/blog/unit-testing-principles), say that
+  a test coupled to implementation details raises false alarms. Asking whether a
+  behavior-preserving refactor would force the test to change puts that
+  maintenance cost on the cost axis. The Practical Test Pyramid
+  [article](https://martinfowler.com/articles/practical-test-pyramid.html)
+  treats the urge to test a private method as a design signal, advises deleting a
+  higher-level test that lower-level tests already cover, and warns against
+  keeping a test out of sunk cost.
+- Trivial code. The same notes describe Khorikov's four kinds of code: trivial
+  code needs no test of its own, domain logic and algorithms get unit tests,
+  controllers get a short integration test, and code both complex and highly
+  connected is split first. That is the decision aid behind `trivial`; the split
+  is handed to `software-design` by skill name. `trivial` is a classification,
+  not an exception, so a trivial change that alters seam-visible behavior is
+  behavioral.
+- Scaffold tests. A test below the seam may drive out a design step, as Kent
+  Beck's [Canon TDD](https://newsletter.kentbeck.com/p/canon-tdd) turns one list
+  item at a time into a test. It is resolved in REFACTOR of the same cycle:
+  rewritten at the seam or deleted. Deleting it needs no supersession proof
+  because it never pinned seam behavior.
+- Characterization expiry. Characterization coverage exists to protect a
+  refactor in flight, so only what sits below the seam expires with it. Tests
+  already at the seam are ordinary regression tests and leave only through
+  supersession.
+- Behavior removal. A test for behavior that no longer ships has nothing to
+  regress against, so it goes in the same change and needs no successor. The
+  coverage clause is intact: removed behavior is no longer shipped.
+- Examples per rule. Organizing by rules with a few examples under each is the
+  [Example Mapping](https://www.cucumber.io/docs/bdd/example-mapping) shape;
+  splitting a rule that needs many examples, or covering it with one
+  property-based test, is this policy's own corollary, not a claim of that page.
+  [Better Gherkin](https://cucumber.io/docs/bdd/better-gherkin/) supports
+  keeping scenarios declarative: wording that would change with the
+  implementation should be rewritten.
+- Diff-scoped mutation evidence. Google's
+  [mutation testing work](https://research.google/pubs/state-of-mutation-testing-at-google/)
+  runs a diff-based approach during code review, which motivates scoping a
+  configured mutation tool to the changed code. A new test that kills no mutant
+  the existing tests miss adds no distinct regression value. No new option is
+  added; it follows the duplication-detector shape.
+- `structure-coupled` records. A test that a behavior-preserving refactor had to
+  edit is tied to internal structure. Listing it in the footer is evidence for
+  `test-quality-audit`'s `verify-then-retire`, stronger than similarity or
+  history, but it never retires a test by itself. The footer is the record; no
+  telemetry is added.
+
+Rejected, with reasons:
+
+- Count quotas and coverage targets: they reward tests for trivial code, which
+  this policy deliberately leaves untested.
+- Automated suite minimization: Noemmer and Haas
+  ([SWQD 2020](https://teamscale.com/hubfs/26978363/Publications/2020-test-suite-minimization-swqd.pdf?hsLang=en))
+  found suites could shrink in size and execution time by over 70% on average,
+  at an average loss of about 12.5% in fault detection (mutation score), up to
+  21% for some projects. That supports the stance that similarity never retires
+  a test.
+- Test impact analysis and predictive test selection
+  ([Meta](https://engineering.fb.com/2018/11/21/developer-tools/predictive-test-selection/)):
+  already a runner lever in `test-quality-audit`'s suite-recovery procedure, so
+  it stays there.
+
 ## Forward Checks
 
 Two fresh-agent runs (Claude Sonnet, 2026-10-15) on synthetic Python
@@ -102,6 +179,8 @@ installed, so a shared support module stood in for `conftest.py`.
   retirement of a test the new test supersedes: `tdd-policy`.
 - Adequacy/brittleness of existing tests, and retirement judged from similarity
   or history: `test-quality-audit`. Both read the one declared feedback budget.
+  `structure-coupled` records feed its `verify-then-retire` and never retire a
+  test by themselves.
 - Code/module design and coupling: `software-design`.
 - Commit/branch preflight: `git-workflow-policy`. PR/MR: `pr-ops`. Issues: `issue-ops`.
 - Cross-plugin handoffs go by skill name, never a path: plugins install
