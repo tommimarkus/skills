@@ -80,6 +80,7 @@ synthesizes it from a verifier reject, and the verifier procedure lives in
 The parent still calls `record-return` on the current run. An old packet may be
 internally valid while its attempt has been superseded; local preflight cannot
 establish live freshness. Acceptance, retry, integration and cleanup remain owned
-by the existing ledger and Git-policy procedures. Parent review of the returned leaf, including each target its `task` names
-explicitly, completes before that `record-return`; a later deviation uses the
-[ledger contract](ledger-contract.md) `--parent-review` lane.
+by the existing ledger and Git-policy procedures. Parent review of the returned
+leaf, including each target its `task` names explicitly, completes before that
+`record-return`; a later deviation uses the [ledger contract](ledger-contract.md)
+`--parent-review` lane.

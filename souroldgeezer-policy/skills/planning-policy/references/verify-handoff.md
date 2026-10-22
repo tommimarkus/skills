@@ -10,7 +10,8 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `acceptance_command`, `cohesive_outcome`, `acceptance_exit_code`,
 `base_commit`, `returned_commit`, `budget`, `changeset`, `outside_write_set`,
 `prior_verify` (null unless a retry: `verify_id`, `rejected_commit`,
-`findings`), and `return_schema`. After a pass the parent may record a `--parent-review` reject, so a `prior_verify` may come from parent review.
+`findings`), and `return_schema`. After a pass the parent may record a
+`--parent-review` reject, so a `prior_verify` may come from parent review.
 
 ## Inputs and reads
 

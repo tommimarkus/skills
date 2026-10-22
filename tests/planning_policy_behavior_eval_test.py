@@ -76,6 +76,8 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-verify-style-only-no-block",
             "planning-policy-behavior-verify-closeout-only-opt-out",
             "planning-policy-behavior-verify-batch-one-dispatch",
+            "planning-policy-behavior-verify-named-target-scope-reject",
+            "planning-policy-behavior-verify-parent-review-reject-after-pass",
             "planning-policy-behavior-batch-environment-stop-continues",
             "planning-policy-behavior-single-step-environment-stop-rerun",
             "planning-policy-behavior-precision-standard-outside-lands",

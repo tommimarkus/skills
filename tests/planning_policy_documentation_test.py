@@ -435,7 +435,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "`record-verify --actor parent --run-id R --return-file F --parent-review`",
             "never an out-of-plan parent edit",
             "the step is `completed` (so never `integrated` or `cleaned`)",
-            "a parent cannot up- or down-grade a verdict to a pass",
+            "(the lane only rejects)",
             "a refusal changes nothing",
             "`verifies/<sid>/<verify_id>.parent-review.json`",
             "parent review rejected the verified build: <codes>",
