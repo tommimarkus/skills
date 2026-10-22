@@ -23,20 +23,30 @@ operational changes.
 
 ### Verify the candidate
 
-- Run the complete [contributor validation](contributing.md#validate-the-change)
-  from the clean task worktree, preserving each gate's exit status.
-- Run `scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation .`
-  unconditionally, without `--changed-since`,
-  with all three CLIs available; require all five Claude/Codex isolated installs,
-  all 16 shared public skills, the isolated Copilot architecture install, Claude
-  component/strict validation, all three external-Dediren adapter handshakes,
-  and unchanged normal plugin/config profiles. Record an unavailable standalone
-  Codex validator as a skip.
+- From the exact clean candidate commit, run `python3 -B
+  scripts/publication_check.py --repo-root . record`. It runs the complete
+  ordered [contributor validation](contributing.md#validate-the-change) with
+  the host smoke unconditionally, without `--changed-since`, and records the
+  commit/tree-bound result. Require all five Claude/Codex isolated installs,
+  all 16 shared public skills, the isolated Copilot architecture install,
+  Claude component/strict validation, all three external-Dediren adapter
+  handshakes, and unchanged normal plugin/config profiles. Record an
+  unavailable standalone Codex validator as a skip.
 - Confirm the plugin docs still link every shipped skill.
 - Confirm `README.md` still acts as the product map.
 - Inspect `git diff --check` for whitespace errors.
 - Review the README and the relevant contributor guide when the release changes
   the documented public surface.
+- Confirm security-sensitive release notes identify the affected surface,
+  fixed plugin version, and user update action without disclosing an unresolved
+  private report. Notify the reporter through the private advisory when one
+  exists.
+
+After the fixed one-commit version-only follow-up, run `python3 -B
+scripts/publication_check.py --repo-root . record --version-followup`. The
+optional pre-push hook accepts only the exact recorded candidate or follow-up;
+it is a local, bypassable control and does not replace review or remote
+enforcement.
 
 ## Versioning guidance
 

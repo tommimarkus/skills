@@ -21,6 +21,10 @@ for their respective runtimes.
   after integration, `main` owns computing and applying the version stamp. The
   release policy documents the fixed version cell follow-up and its focused
   checks; any other drift requires full candidate verification again.
+- For a security-sensitive change or vulnerability report, use the
+  [security policy](../SECURITY.md) and
+  [security baseline](security-baseline.md). Do not put sensitive details in a
+  public issue while private reporting remains pending or unavailable.
 - For a rare operational change, including Dediren adoption or support removal,
   use the [maintenance procedures](maintenance-procedures.md).
 
@@ -71,6 +75,18 @@ parent and fast-forwards it. Routine integration does not cherry-pick. The
 planning-policy workflow adds its own approved-plan, capability-binding, and
 worktree-closeout requirements when it is in use.
 
+The repository provides an optional local publication guard. It is scoped to
+this clone's Git common directory and refuses to replace another pre-push hook:
+
+```bash
+python3 -B scripts/publication_check.py --repo-root . install-hook
+python3 -B scripts/publication_check.py --repo-root . uninstall-hook
+```
+
+Install or remove it only within the authority for the current task. The hook
+reduces accidental unchecked pushes to `main`; it remains bypassable and does
+not change global Git configuration.
+
 ## Keep the runtime lanes aligned
 
 Every published plugin appears in both marketplaces and has Claude and legacy
@@ -101,6 +117,19 @@ uv run python scripts/version_stamp.py guard
 ```
 
 The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
+
+Before an authorized push of `main`, run the same gates as a clean,
+commit-bound publication record:
+
+```text
+python3 -B scripts/publication_check.py --repo-root . record
+```
+
+The command uses the unconditional safety-flagged host smoke. If integration
+adds exactly one atomic version-only follow-up allowed by the repository
+contract, run `record --version-followup` from that clean commit. The optional
+pre-push hook's `check-push` entrypoint accepts only a `main` source commit
+covered by the stored receipt.
 
 The version guard runs after the candidate gates and before fast-forward
 integration. The fragmentation script runs metadata and stop-hook checks. The explicit
@@ -143,4 +172,6 @@ standard](skill-architecture.md) for authoring judgment, the [evaluation
 evidence guide](skill-evaluation.md) for behavior evidence, the [release
 checklist](release-checklist.md) for version and publication preparation, and
 the [maintenance procedures](maintenance-procedures.md) for infrequent
-operations.
+operations. Use the [security policy](../SECURITY.md) for reporting and
+response, and the [security baseline](security-baseline.md) for threats,
+controls, assurance targets, and residual risk.

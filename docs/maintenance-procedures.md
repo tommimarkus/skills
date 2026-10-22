@@ -10,6 +10,34 @@ publication preparation, use the [release checklist](release-checklist.md).
   retire the marketplace adapter without deleting downstream conventions.
 - [Migrate an architecture installation](#architecture-design-plugin-migration):
   install the plugin that now owns the skill.
+- [Enable private vulnerability reporting](#private-vulnerability-reporting-rollout):
+  change the live repository setting only after explicit approval and verify it
+  before updating the security policy's status.
+
+## Private vulnerability reporting rollout
+
+The repository has selected GitHub private vulnerability reporting, but
+[`SECURITY.md`](../SECURITY.md) records it as pending until live enablement is
+verified. The setting is external state and is not changed by documentation,
+integration, or publication work.
+
+1. With repository-admin access, inspect **Security → Advisories** and
+   **Settings → Advanced Security → Private vulnerability reporting**. Record
+   the observed state; do not infer it from `SECURITY.md`.
+2. Obtain explicit authority for the live setting change. Then enable private
+   vulnerability reporting using GitHub's repository setting. Do not create a
+   public test issue or include real vulnerability details in rollout evidence.
+3. Re-read the setting and verify that **Report a vulnerability** appears on
+   the repository's Advisories page for a reporter. Confirm the maintainer's
+   notification preferences include repository security alerts.
+4. In a normal content change, replace the pending statement in `SECURITY.md`
+   and aligned public guidance with the observed enabled state. Run the normal
+   candidate and publication gates; do not combine the GitHub setting mutation
+   with an unreviewed policy rewrite.
+
+If any readback is unavailable, leave the policy as pending. GitHub's
+[configuration procedure](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository)
+is the provider authority for the setting and reporter-visible control.
 
 ## Dediren upstream release adoption
 

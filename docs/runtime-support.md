@@ -6,6 +6,14 @@ Native Copilot CLI support currently covers `souroldgeezer-architecture` and
 its `architecture-design` skill. The workflows are shared; discovery, tool
 launch, permissions, and configuration belong to each host.
 
+Installing a plugin authorizes its instructions and local helpers to run with
+the permissions the host grants. Install from the intended marketplace or
+checkout, inspect the materialized install path when results look stale, and
+use the host's normal plugin manager to refresh security fixes. The
+[security policy](../SECURITY.md) names supported versions and reporting; the
+[security baseline](security-baseline.md) describes executable surfaces and
+trust boundaries.
+
 ## Install and adapters
 
 Claude reads `.claude-plugin/marketplace.json`; Codex reads
@@ -104,6 +112,9 @@ consumer paths after a plugin update.
 Record the host/version, plugin/version and installed path, the requested
 skill/task, and the exact error with credentials removed. Separate an
 installation problem from a missing capability or an incorrect task result.
+For a suspected vulnerability, follow [SECURITY.md](../SECURITY.md): private
+reporting is the chosen channel, but its enablement remains pending until
+verified, and sensitive details do not belong in a public issue.
 Use [contributing](contributing.md#validate-the-change) for the full local
 validation and isolated host smoke. The
 [maintenance smoke recipe](maintenance-procedures.md#dediren-upstream-release-adoption)

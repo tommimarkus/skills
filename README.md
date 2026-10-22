@@ -159,6 +159,13 @@ Architecture Review preserves original source and artifacts as review evidence. 
 
 Use the [contributor guide](docs/contributing.md) for a persistent task worktree, validation, and release boundaries. Its [maintenance procedures](docs/maintenance-procedures.md) cover rare runtime operations.
 
+Security reports, response targets, and supported versions are in the
+[security policy](SECURITY.md). The [security baseline](docs/security-baseline.md)
+documents the marketplace threat model, local-publication control, OWASP SCVS
+Level 1 target and current gaps. Private vulnerability reporting is the chosen
+channel, but its enablement is pending and must not be represented as live until
+it is verified on GitHub.
+
 Lean Audit reports explicit requested-scope coverage for normal Markdown scans and treats an empty eligible scope as an input error. Its workflow forecast reports `indeterminate` until its declared core budget evidence is complete, except when known expected usage already proves an overflow.
 Intentional clone regions preserve detection between unmarked copies. The Stop fidelity guard checks deleted references, and trace totals include provider-specific cache input.
 
@@ -187,5 +194,7 @@ checks. Other drift requires the full candidate gates again. The
 - [Using skills](docs/using-skills.md): task selection, examples, outputs, and boundaries.
 - [Runtime support](docs/runtime-support.md): supported hosts, adapters, hooks, and Dediren.
 - [Contributor guide](docs/contributing.md): local setup and validation.
+- [Security policy](SECURITY.md): private reporting status, supported versions, and response targets.
+- [Security baseline](docs/security-baseline.md): threats, controls, assurance targets, and residual risks.
 - [Skill architecture standard](docs/skill-architecture.md): authoring and review judgment.
 - [Privacy policy](PRIVACY.md) and [terms](TERMS.md).

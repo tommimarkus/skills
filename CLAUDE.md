@@ -347,6 +347,35 @@ Adding a new plugin:
 
 **Removing a runtime's or tool's support**: on any runtime/tool support-removal, follow [docs/maintenance-procedures.md § Removing a runtime's or tool's support](docs/maintenance-procedures.md) — scope the cut to marketplace-owned surfaces, preserve downstream target-repo conventions, optional handoffs to external plugins, and vendor-named detection patterns, and re-diff the report and gold ledger.
 
+## Security and local publication
+
+<!-- lean-audit:sync-intentional: AGENTS.md § Security and local publication states the same cross-runtime repository contract; each runtime file stays self-contained, so edit both together. -->
+
+[`SECURITY.md`](SECURITY.md) owns supported versions, the reporting channel,
+response targets, and coordinated disclosure. Private vulnerability reporting
+is the chosen GitHub channel, but its enablement is pending and unverified;
+never claim it is enabled until the repository state is re-read after the live
+change. Keep sensitive report content out of public issues. The threat model,
+OWASP SCVS Level 1 target and gap matrix, non-claim of SLSA, and accepted
+writer-trust residuals live in [`docs/security-baseline.md`](docs/security-baseline.md).
+
+A push of `main` is publication. From the exact clean candidate commit, run:
+
+```text
+python3 -B scripts/publication_check.py --repo-root . record
+```
+
+This runs the ordered candidate gates with the unconditional safety-flagged
+host smoke and stores a commit/tree-bound local receipt in the Git common
+directory. After the one allowed atomic version-only follow-up, run `record
+--version-followup`. `check-push` is the pre-push entrypoint; `install-hook` and
+`uninstall-hook` manage only this repository's hook and refuse to overwrite or
+remove a different hook. Installing the hook, pushing, and changing GitHub
+security settings require the task's explicit authority. The receipt and hook
+are bypassable local controls; they are not CI, a required status check,
+independent approval, artifact provenance, or proof of attained SCVS
+conformance.
+
 ## Plugin versioning (MUST)
 
 Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. The Claude `plugin.json#version` remains the release authority; Claude Code always resolves it over a marketplace-entry copy without warning, so marketplace entries never carry a `version` key. Codex and native Copilot manifests mirror the same semantic version in strict-SemVer form (`YYYY.M.MICRO`). A stamp updates every applicable manifest cell and the README together. **Where that stamp lands depends on where the work happens:**
