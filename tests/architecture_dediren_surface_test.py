@@ -35,41 +35,6 @@ ACTIVE_SURFACES = [
     REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design" / "SKILL.md",
     REPO_ROOT / "souroldgeezer-design" / "skills" / "infra-design" / "SKILL.md",
 ]
-EXTRACT_GROUP_SURFACES = [
-    ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md",
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "architecture-operational-workflow.md",
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "lifting-rules-dotnet.md",
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "lifting-rules-bicep.md",
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "lifting-rules-gha.md",
-    ARCH_PLUGIN
-    / "skills"
-    / "architecture-design"
-    / "references"
-    / "procedures"
-    / "lifting-rules-process.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md",
-    ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-]
 def compact_file(path: Path) -> str:
     return " ".join(path.read_text(encoding="utf-8").split())
 
@@ -86,22 +51,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         for surface, heading, phrases in expectations:
             with self.subTest(surface=surface.relative_to(REPO_ROOT)):
                 assert_phrases(self, raw_file(surface), phrases, heading=heading)
-
-    def _assert_phrase_in_surfaces(self, surfaces: list, phrase: str) -> None:
-        """One phrase, checked (compacted) across a list of surfaces."""
-        for surface in surfaces:
-            with self.subTest(surface=surface.relative_to(REPO_ROOT)):
-                content = " ".join(surface.read_text(encoding="utf-8").split())
-                self.assertIn(phrase, content)
-
-    def _assert_phrases_in_surfaces(self, surfaces: list, phrases: list) -> None:
-        """Every phrase in `phrases`, checked (compacted) across every surface in
-        `surfaces` — the nested surfaces x phrases coverage shape used below."""
-        for surface in surfaces:
-            content = " ".join(surface.read_text(encoding="utf-8").split())
-            for phrase in phrases:
-                with self.subTest(surface=surface.relative_to(REPO_ROOT), phrase=phrase):
-                    self.assertIn(phrase, content)
 
     def _assert_phrases_per_surface(self, expectations: dict) -> None:
         """For each surface -> [phrases] mapping, assert every phrase is present in
@@ -366,36 +315,38 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         # The lead-EA modeling feedback lives canonically in architecture.md §5 and
         # is exercised by the behavioral evals. output-format.md cites §5 rather
         # than duplicating the prose (refactor ad4db28).
-        canonical_surfaces = [
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md",
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl",
-        ]
-        canonical_phrases = [
-            "APIs and GUIs are Application Interfaces",
-            "Application Services model the functionality exposed through an interface",
-            "Application Component to Application Interface Realization",
-            "do not report it as endpoint-illegal",
-            "Prefer Composition or Aggregation for component-interface ownership",
-            "Use Triggering when the architectural claim is process sequencing",
-            "define the view concern, allowed element types, and relationship types",
-            "Dediren tool issues",
-        ]
-        self._assert_phrases_in_surfaces(canonical_surfaces, canonical_phrases)
-
-        output_format = " ".join(
-            (ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md")
-            .read_text(encoding="utf-8")
-            .split()
+        evals = ARCH_REFS / "evals" / "behavior-cases.jsonl"
+        output_format = ARCH_REFS / "output-format.md"
+        view_concern = "define the view concern, allowed element types, and relationship types"
+        self._assert_sections(
+            (ARCH_DOC, "### Application Interfaces, APIs, And GUIs", (
+                "APIs and GUIs are Application Interfaces",
+                "Application Services model the functionality exposed through an interface",
+                "Application Component to Application Interface Realization",
+                "do not report it as endpoint-illegal",
+                "Prefer Composition or Aggregation for component-interface ownership",
+            )),
+            (ARCH_DOC, "### Process Handoffs", ("Use Triggering when the architectural claim is process sequencing",)),
+            (ARCH_DOC, ARCH_VIEW_RULES, (view_concern,)),
+            (ARCH_DOC, "### Package JSON Generation", ("Dediren tool issues",)),
+            (evals, None, (
+                "APIs and GUIs are Application Interfaces",
+                "Application Services model the functionality exposed through an interface",
+                "Application Component to Application Interface Realization",
+                "do not report it as endpoint-illegal",
+                "Prefer Composition or Aggregation for component-interface ownership",
+                "Use Triggering when the architectural claim is process sequencing",
+                view_concern,
+                "Dediren tool issues",
+            )),
+            (output_format, None, (
+                "architecture.md` §5",
+                "interface/service semantics",
+                "component-interface ownership",
+                "Triggering for process sequencing",
+                view_concern,
+            )),
         )
-        for phrase in [
-            "architecture.md` §5",
-            "interface/service semantics",
-            "component-interface ownership",
-            "Triggering for process sequencing",
-            "define the view concern, allowed element types, and relationship types",
-        ]:
-            with self.subTest(surface="output-format.md", phrase=phrase):
-                self.assertIn(phrase, output_format)
 
     def test_application_interface_guidance_allows_realization_but_prefers_ownership(self) -> None:
         # The realization-vs-ownership guidance lives canonically in
@@ -457,56 +408,55 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         self._assert_sections((ARCH_DOC, "## 4. ArchiMate Layers And Aspects", ("Representation",)))
 
     def test_grouping_connectors_viewpoints_and_customization_guidance_is_documented(self) -> None:
-        architecture_reference = (
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md"
-        ).read_text(encoding="utf-8")
-        workflow = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md"
-        ).read_text(encoding="utf-8")
-        seed_views = (
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "seed-views.md"
-        ).read_text(encoding="utf-8")
-        output_format = (
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md"
-        ).read_text(encoding="utf-8")
-        behavior_cases = (
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "evals" / "behavior-cases.jsonl"
-        ).read_text(encoding="utf-8")
-
-        for content in [architecture_reference, workflow, output_format, behavior_cases]:
-            normalized = " ".join(content.split())
-            lowered = normalized.lower()
-            self.assertIn("layout-only groups are not archimate grouping elements", lowered)
-            self.assertIn("semantic-boundary", lowered)
-            self.assertIn("semantic_source_id", lowered)
-            self.assertIn("relationship connectors and junctions", lowered)
-            self.assertIn("unsupported in dediren package source", lowered)
-
-        for content in [architecture_reference, seed_views, behavior_cases]:
-            normalized = " ".join(content.split())
-            self.assertIn(
-                "Seed diagram kinds are starter coverage, not the full ArchiMate viewpoint mechanism",
-                normalized,
-            )
-            self.assertIn("Custom viewpoint path", normalized)
-
-        for content in [architecture_reference, output_format, behavior_cases]:
-            normalized = " ".join(content.split())
-            self.assertIn("Customization profile", normalized)
-
-        for content in [architecture_reference, behavior_cases]:
-            normalized = " ".join(content.split())
-            self.assertIn("profile, attribute, and specialization choices", normalized)
+        workflow = ARCH_REFS / "procedures" / "architecture-operational-workflow.md"
+        seed_views = ARCH_REFS / "procedures" / "seed-views.md"
+        output_format = ARCH_REFS / "output-format.md"
+        evals = ARCH_REFS / "evals" / "behavior-cases.jsonl"
+        seed_kinds = "Seed diagram kinds are starter coverage, not the full ArchiMate viewpoint mechanism"
+        self._assert_sections(
+            (ARCH_DOC, ARCH_EXTRACTION, (
+                "Layout-only groups are not ArchiMate Grouping elements",
+                "semantic-boundary",
+                "semantic_source_id",
+            )),
+            (ARCH_DOC, "### Relationship Connectors And Junctions", (
+                "relationship connectors and junctions",
+                "unsupported in dediren package source",
+            )),
+            (workflow, None, (
+                "Layout-only groups are not ArchiMate Grouping elements",
+                "semantic-boundary",
+                "semantic_source_id",
+                "relationship connectors and junctions",
+                "unsupported in dediren package source",
+            )),
+            (output_format, None, (
+                "layout-only groups are not ArchiMate Grouping elements",
+                "semantic-boundary",
+                "semantic_source_id",
+                "relationship connectors and junctions",
+                "unsupported in dediren package source",
+                "Customization profile",
+            )),
+            (evals, None, (
+                "layout-only groups are not ArchiMate Grouping elements",
+                "semantic-boundary",
+                "semantic_source_id",
+                "relationship connectors and junctions",
+                "unsupported in dediren package source",
+                seed_kinds,
+                "Custom viewpoint path",
+                "Customization profile",
+                "profile, attribute, and specialization choices",
+            )),
+            (ARCH_DOC, "## 6. Supported Diagram Kinds", (seed_kinds,)),
+            (ARCH_DOC, "### Custom Viewpoint Path", ("Custom viewpoint path",)),
+            (ARCH_DOC, "## 11. Customization Profile", (
+                "Customization profile",
+                "profile, attribute, and specialization choices",
+            )),
+            (seed_views, None, (seed_kinds, "Custom viewpoint path")),
+        )
 
     def test_archimate_32_conformance_boundary_and_source_valid_semantics(self) -> None:
         # self-check.md drives semantic validation through the MCP tool with a profile;
@@ -528,94 +478,77 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         )
 
     def test_dediren_external_runtime_contract_is_documented(self) -> None:
-        expectations = {
-            ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": [
+        self._assert_sections(
+            (ARCH_DOC, ARCH_RUNTIME, (
                 "tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint",
                 "`Node`, not `TechnologyNode`",
                 "close parallel route channels during layout validation",
                 "`dediren_build` call walks its views through projection",
-            ],
+            )),
             # The operational workflow and output-format cite architecture.md §9
             # for endpoint/Node/route semantics instead of restating them.
-            ARCH_PLUGIN
-            / "skills"
-            / "architecture-design"
-            / "references"
-            / "procedures"
-            / "architecture-operational-workflow.md": [
+            (ARCH_REFS / "procedures" / "architecture-operational-workflow.md", None, (
                 "pinned checksum-verified install",
                 "plugins.generic-graph.semantic_profile",
                 "architecture.md` §9",
                 "endpoint legality",
                 "`Node` naming",
                 "in-build layout",
-            ],
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "output-format.md": [
+            )),
+            (ARCH_REFS / "output-format.md", None, (
                 "which Dediren lane ran",
                 "Runtime semantics",
                 "are defined in `architecture.md` §9",
-            ],
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "source-grounding.md": [
+            )),
+            (ARCH_REFS / "source-grounding.md", None, (
                 "tested Dediren runtime enforces ArchiMate® 3.2 relationship endpoint legality",
                 "`Node`, not `TechnologyNode`",
                 "reports close parallel route channels",
                 "plugins.generic-graph.semantic_profile",
                 "runs projection, layout, layout validation, and rendering inside each `dediren_build` call",
-            ],
+            )),
             # Compatibility evidence is independent from runtime selection.
-            REPO_ROOT / "docs" / "maintenance-procedures.md": [
+            (REPO_ROOT / "docs" / "maintenance-procedures.md", "## Dediren upstream release adoption", (
                 "version in repo fixtures is a compatibility evidence baseline",
-            ],
-        }
-
-        self._assert_phrases_per_surface(expectations)
+            )),
+        )
 
     def test_dediren_host_adapter_and_generic_local_client_contract_is_documented(self) -> None:
         """The shared router stays harness-neutral while host configuration differs."""
-        expectations = {
-            REPO_ROOT / "AGENTS.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
+        contract = "### Dediren MCP adapter contract"
+        common = ("shared launcher/router has no harness detection", "Generic local-client compatibility")
+        self._assert_sections(
+            (REPO_ROOT / "AGENTS.md", contract, common + (
                 "absolute `workspaceRoot` on every tool call",
                 "Streamable HTTP is future work only",
                 "authentication, origin validation, port and service lifecycle, session isolation, and workspace authorization",
                 "Preserve the legacy verified-release-cache fallback",
-            ],
-            REPO_ROOT / "CLAUDE.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
+            )),
+            (REPO_ROOT / "CLAUDE.md", contract, common + (
                 "absolute `workspaceRoot`",
                 "Streamable HTTP is future work only",
                 "`startup_timeout_sec` is seconds",
                 "`timeout` is milliseconds",
-            ],
-            REPO_ROOT / "docs" / "runtime-support.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
+            )),
+            (REPO_ROOT / "docs" / "runtime-support.md", "## Install and adapters", common + (
                 "absolute `workspaceRoot` per tool call",
                 "Streamable HTTP is future work only",
                 "`startup_timeout_sec` is seconds",
                 "`timeout` is milliseconds",
-            ],
-            ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
+            )),
+            (ARCH_SKILL, "## Workflow", common + (
                 "absolute `workspaceRoot` per tool call",
                 "Streamable HTTP is future work only",
                 "legacy verified-release-cache fallback",
-            ],
-            ARCH_PLUGIN / "skills" / "architecture-design" / "references" / "procedures" / "self-check.md": [
-                "shared launcher/router has no harness detection",
-                "Generic local-client compatibility",
+            )),
+            (ARCH_REFS / "procedures" / "self-check.md", "## Server availability", common + (
                 "absolute `workspaceRoot` per tool call",
                 "Streamable HTTP is future work only",
                 "Codex `startup_timeout_sec` are seconds",
                 "Copilot `timeout` is milliseconds",
                 "legacy verified-release-cache fallback",
-            ],
-        }
-
-        self._assert_phrases_per_surface(expectations)
+            )),
+        )
 
     def test_guidance_avoids_hard_coded_dediren_version_numbers(self) -> None:
         """A version named as the pin or the floor is the runtime module's own value.
