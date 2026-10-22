@@ -711,6 +711,15 @@ class PlanningWorktreeHelperTest(unittest.TestCase):
         self.assertEqual(expected, value["error"])
         self.assertIn(f"task/{name}", self.branches())
 
+    def test_refuses_when_branch_ref_is_not_the_source_commit(self) -> None:
+        before = git(self.root, "rev-parse", "main").stdout.strip()
+        self.assert_integrate_refused(
+            "ref-diverges",
+            "returned source commit is not the exact branch tip",
+            ("rev-parse --verify task/ref-diverges^{commit}", f"echo {'ab' * 20}; exit 0"),
+        )
+        self.assertEqual(before, git(self.root, "rev-parse", "main").stdout.strip())
+
     def assert_cleanup_refused(self, name: str, expected: str, arrange, leaf_remains=True) -> None:
         leaf, integrated = self.integrated_leaf(name)
         arrange(leaf)
