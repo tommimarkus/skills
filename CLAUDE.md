@@ -488,10 +488,14 @@ suite: retire or consolidate a test the new one supersedes, naming its
 successor; rewrite at the seam or delete any scaffold test below it before GREEN
 lands; removing a behavior removes its tests. Reuse `tests/surface_test_lib.py`
 helpers before defining new ones; share only immutable setup; no fixed sleeps,
-real clocks, or reliance on the machine's locale or timezone. Budget full-suite: 35s for the closeout
-`unittest discover` lane (measured 32.9 s on 2026-10-15 after the second
-suite-recovery batch, down from 47.6 s; re-record the budget to the latest
-measured run after each landed batch, target 30s).
+real clocks, or reliance on the machine's locale or timezone. Budget full-suite: 47s for the closeout
+`unittest discover` lane (measured 46.4 s for 1,688 tests on 2026-10-23 at load
+3.8 on 16 CPUs, up from 32.9 s for 1,417 tests on 2026-10-15: the suite grew
+19%, and the slowest 20 tests — led by the complex-eval fork/join lifecycle, the
+code-clone ratchet, the committed load-cost baselines, and the ruff/mypy
+standard gate — take only 10.8 s, so the growth is spread across the tail;
+re-record the budget to the latest measured run after each landed batch, target
+30s).
 
 Design and audit skills share the Build / Extract / Review / Lookup (design) and Quick / Deep (audit) mode dispatch from § "Skill architecture (shared pattern across skills)".
 
