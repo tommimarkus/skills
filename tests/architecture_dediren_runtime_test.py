@@ -89,6 +89,25 @@ def stub_fetch(payload: bytes, checksums: str) -> Callable[[str, float], bytes]:
     return fetch
 
 
+def add_archive_file(
+    archive: tarfile.TarFile, name: str, body: bytes, *, mode: int | None = None
+) -> None:
+    info = tarfile.TarInfo(name)
+    info.size = len(body)
+    if mode is not None:
+        info.mode = mode
+    archive.addfile(info, io.BytesIO(body))
+
+
+def add_archive_link(
+    archive: tarfile.TarFile, name: str, target: str, *, hard: bool = False
+) -> None:
+    info = tarfile.TarInfo(name)
+    info.type = tarfile.LNKTYPE if hard else tarfile.SYMTYPE
+    info.linkname = target
+    archive.addfile(info)
+
+
 class DataHomeResolutionTest(unittest.TestCase):
     def test_explicit_home_wins_over_every_host_variable(self) -> None:
         env = {
@@ -240,6 +259,14 @@ class ProvisioningTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(lambda: setattr(runtime, "fetch", self.original_fetch))
 
+    def incomplete_target(self) -> tuple[str, Path]:
+        version = runtime.DEDIREN_VERSION_DEFAULT
+        target = runtime.bundle_dir(self.home, version)
+        target.mkdir(parents=True)
+        marker = target / "keep-me"
+        marker.write_text("incomplete", encoding="utf-8")
+        return version, marker
+
     def test_verified_release_installs_into_the_plugin_data_directory(self) -> None:
         version = runtime.DEDIREN_VERSION_DEFAULT
         payload, checksums = fake_release(version)
@@ -344,11 +371,7 @@ class ProvisioningTest(unittest.TestCase):
 
     def test_invalid_staged_bundle_does_not_replace_an_incomplete_existing_target(self) -> None:
         """A broken download must not destroy a recoverable incomplete bundle."""
-        version = runtime.DEDIREN_VERSION_DEFAULT
-        target = runtime.bundle_dir(self.home, version)
-        target.mkdir(parents=True)
-        marker = target / "keep-me"
-        marker.write_text("incomplete", encoding="utf-8")
+        version, marker = self.incomplete_target()
 
         def missing_manifest(archive: tarfile.TarFile) -> None:
             launcher = b"#!/usr/bin/env bash\nexit 0\n"
@@ -358,6 +381,23 @@ class ProvisioningTest(unittest.TestCase):
             archive.addfile(info, io.BytesIO(launcher))
 
         payload, checksums = fake_release(version, members=missing_manifest)
+        runtime.fetch = stub_fetch(payload, checksums)
+
+        with self.assertRaises(runtime.DedirenError):
+            runtime.provision(self.home, version, runtime.DEDIREN_REPO_DEFAULT)
+
+        self.assertEqual(marker.read_text(encoding="utf-8"), "incomplete")
+
+    def test_unsafe_archive_topology_does_not_mutate_an_incomplete_target(self) -> None:
+        version, marker = self.incomplete_target()
+
+        def composed_links(archive: tarfile.TarFile) -> None:
+            root = f"dediren-agent-bundle-{version}"
+            for name, linkname in ((f"{root}/alias", "."), (f"{root}/alias/escape", "..")):
+                add_archive_link(archive, name, linkname)
+            add_archive_file(archive, f"{root}/escape/marker", b"outside")
+
+        payload, checksums = fake_release(version, members=composed_links)
         runtime.fetch = stub_fetch(payload, checksums)
 
         with self.assertRaises(runtime.DedirenError):
@@ -492,6 +532,7 @@ class ExtractionSafetyTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         self.destination = Path(self.temp.name) / "unpacked"
+        self.destination.mkdir()
         self.addCleanup(self.temp.cleanup)
 
     def extract_archive(self, build: Callable[[tarfile.TarFile], None]) -> None:
@@ -609,6 +650,100 @@ class ExtractionSafetyTest(unittest.TestCase):
 
         self.extract_archive(build)
         self.assertTrue((self.destination / "bundle" / "lib" / "alias.jar").is_symlink())
+
+    def test_composed_symlink_ancestor_is_refused_before_any_member_is_written(self) -> None:
+        outside_marker = Path(self.temp.name) / "marker.txt"
+
+        def build(archive: tarfile.TarFile) -> None:
+            for name, linkname in (("alias", "."), ("alias/escape", "..")):
+                add_archive_link(archive, name, linkname)
+            add_archive_file(archive, "escape/marker.txt", b"outside")
+
+        with self.assertRaises(runtime.DedirenError) as caught:
+            self.extract_archive(build)
+
+        self.assertIn("link ancestor", str(caught.exception))
+        self.assertFalse(outside_marker.exists())
+        self.assertEqual(list(self.destination.iterdir()), [])
+
+    def test_duplicate_member_is_refused_before_any_member_is_written(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            for body in (b"first", b"second"):
+                add_archive_file(archive, "bundle/file.txt", body)
+
+        self.assert_refused_and_nothing_extracted(build, "duplicate path")
+
+    def test_cyclic_links_are_refused_before_any_member_is_written(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            for name, linkname in (("bundle/a", "b"), ("bundle/b", "a")):
+                add_archive_link(archive, name, linkname)
+
+        self.assert_refused_and_nothing_extracted(build, "link cycle")
+
+    def test_safe_forward_symlink_and_hardlink_are_preserved(self) -> None:
+        def build(archive: tarfile.TarFile) -> None:
+            add_archive_link(archive, "bundle/lib/alias.jar", "real.jar")
+            add_archive_link(archive, "bundle/lib/copy.jar", "bundle/lib/real.jar", hard=True)
+            add_archive_file(archive, "bundle/lib/real.jar", b"real")
+
+        self.extract_archive(build)
+
+        real = self.destination / "bundle" / "lib" / "real.jar"
+        alias = self.destination / "bundle" / "lib" / "alias.jar"
+        copy = self.destination / "bundle" / "lib" / "copy.jar"
+        self.assertEqual(alias.read_bytes(), b"real")
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(copy.stat().st_ino, real.stat().st_ino)
+
+    def test_member_count_limit_is_checked_before_extraction(self) -> None:
+        archive = mock.MagicMock()
+        archive.getmembers.side_effect = AssertionError("bulk enumeration is unsafe")
+
+        def guarded_members():
+            for index in range(3):
+                yield tarfile.TarInfo(f"bundle/{index}.txt")
+            raise AssertionError("enumerated beyond the first over-limit member")
+
+        archive.__iter__.side_effect = guarded_members
+        with mock.patch.object(runtime, "MAX_ARCHIVE_MEMBERS", 2):
+            with self.assertRaises(runtime.DedirenError) as caught:
+                list(runtime.safe_members(archive, self.destination))
+
+        self.assertIn("member count", str(caught.exception))
+        self.assertEqual(list(self.destination.iterdir()), [])
+
+    def test_expanded_size_limits_accept_the_boundary_and_refuse_one_byte_over(self) -> None:
+        body = b"1234"
+
+        def build(archive: tarfile.TarFile) -> None:
+            add_archive_file(archive, "bundle/file.txt", body)
+
+        with mock.patch.multiple(
+            runtime, MAX_ARCHIVE_FILE_BYTES=4, MAX_ARCHIVE_TOTAL_BYTES=4
+        ):
+            self.extract_archive(build)
+            self.assertEqual((self.destination / "bundle" / "file.txt").read_bytes(), body)
+            self.destination = Path(self.temp.name) / "overflow"
+            self.destination.mkdir()
+            body = b"12345"
+            with self.assertRaises(runtime.DedirenError) as caught:
+                self.extract_archive(build)
+
+        self.assertIn("per-file limit", str(caught.exception))
+        self.assertEqual(list(self.destination.iterdir()), [])
+
+        archive = mock.MagicMock()
+        oversized = tarfile.TarInfo("bundle/oversized")
+        oversized.size = 5
+
+        def one_member_only():
+            yield oversized
+            raise AssertionError("enumerated beyond the over-limit member")
+
+        archive.__iter__.side_effect = one_member_only
+        with mock.patch.multiple(runtime, MAX_ARCHIVE_FILE_BYTES=5, MAX_ARCHIVE_TOTAL_BYTES=4):
+            with self.assertRaises(runtime.DedirenError):
+                list(runtime.safe_members(archive, self.destination))
 
 
 class FakeResponse:

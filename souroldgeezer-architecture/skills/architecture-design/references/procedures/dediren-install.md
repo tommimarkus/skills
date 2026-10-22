@@ -45,10 +45,11 @@ release the render lane takes each view's accessible name from its own
 2. Fetch `SHA256SUMS` from the release first and read the archive's name out of
    it — the compression format comes from the release, never an assumption here.
 3. Fetch that archive and verify its SHA-256 **before** unpacking.
-4. Unpack through explicit member sanitisation: absolute paths, `..` traversals,
-   links that resolve outside the destination, devices, and fifos are all
-   refused, so a tampered archive fails loudly instead of writing outside the
-   directory.
+4. Preflight every member before writing: reject duplicate paths, unsafe or
+   cyclic link topology, special files, and entries beneath archive links.
+   Enforce 8,192-member, 512 MiB expanded-total, and 128 MiB per-file ceilings
+   from metadata and while copying. Write files and directories without
+   `tarfile` extraction defaults, then create only validated contained links.
 5. Install atomically — the verified bundle replaces the target directory in one
    move, leaving no partially-extracted state behind.
 

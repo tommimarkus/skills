@@ -29,7 +29,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
 
 DEDIREN_REPO_DEFAULT = "tommimarkus/dediren"
@@ -52,6 +52,9 @@ CONNECT_TIMEOUT_SECONDS = 30.0
 CHECKSUMS_TOTAL_TIMEOUT_SECONDS = 30.0
 ARCHIVE_TOTAL_TIMEOUT_SECONDS = 300.0
 MAX_DOWNLOAD_BYTES = 256 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 8192
+MAX_ARCHIVE_TOTAL_BYTES = 512 * 1024 * 1024
+MAX_ARCHIVE_FILE_BYTES = 128 * 1024 * 1024
 DOWNLOAD_ATTEMPTS = 3
 LOCK_WAIT_SECONDS = 120.0
 CALVER_PATTERN = re.compile(r"(?<![0-9.])([0-9]{4})\.([0-9]{2})\.([0-9]+)(?![0-9.])")
@@ -472,69 +475,222 @@ def verify_digest(payload: bytes, expected: str, archive_name: str) -> None:
 # --------------------------------------------------------------------------
 
 
-def _contained(root: Path, candidate: Path) -> bool:
-    try:
-        candidate.relative_to(root)
-    except ValueError:
-        return False
-    return True
+ArchivePath = tuple[str, ...]
+
+
+def _archive_path(value: str, *, member_name: str, allow_parent: bool) -> ArchivePath:
+    if not value or "\0" in value or value.startswith("/") or PurePosixPath(value).is_absolute():
+        raise DedirenError(
+            f"refusing archive path with an absolute path: {member_name} -> {value}",
+            EXIT_UNAVAILABLE,
+        )
+    parts: list[str] = []
+    for part in PurePosixPath(value).parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not allow_parent:
+                raise DedirenError(
+                    f"refusing archive member with a parent traversal: {member_name}",
+                    EXIT_UNAVAILABLE,
+                )
+            if not parts:
+                raise DedirenError(
+                    f"refusing archive link that escapes the destination: "
+                    f"{member_name} -> {value}",
+                    EXIT_UNAVAILABLE,
+                )
+            parts.pop()
+        else:
+            parts.append(part)
+    if not parts:
+        raise DedirenError(f"refusing empty archive member path: {member_name}", EXIT_UNAVAILABLE)
+    return tuple(parts)
+
+
+def _link_target(path: ArchivePath, member: tarfile.TarInfo) -> ArchivePath:
+    link = member.linkname
+    if not link or "\0" in link or link.startswith("/") or PurePosixPath(link).is_absolute():
+        raise DedirenError(
+            f"refusing archive link to an absolute path: {member.name} -> {link}",
+            EXIT_UNAVAILABLE,
+        )
+    base = path[:-1] if member.issym() else ()
+    parts = list(base)
+    for part in PurePosixPath(link).parts:
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not parts:
+                raise DedirenError(
+                    f"refusing archive link that escapes the destination: "
+                    f"{member.name} -> {link}",
+                    EXIT_UNAVAILABLE,
+                )
+            parts.pop()
+        else:
+            parts.append(part)
+    return tuple(parts)
+
+
+def _archive_plan(
+    archive: tarfile.TarFile,
+) -> tuple[
+    list[tarfile.TarInfo],
+    dict[ArchivePath, tarfile.TarInfo],
+    dict[ArchivePath, ArchivePath],
+]:
+    """Preflight the complete archive before any filesystem mutation."""
+    members: list[tarfile.TarInfo] = []
+    by_path: dict[ArchivePath, tarfile.TarInfo] = {}
+    expanded = 0
+    for member_number, member in enumerate(archive, start=1):
+        if member_number > MAX_ARCHIVE_MEMBERS:
+            raise DedirenError(
+                f"archive member count exceeds limit {MAX_ARCHIVE_MEMBERS}", EXIT_UNAVAILABLE
+            )
+        members.append(member)
+        path = _archive_path(member.name, member_name=member.name, allow_parent=False)
+        if path in by_path:
+            raise DedirenError(
+                f"refusing duplicate path in archive: {member.name}", EXIT_UNAVAILABLE
+            )
+        if not (member.isdir() or member.isfile() or member.issym() or member.islnk()):
+            raise DedirenError(
+                f"refusing non-file archive member: {member.name}", EXIT_UNAVAILABLE
+            )
+        if member.isfile():
+            if member.size < 0 or member.size > MAX_ARCHIVE_FILE_BYTES:
+                raise DedirenError(
+                    f"archive member exceeds per-file limit {MAX_ARCHIVE_FILE_BYTES}: "
+                    f"{member.name}",
+                    EXIT_UNAVAILABLE,
+                )
+            expanded += member.size
+            if expanded > MAX_ARCHIVE_TOTAL_BYTES:
+                raise DedirenError(
+                    f"archive expanded size exceeds limit {MAX_ARCHIVE_TOTAL_BYTES}",
+                    EXIT_UNAVAILABLE,
+                )
+        by_path[path] = member
+
+    for path, member in by_path.items():
+        for depth in range(1, len(path)):
+            ancestor = by_path.get(path[:depth])
+            if ancestor is not None and not ancestor.isdir():
+                kind = "link" if ancestor.issym() or ancestor.islnk() else "non-directory"
+                raise DedirenError(
+                    f"refusing archive member beneath a {kind} ancestor: {member.name}",
+                    EXIT_UNAVAILABLE,
+                )
+
+    raw_targets = {
+        path: _link_target(path, member)
+        for path, member in by_path.items()
+        if member.issym() or member.islnk()
+    }
+    directories = {()}
+    for path in by_path:
+        directories.update(path[:depth] for depth in range(1, len(path)))
+    directories.update(path for path, member in by_path.items() if member.isdir())
+
+    def resolve(path: ArchivePath, stack: tuple[ArchivePath, ...] = ()) -> ArchivePath:
+        for depth in range(1, len(path) + 1):
+            prefix = path[:depth]
+            member = by_path.get(prefix)
+            if member is None:
+                continue
+            if member.issym() or member.islnk():
+                if prefix in stack:
+                    raise DedirenError(
+                        f"refusing archive link cycle at {'/'.join(prefix)}", EXIT_UNAVAILABLE
+                    )
+                return resolve(raw_targets[prefix] + path[depth:], stack + (prefix,))
+            if not member.isdir() and depth < len(path):
+                raise DedirenError(
+                    f"refusing archive link through a non-directory: {'/'.join(path)}",
+                    EXIT_UNAVAILABLE,
+                )
+        return path
+
+    resolved_targets: dict[ArchivePath, ArchivePath] = {}
+    for path, member in by_path.items():
+        if path not in raw_targets:
+            continue
+        resolved = resolve(raw_targets[path], (path,))
+        target = by_path.get(resolved)
+        if resolved not in directories and target is None:
+            raise DedirenError(
+                f"refusing archive link to a missing target: {member.name} -> {member.linkname}",
+                EXIT_UNAVAILABLE,
+            )
+        if member.islnk() and (target is None or not target.isfile()):
+            raise DedirenError(
+                f"refusing archive hardlink to a non-file: {member.name} -> {member.linkname}",
+                EXIT_UNAVAILABLE,
+            )
+        resolved_targets[path] = resolved
+    return members, by_path, resolved_targets
 
 
 def safe_members(archive: tarfile.TarFile, destination: Path) -> Iterable[tarfile.TarInfo]:
-    """Yield members that are safe to write under `destination`.
-
-    Written by hand rather than relying on ``tarfile``'s extraction filters,
-    which are not available across the whole range of host interpreters this
-    runs under. Anything that could escape the destination — an absolute path, a
-    parent traversal, a link pointing outside, a device or fifo — is refused
-    rather than skipped, so a tampered archive fails loudly.
-    """
-    for member in archive.getmembers():
-        name = member.name
-        if name.startswith("/") or Path(name).is_absolute():
-            raise DedirenError(
-                f"refusing archive member with an absolute path: {name}",
-                EXIT_UNAVAILABLE,
-            )
-        if ".." in Path(name).parts:
-            raise DedirenError(
-                f"refusing archive member with a parent traversal: {name}",
-                EXIT_UNAVAILABLE,
-            )
-        target = (destination / name).resolve()
-        if not _contained(destination.resolve(), target):
-            raise DedirenError(
-                f"refusing archive member that escapes the destination: {name}",
-                EXIT_UNAVAILABLE,
-            )
-        if member.ischr() or member.isblk() or member.isfifo() or member.isdev():
-            raise DedirenError(
-                f"refusing non-file archive member: {name}", EXIT_UNAVAILABLE
-            )
-        if member.issym() or member.islnk():
-            link = member.linkname
-            if Path(link).is_absolute():
-                raise DedirenError(
-                    f"refusing archive link to an absolute path: {name} -> {link}",
-                    EXIT_UNAVAILABLE,
-                )
-            base = target.parent if member.issym() else destination
-            resolved = (base / link).resolve()
-            if not _contained(destination.resolve(), resolved):
-                raise DedirenError(
-                    f"refusing archive link that escapes the destination: "
-                    f"{name} -> {link}",
-                    EXIT_UNAVAILABLE,
-                )
-        yield member
+    """Yield members only after complete topology and resource preflight."""
+    del destination  # topology is validated without consulting mutable filesystem state
+    members, _, _ = _archive_plan(archive)
+    yield from members
 
 
 def extract(archive_path: Path, destination: Path) -> None:
-    destination.mkdir(parents=True, exist_ok=True)
     with tarfile.open(archive_path) as archive:
-        members = list(safe_members(archive, destination))
-        for member in members:
-            archive.extract(member, path=destination)
+        _, by_path, resolved_targets = _archive_plan(archive)
+        destination.mkdir(parents=True, exist_ok=True)
+        if destination.is_symlink() or not destination.is_dir():
+            raise DedirenError(f"archive destination is not a directory: {destination}")
+        if any(destination.iterdir()):
+            raise DedirenError(f"archive destination is not empty: {destination}")
+
+        directories = {path[:depth] for path in by_path for depth in range(1, len(path))}
+        directories.update(path for path, member in by_path.items() if member.isdir())
+        for path in sorted(directories, key=lambda item: (len(item), item)):
+            destination.joinpath(*path).mkdir(exist_ok=True)
+
+        copied = 0
+        for path, member in by_path.items():
+            if not member.isfile():
+                continue
+            source = archive.extractfile(member)
+            if source is None:
+                raise DedirenError(f"could not read archive member: {member.name}")
+            target = destination.joinpath(*path)
+            written = 0
+            with source, target.open("xb") as output:
+                while chunk := source.read(1024 * 1024):
+                    written += len(chunk)
+                    copied += len(chunk)
+                    if written > member.size or written > MAX_ARCHIVE_FILE_BYTES:
+                        raise DedirenError(
+                            f"archive member exceeded declared or per-file size: {member.name}"
+                        )
+                    if copied > MAX_ARCHIVE_TOTAL_BYTES:
+                        raise DedirenError("archive exceeded expanded size while copying")
+                    output.write(chunk)
+            if written != member.size:
+                raise DedirenError(
+                    f"archive member size mismatch for {member.name}: "
+                    f"expected {member.size}, copied {written}"
+                )
+            target.chmod(member.mode & 0o777)
+
+        for path, member in by_path.items():
+            if member.islnk():
+                source = destination.joinpath(*resolved_targets[path])
+                os.link(source, destination.joinpath(*path), follow_symlinks=False)
+        for path, member in by_path.items():
+            if member.issym():
+                os.symlink(member.linkname, destination.joinpath(*path))
+        for path, member in sorted(by_path.items(), key=lambda item: len(item[0]), reverse=True):
+            if member.isdir():
+                destination.joinpath(*path).chmod(member.mode & 0o777)
 
 
 # --------------------------------------------------------------------------
