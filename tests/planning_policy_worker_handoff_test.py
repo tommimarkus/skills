@@ -357,60 +357,69 @@ class PlanningPolicyWorkerHandoffTest(unittest.TestCase):
 
     def test_malformed_files_and_events_fail_without_tracebacks(self) -> None:
         run_id = self.started_run()
-        packet = self.handoff(run_id)
         handoff_file = self.root / "handoff.json"
         return_file = self.root / "return.json"
-        packet["plan_context"] = []
-        packet["handoff_sha256"] = canonical_sha256(
-            {key: value for key, value in packet.items() if key != "handoff_sha256"}
-        )
-        handoff_file.write_text(json.dumps(packet), encoding="utf-8")
-        return_file.write_text(json.dumps(self.completed_return(packet)), encoding="utf-8")
-        code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
-                                 "--return-file", str(return_file))
-        self.assertNotEqual(0, code, result)
-        self.assertNotIn("Traceback", result["error"])
+        run_dir = self.root / "planning-policy/ledgers/handoff-plan" / run_id
 
-        packet = self.handoff(run_id)
-        handoff_file.write_text(json.dumps(packet), encoding="utf-8")
-        malformed = self.completed_return(packet)
-        malformed["changed_paths"] = [{}]
-        return_file.write_text(json.dumps(malformed), encoding="utf-8")
-        code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
-                                 "--return-file", str(return_file))
-        self.assertNotEqual(0, code, result)
-        self.assertEqual("invalid changed_paths", result["error"])
+        def validate_return():
+            return self.call("validate-return", "--handoff-file", str(handoff_file),
+                             "--return-file", str(return_file))
 
-        for field, malformed_value in (("status", []), ("notes", [{"type": {}, "message": "bad"}])):
-            with self.subTest(field=field):
+        def write_valid_handoff() -> dict:
+            packet = self.handoff(run_id)
+            handoff_file.write_text(json.dumps(packet), encoding="utf-8")
+            return packet
+
+        def malformed_plan_context():
+            packet = self.handoff(run_id)
+            packet["plan_context"] = []
+            packet["handoff_sha256"] = canonical_sha256(
+                {key: value for key, value in packet.items() if key != "handoff_sha256"}
+            )
+            handoff_file.write_text(json.dumps(packet), encoding="utf-8")
+            return_file.write_text(json.dumps(self.completed_return(packet)), encoding="utf-8")
+            return validate_return()
+
+        def malformed_return(field, value):
+            def run():
+                packet = write_valid_handoff()
                 malformed = self.completed_return(packet)
-                malformed[field] = malformed_value
+                malformed[field] = value
                 return_file.write_text(json.dumps(malformed), encoding="utf-8")
-                code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
-                                         "--return-file", str(return_file))
+                return validate_return()
+            return run
+
+        def oversized_handoff():
+            return_file.write_text(json.dumps(self.completed_return(self.handoff(run_id))), encoding="utf-8")
+            handoff_file.write_bytes(b" " * (ledger.MAX_WORKER_HANDOFF_RAW + 1))
+            return validate_return()
+
+        def oversized_return():
+            write_valid_handoff()
+            return_file.write_bytes(b" " * (ledger.MAX_RETURN + 1))
+            return validate_return()
+
+        scenarios = (
+            ("plan_context_not_object", malformed_plan_context, "invalid worker handoff plan context"),
+            ("changed_paths_entry_not_string", malformed_return("changed_paths", [{}]), "invalid changed_paths"),
+            ("status_not_string", malformed_return("status", []), "invalid return status"),
+            ("note_type_not_string", malformed_return("notes", [{"type": {}, "message": "bad"}]),
+             "invalid typed notes"),
+            ("handoff_over_byte_limit", oversized_handoff, "worker handoff exceeds byte limit"),
+            ("return_over_byte_limit", oversized_return, "step return exceeds byte limit"),
+        )
+        for name, run, expected in scenarios:
+            with self.subTest(scenario=name):
+                code, result = run()
                 self.assertNotEqual(0, code, result)
-                self.assertNotIn("Traceback", result["error"])
+                self.assertEqual(expected, result["error"])
 
-        handoff_file.write_bytes(b" " * (ledger.MAX_WORKER_HANDOFF_RAW + 1))
-        code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
-                                 "--return-file", str(return_file))
-        self.assertNotEqual(0, code, result)
-        self.assertEqual("worker handoff exceeds byte limit", result["error"])
-
-        packet = self.handoff(run_id)
-        handoff_file.write_text(json.dumps(packet), encoding="utf-8")
-        return_file.write_bytes(b" " * (ledger.MAX_RETURN + 1))
-        code, result = self.call("validate-return", "--handoff-file", str(handoff_file),
-                                 "--return-file", str(return_file))
-        self.assertNotEqual(0, code, result)
-        self.assertEqual("step return exceeds byte limit", result["error"])
-
-        events = self.root / "planning-policy/ledgers/handoff-plan" / run_id / "events.jsonl"
-        checkpoint = self.root / "planning-policy/ledgers/handoff-plan" / run_id / "checkpoint.json"
+        checkpoint = run_dir / "checkpoint.json"
         before = checkpoint.read_bytes()
-        events.write_text("{}\n", encoding="utf-8")
+        (run_dir / "events.jsonl").write_text("{}\n", encoding="utf-8")
         code, result = self.call(*self.common, "handoff", "--run-id", run_id, "--step-id", "build")
         self.assertNotEqual(0, code, result)
+        self.assertEqual("invalid run event", result["error"])
         self.assertEqual(before, checkpoint.read_bytes())
 
 

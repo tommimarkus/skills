@@ -567,12 +567,9 @@ class SharedContractTest(unittest.TestCase):
         advisory = MODULE.validate(plan)["cost_advisory"]
         stable = advisory["stable_proxy"]
         self.assertEqual(2, stable["leaf_count"])
-        expected_total = sum(
-            MODULE.proxy_tokens({key: item.get(key) for key in MODULE.REQUIRED if key in item})
-            for item in plan["leaves"]
-        )
-        self.assertEqual(expected_total, stable["handoff_total"])
-        self.assertGreater(stable["handoff_total"], 0)
+        # Literal proxy-token total of the two fixture leaves (156 + 153); a fixture or
+        # tokenizer change must update it knowingly.
+        self.assertEqual(309, stable["handoff_total"])
 
     def test_batched_dispatch_lowers_prefix_multiplication_while_handoff_total_matches(self):
         def build(batched):

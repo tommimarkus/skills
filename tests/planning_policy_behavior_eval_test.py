@@ -185,12 +185,11 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         self.assertNotIn("deep", {case["tier"] for case in self.forward})
         for case in self.forward:
             self.assertTrue((FIXTURES / case["fixture"]).is_dir())
-        self.assertEqual(self.runner.MAPPINGS["claude"]["standard"], ("sonnet", "medium"))
-        self.assertEqual(self.runner.MAPPINGS["codex"]["standard"], ("gpt-5.6-terra", "medium"))
-        self.assertEqual(self.runner.MAPPINGS["claude"]["mechanical"], ("haiku", "low"))
-        self.assertEqual(self.runner.MAPPINGS["codex"]["mechanical"], ("gpt-5.6-luna", "low"))
-        self.assertEqual(self.runner.MAPPINGS["claude"]["analytical"], ("opus", "high"))
-        self.assertEqual(self.runner.MAPPINGS["codex"]["analytical"], ("gpt-5.6-sol", "high"))
+        host_tiers = json.loads((ROOT / "souroldgeezer-policy/skills/planning-policy/references/host-tiers.json").read_text(encoding="utf-8"))
+        for harness, host in (("claude", "claude-code"), ("codex", "codex")):
+            expected = {tier: (spec["model"], spec["effort"]) for tier, spec in host_tiers["hosts"][host]["tiers"].items()}
+            self.assertEqual(4, len(expected))
+            self.assertEqual(expected, self.runner.MAPPINGS[harness], harness)
         required = {"id", "dependencies", "task", "boundary", "read_set", "write_set", "size", "tier", "worktree_owner", "acceptance_command", "return_contract", "stop_conditions"}
         for case in self.forward:
             self.assertTrue(required.issubset(case), case["id"])
@@ -445,6 +444,19 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             insecure = Path(temporary) / "missing"
             with self.assertRaises(SystemExit):
                 self.runner.main(["--harness", "claude", "--output-dir", str(insecure), "--execute"])
+
+    def test_live_execution_refuses_a_world_writable_output_directory(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.object(
+            self.runner.subprocess, "run", side_effect=AssertionError("a refused directory must not launch a host")
+        ):
+            exposed = Path(temporary) / "exposed"
+            exposed.mkdir()
+            exposed.chmod(0o777)
+            self.assertFalse(self.runner.is_secure_output_dir(exposed))
+            with self.assertRaises(SystemExit):
+                self.runner.main(["--harness", "claude", "--output-dir", str(exposed), "--execute"])
+            exposed.chmod(0o700)
+            self.assertTrue(self.runner.is_secure_output_dir(exposed))
 
 
 if __name__ == "__main__":

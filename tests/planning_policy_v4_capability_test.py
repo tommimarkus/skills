@@ -12,6 +12,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import assert_phrases
+
 ROOT = Path(__file__).resolve().parents[1]
 POLICY = ROOT / "souroldgeezer-policy/skills/planning-policy"
 SCRIPTS = POLICY / "references/scripts"
@@ -334,14 +336,31 @@ class CapabilityLedgerTest(unittest.TestCase):
 
 class CapabilityAdapterTest(unittest.TestCase):
     def test_host_adapters_require_the_exact_binding_in_each_handoff(self) -> None:
-        for relative in ("extensions/codex.md", "extensions/claude-code.md"):
+        resolution = "## Capability resolution"
+        resolve_tokens = (
+            "planning-capability-binding-v1", "capability_requirements",
+            "blocked:capability_unavailable", "do not silently substitute",
+        )
+        adapters = {
+            "extensions/codex.md": (
+                (resolution, resolve_tokens),
+                ("## Required handoff", (
+                    "exact resolved binding `planning-capability-binding-v1`",
+                    "reject a missing or mismatched binding as `blocked:capability_unavailable` without probing",
+                )),
+            ),
+            "extensions/claude-code.md": (
+                (resolution, resolve_tokens + (
+                    "exact resolved binding, including its `planning-capability-binding-v1` schema",
+                    "rejects a missing or mismatched binding as `blocked:capability_unavailable` without probing",
+                )),
+            ),
+        }
+        for relative, anchored in adapters.items():
             text = (POLICY / relative).read_text(encoding="utf-8")
-            with self.subTest(adapter=relative):
-                self.assertIn("planning-capability-binding-v1", text)
-                self.assertIn("capability_requirements", text)
-                self.assertIn("exact resolved binding", text)
-                self.assertIn("blocked:capability_unavailable", text)
-                self.assertIn("do not silently substitute", text)
+            for heading, tokens in anchored:
+                with self.subTest(adapter=relative, heading=heading):
+                    assert_phrases(self, text, tokens, heading=heading)
 
 
 class CapabilityDocumentationTest(unittest.TestCase):

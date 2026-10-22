@@ -11,10 +11,12 @@ a live run.
 """
 
 import importlib.util
-import inspect
 import re
 import unittest
 from pathlib import Path
+
+from tests.planning_ledger_dispatch_test import leaf
+from tests.planning_ledger_verify_test import VerifyHarness
 
 REPO_ROOT = Path(__file__).parents[1]
 POLICY = REPO_ROOT / "souroldgeezer-policy"
@@ -226,52 +228,84 @@ class BoundedCapParityTest(unittest.TestCase):
                 )
 
 
-class NextBlockScopeParityTest(unittest.TestCase):
-    """The doc's claim about which commands emit a live `next` block must match code.
+class NextBlockScopeParityTest(VerifyHarness):
+    """The doc's claim about which commands emit a live `next` block must match behavior.
 
-    The doc was once drafted on a wrong premise about which commands emit `next`
-    before being corrected. This gate derives the actual emitter set from
-    `planning_ledger.py`'s own source, so a future change that starts (or
-    stops) a command emitting `next` — or a doc edit that re-claims a command
-    the code does not cover — fails here instead of drifting back to the same
-    wrong claim in a live run.
+    The doc was once drafted on a wrong premise about which commands emit `next`.
+    This gate runs each candidate command against fixture runs and records which
+    results actually carry a `next` block, so a command that starts (or stops)
+    emitting one, or a doc edit that re-claims a command the ledger does not
+    cover, fails here instead of drifting back into a live run. A source-text
+    heuristic once pinned only three emitters and missed the ones that build
+    their block through helper functions.
     """
 
     NEXT_EMIT_CANDIDATES = {
-        "init5": "init-v5",
-        "record": "record-return",
-        "record_verify": "record-verify",
-        "transition_step": "transition",
-        "close_run": "close",
-        "reopen_run": "reopen",
+        "init-v5": "init-v5",
+        "transition": "transition",
+        "record-return": "record-return",
+        "record-verify": "record-verify",
+        "close": "close",
+        "reopen": "reopen",
         "validate": "validate --closeout",
     }
+    EXPECTED_EMITTERS = {
+        "init-v5", "transition", "record-return", "record-verify", "reopen", "validate --closeout",
+    }
 
-    @staticmethod
-    def _emits_next(function_name):
-        source = inspect.getsource(getattr(ledger, function_name))
-        return "bounded_next(" in source or "next_after_return(" in source
+    def observed_emitters(self):
+        """Run the candidates over three fresh runs; return the commands whose result has `next`."""
+        seen = {}
 
-    def test_code_derived_emitters_are_exactly_init_v5_record_return_and_record_verify(self):
-        """Pin the current, intentional scope so a silent expansion is visible."""
-        emitters = {
-            cli
-            for name, cli in self.NEXT_EMIT_CANDIDATES.items()
-            if self._emits_next(name)
-        }
-        self.assertEqual({"init-v5", "record-return", "record-verify"}, emitters)
+        def run(name, *arguments):
+            code, result = self.call(*arguments)
+            self.assertEqual(0, code, (name, result))
+            seen[self.NEXT_EMIT_CANDIDATES[name]] = "next" in result
+            return result
 
-    def test_ledger_contract_names_every_code_derived_emitter(self):
+        def actor(*arguments):
+            return (*arguments[:1], "--actor", "parent", "--run-id", self.run_id, *arguments[1:])
+
+        # Fresh run: init-v5, then a pending step becomes ready.
+        seen["init-v5"] = "next" in self.init([leaf("alpha", "leaf-alpha")])
+        run("transition", *actor("transition", "--step-id", "alpha", "--to", "ready", "--agent-id", "w"))
+
+        # Verified run: record-return, record-verify, validate --closeout, close completed.
+        self.setUp()
+        packet, returned = self.completed()
+        seen["record-return"] = "next" in returned
+        _, issued = self.verify_handoff()
+        (verify,) = issued["handoffs"]
+        run("record-verify", *actor("record-verify", "--return-file", str(self.verify_return(verify))))
+        landed_code, landed = self.land()
+        self.assertEqual(0, landed_code, landed)
+        run("validate", "validate", "--run-id", self.run_id, "--closeout")
+        run("close", *actor("close", "--outcome", "completed"))
+
+        # Retryable failure: close blocked, then reopen.
+        self.setUp()
+        packet = self.started()
+        self.commit_file("src/alpha/a.txt", "x\n")
+        blocker = {"code": "failed:acceptance", "summary": "acceptance failed"}
+        self.returned(packet, "failed", blockers=[blocker])
+        run("close", *actor("close", "--outcome", "blocked", "--reason", "stuck"))
+        run("reopen", *actor("reopen", "--reason", "retry"))
+        return {cli for cli, emitted in seen.items() if emitted}
+
+    def test_behavioral_emitters_are_exactly_the_pinned_set(self):
+        """Pin the current scope so a silent expansion or loss is visible; `close` is terminal."""
+        self.assertEqual(self.EXPECTED_EMITTERS, self.observed_emitters())
+
+    def test_ledger_contract_names_every_behavioral_emitter(self):
         text = normalized(REFERENCE)
-        for name, cli in self.NEXT_EMIT_CANDIDATES.items():
-            if self._emits_next(name):
-                with self.subTest(command=cli):
-                    self.assertIn(
-                        cli,
-                        text,
-                        f"ledger-contract.md never names {cli!r} as next-emitting, "
-                        "but planning_ledger.py's own source shows it is",
-                    )
+        for cli in sorted(self.observed_emitters()):
+            with self.subTest(command=cli):
+                self.assertIn(
+                    cli,
+                    text,
+                    f"ledger-contract.md never names {cli!r} as next-emitting, "
+                    "but a live run shows it is",
+                )
 
 
 class ReferencedReturnCodeParityTest(unittest.TestCase):

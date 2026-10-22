@@ -33,21 +33,23 @@ class PrecisionFieldTest(unittest.TestCase):
         plan = plan_with()
         del plan["leaves"][0]["read_set"]
         plan["leaves"][0]["write_set"] = []
-        self.assertTrue(errors_of(plan))
+        self.assertEqual(["leaves[0].read_set and leaves[0].write_set cannot both be empty"], errors_of(plan))
         self.assertEqual([], [e for e in errors_of(plan_with(read_set=[], write_set=["x.py"]))])
         self.assertTrue(any("cannot both be empty" in e for e in errors_of(plan_with(read_set=[], write_set=[]))))
 
     def test_strict_requires_exact_write_and_nonempty_exact_read(self):
-        for fields in (
-            {"write_set": ["outputs/*.py"], "read_set": ["a.py"]},
-            {"write_set": ["outputs/a.py"], "read_set": []},
-            {"write_set": ["outputs/a.py"], "read_set": ["docs/**"]},
-            {"write_set": [], "read_set": ["a.py"]},
+        tail = "must be a non-empty exact path list without glob characters under strict precision"
+        for field, fields in (
+            ("write_set", {"write_set": ["outputs/*.py"], "read_set": ["a.py"]}),
+            ("read_set", {"write_set": ["outputs/a.py"], "read_set": []}),
+            ("read_set", {"write_set": ["outputs/a.py"], "read_set": ["docs/**"]}),
+            ("write_set", {"write_set": [], "read_set": ["a.py"]}),
         ):
-            self.assertTrue(errors_of(plan_with("strict", **fields)), fields)
+            with self.subTest(fields=fields):
+                self.assertEqual([f"leaves[0].{field} {tail}"], errors_of(plan_with("strict", **fields)))
         plan = plan_with("strict")
         del plan["leaves"][0]["read_set"]
-        self.assertTrue(any("read_set" in e for e in errors_of(plan)))
+        self.assertIn("leaves[0].read_set is required", errors_of(plan))
 
     def test_strict_accepts_exact_sets(self):
         plan = plan_with("strict", write_set=["outputs/a.py"], read_set=["a.py", "docs"])
