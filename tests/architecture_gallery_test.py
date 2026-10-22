@@ -113,9 +113,11 @@ FIXTURE = os.path.join(
 
 
 class BuildHtmlTest(unittest.TestCase):
-    def setUp(self):
-        self.m = _load()
-        self.html = self.m.build_html(FIXTURE)
+    @classmethod
+    def setUpClass(cls):
+        # immutable build result shared by the read-only assertions below
+        cls.m = _load()
+        cls.html = cls.m.build_html(FIXTURE)
 
     def test_self_contained_no_external_refs(self):
         # No external fetches. Namespace URIs (xmlns / xmlns:xlink) are inert
@@ -145,19 +147,22 @@ class BuildHtmlTest(unittest.TestCase):
 
     def test_sections_derived_from_real_profiles(self):
         # ArchiMate view -> A/ArchiMate views ; UML class -> T ; UML sequence -> S
-        self.assertIn("ArchiMate views", self.html)
-        self.assertIn("Structure & data", self.html)
-        self.assertIn("Sequences", self.html)
-        self.assertIn('"code": "A1"', self.html)
-        self.assertIn('"code": "T1"', self.html)
-        self.assertIn('"code": "S1"', self.html)
+        views = {v["id"]: v for v in _data(self.html)}
+        self.assertEqual(
+            {vid: (v["group"]["key"], v["group"]["title"], v["code"])
+             for vid, v in views.items()},
+            {"app-cooperation": ("arch", "ArchiMate views", "A1"),
+             "domain-class": ("uml-data", "Structure & data", "T1"),
+             "order-sequence": ("uml-seq", "Sequences", "S1")})
 
     def test_english_chrome_and_lang(self):
         self.assertIn('lang="en"', self.html)
-        self.assertNotIn("tiheä", self.html)
-        self.assertNotIn("asettelu", self.html)
-        self.assertNotIn("Konteksti", self.html)
-        self.assertNotIn("solmua", self.html)
+        # chrome strings the build derives are English: group titles and
+        # density labels come from the DATA payload, not localized copy
+        data = _data(self.html)
+        self.assertEqual({v["group"]["title"] for v in data},
+                         {"ArchiMate views", "Structure & data", "Sequences"})
+        self.assertEqual({v["density"] for v in data}, {"below-threshold"})
 
     def test_counts_from_render_metadata(self):
         # Each view's node/edge counts are read from its own render-metadata,
@@ -198,7 +203,7 @@ class BuildHtmlTest(unittest.TestCase):
                 _json.dump({"package_schema_version": "package.schema.v1",
                             "models": [], "views": []}, fh)
             html = self.m.build_html(d)          # must not raise
-            self.assertIn("const DATA = []", html)
+            self.assertEqual(_data(html), [])
             self.assertIn("if (DATA.length)", html)
 
     def test_untagged_package_takes_en_ltr_and_the_directory_feature(self):
@@ -430,11 +435,14 @@ class SheetDerivationTest(unittest.TestCase):
         self.assertNotIn("status", dense)
         self.assertIn('data-dediren-edge-label-for="e0"', sparse_html)
         self.assertIn('data-dediren-edge-id="e49"', dense_html)
-        self.assertIn("below density threshold", sparse_html)
-        self.assertIn("dense by edge count", dense_html)
-        self.assertNotIn("layout ok", sparse_html)
-        self.assertIn("assess layout quality from build diagnostics and the SVG",
-                      sparse_html)
+        # the payload carries a density bucket and counts only; it never
+        # asserts layout quality for either view
+        for view in (sparse, dense):
+            self.assertEqual(
+                set(view),
+                {"id", "code", "group", "title", "q", "kind", "nodes", "edges",
+                 "density", "sheet", "sheetLine"})
+            self.assertNotIn("layout", _json.dumps(view).casefold())
 
 
 class AuthorThemeTest(unittest.TestCase):

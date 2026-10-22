@@ -43,123 +43,115 @@ class IpHygieneEvalContractTest(unittest.TestCase):
             item["case"]: item
             for item in map(json.loads, (CORPUS / "expected.jsonl").read_text().splitlines())
         }
-        self.assertEqual(
-            {frozenset(group) for group in expected["case-001"]["required_code_groups"]},
-            {frozenset({"IP-MARK-2"}), frozenset({"IP-MARK-3"})},
-        )
-        self.assertEqual(
-            expected["case-002"]["allowed_classifications"]["IP-MARK-4"][0]["authority_class"],
-            "conservative repository policy",
-        )
-        self.assertEqual(expected["case-017"]["expect"], "stopped")
-        self.assertEqual(expected["case-017"]["outcome"], "not-evaluated")
-        self.assertIsNone(expected["case-017"]["designated_blocker_criterion"])
-        self.assertEqual(expected["case-018"]["expect"], "stopped")
-        self.assertEqual(expected["case-018"]["outcome"], "not-evaluated")
-        self.assertIsNone(expected["case-018"]["designated_blocker_criterion"])
-        for case_id in ("case-017", "case-018", "case-019"):
-            db_code = "IP-DB-1" if case_id == "case-017" else "IP-DB-2"
+
+        def authority(case_id: str, code: str) -> str:
+            return expected[case_id]["allowed_classifications"][code][0]["authority_class"]
+
+        def facts(case_id: str, code: str) -> set[str]:
+            return {item["fact_status"] for item in expected[case_id]["allowed_classifications"][code]}
+
+        with self.subTest(boundary="alternative marks are alternatives, not a conjunction"):
             self.assertEqual(
-                expected[case_id]["allowed_classifications"][db_code][0]["authority_class"],
-                "binding-law harmonization source",
-                case_id,
+                {frozenset(group) for group in expected["case-001"]["required_code_groups"]},
+                {frozenset({"IP-MARK-2"}), frozenset({"IP-MARK-3"})},
             )
-        for case_id in ("case-005", "case-013", "case-014", "case-024",
-                        "case-027", "case-028"):
-            for classifications in expected[case_id]["allowed_classifications"].values():
-                self.assertNotEqual(classifications[0]["authority_class"], "binding law", case_id)
-        self.assertEqual(expected["case-015"]["family"], "IP-LIC")
-        self.assertEqual(
-            expected["case-022"]["allowed_classifications"]["IP-LIC-4"][0]["authority_class"],
-            "conservative repository policy",
-        )
-        prospective = [case for case in expected.values() if case["lane"] == "prospective"]
-        self.assertEqual(
-            {case["outcome"] for case in prospective},
-            {"proceed-with-stated-controls", "do-not-proceed", "insufficient-evidence", "counsel-required"},
-        )
-        self.assertEqual(
-            {case["outcome"] for case in expected.values() if case["lane"] == "in-depth"},
-            {"blocked", "qualified", "no-blocker-identified"},
-        )
-        covered = {code for case in expected.values() for group in case["required_code_groups"] for code in group}
-        self.assertIn("IP-COPY-4", covered)
-        self.assertIn("IP-MARK-5", covered)
-        self.assertEqual(covered, defined_criteria())
-        self.assertEqual(expected["case-009"]["required_code_groups"], [["IP-SRC-1", "IP-LIC-1"]])
-        self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
-        self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
-        self.assertEqual(
-            {item["fact_status"]
-             for item in expected["case-040"]["allowed_classifications"]["IP-MARK-5"]},
-            {"inference"},
-        )
-        self.assertEqual(
-            {case["counsel_outcome"] for case in expected.values()},
-            {"not-triggered", "recommended", "required"},
-        )
-        authorities = {
-            classification["authority_class"]
-            for case in expected.values()
-            for classifications in case["allowed_classifications"].values()
-            for classification in classifications
-        }
-        self.assertEqual(authorities, {
-            "binding law", "binding-law harmonization source", "operative licence term",
-            "holder policy", "project convention", "conservative repository policy",
-        })
-        self.assertEqual(expected["case-030"]["expect"], "no-finding")
-        self.assertEqual(expected["case-041"]["required_code_groups"], [["IP-MARK-1"]])
-        self.assertIn("rejects every", cases_by_id()["case-041"]["prompt"])
-
-        for case_id in ("case-010", "case-013"):
-            self.assertEqual(expected[case_id]["outcome"], "fail", case_id)
-            primary = expected[case_id]["required_code_groups"][0][0]
-            self.assertTrue(
-                any(item["severity"] == "block"
-                    for item in expected[case_id]["allowed_classifications"][primary]),
-                case_id,
-            )
-
-        for case_id in ("case-008", "case-037"):
+        with self.subTest(boundary="repository-policy marks are not binding law"):
+            self.assertEqual(authority("case-002", "IP-MARK-4"), "conservative repository policy")
+            self.assertEqual(authority("case-022", "IP-LIC-4"), "conservative repository policy")
+            for case_id in ("case-005", "case-013", "case-014", "case-024", "case-027", "case-028"):
+                for classifications in expected[case_id]["allowed_classifications"].values():
+                    self.assertNotEqual(classifications[0]["authority_class"], "binding law", case_id)
+        with self.subTest(boundary="database-right cases stop as not-evaluated on a harmonization source"):
+            for case_id in ("case-017", "case-018"):
+                self.assertEqual(expected[case_id]["expect"], "stopped", case_id)
+                self.assertEqual(expected[case_id]["outcome"], "not-evaluated", case_id)
+                self.assertIsNone(expected[case_id]["designated_blocker_criterion"], case_id)
+            for case_id, code in (("case-017", "IP-DB-1"), ("case-018", "IP-DB-2"),
+                                  ("case-019", "IP-DB-2")):
+                self.assertEqual(authority(case_id, code), "binding-law harmonization source", case_id)
+                self.assertIn(
+                    {"severity": "warn", "authority_class": "conservative repository policy",
+                     "fact_status": "fact"},
+                    expected[case_id]["allowed_classifications"][code],
+                    case_id,
+                )
+        with self.subTest(boundary="licence family and required codes per case"):
+            self.assertEqual(expected["case-015"]["family"], "IP-LIC")
+            self.assertIn("IP-LIC-1", expected["case-019"]["required_code_groups"][0])
+            self.assertIn("IP-LIC-2", expected["case-022"]["required_code_groups"][0])
+            self.assertEqual(expected["case-009"]["required_code_groups"], [["IP-SRC-1", "IP-LIC-1"]])
+            self.assertIn("IP-SRC-4", expected["case-011"]["required_code_groups"][0])
+            self.assertEqual(expected["case-041"]["required_code_groups"], [["IP-MARK-1"]])
+        with self.subTest(boundary="lane outcome vocabularies stay closed"):
+            prospective = [case for case in expected.values() if case["lane"] == "prospective"]
             self.assertEqual(
-                {item["severity"]
-                 for item in expected[case_id]["allowed_classifications"]["IP-MARK-4"]},
-                {"info", "warn"},
-                case_id,
+                {case["outcome"] for case in prospective},
+                {"proceed-with-stated-controls", "do-not-proceed", "insufficient-evidence",
+                 "counsel-required"},
             )
-
-        for case_id, code in (("case-017", "IP-DB-1"), ("case-018", "IP-DB-2"),
-                              ("case-019", "IP-DB-2")):
+            self.assertEqual(
+                {case["outcome"] for case in expected.values() if case["lane"] == "in-depth"},
+                {"blocked", "qualified", "no-blocker-identified"},
+            )
+            self.assertEqual(
+                {case["counsel_outcome"] for case in expected.values()},
+                {"not-triggered", "recommended", "required"},
+            )
+        with self.subTest(boundary="every defined criterion is covered by some case"):
+            covered = {code for case in expected.values()
+                       for group in case["required_code_groups"] for code in group}
+            self.assertIn("IP-COPY-4", covered)
+            self.assertIn("IP-MARK-5", covered)
+            self.assertEqual(covered, defined_criteria())
+        with self.subTest(boundary="allowed codes admit the reviewed alternative readings"):
+            self.assertIn("IP-COPY-1", expected["case-039"]["allowed_codes"])
+            self.assertIn("IP-MARK-3", expected["case-040"]["allowed_codes"])
+            self.assertIn("interoperability guide", expected["case-039"]["evidence_anchors"])
+        with self.subTest(boundary="inference-only facts stay inference"):
+            self.assertEqual(facts("case-040", "IP-MARK-5"), {"inference"})
+            self.assertEqual(facts("case-041", "IP-MARK-1"), {"inference"})
+        with self.subTest(boundary="authority classes form the reviewed closed set"):
+            authorities = {
+                classification["authority_class"]
+                for case in expected.values()
+                for classifications in case["allowed_classifications"].values()
+                for classification in classifications
+            }
+            self.assertEqual(authorities, {
+                "binding law", "binding-law harmonization source", "operative licence term",
+                "holder policy", "project convention", "conservative repository policy",
+            })
+        with self.subTest(boundary="a no-finding case expects no finding"):
+            self.assertEqual(expected["case-030"]["expect"], "no-finding")
+            self.assertIn("rejects every", cases_by_id()["case-041"]["prompt"])
+        with self.subTest(boundary="failing cases carry a blocking severity on the primary code"):
+            for case_id in ("case-010", "case-013"):
+                self.assertEqual(expected[case_id]["outcome"], "fail", case_id)
+                primary = expected[case_id]["required_code_groups"][0][0]
+                self.assertTrue(
+                    any(item["severity"] == "block"
+                        for item in expected[case_id]["allowed_classifications"][primary]),
+                    case_id,
+                )
+        with self.subTest(boundary="mark-use cases allow only info or warn severity"):
+            for case_id in ("case-008", "case-037"):
+                self.assertEqual(
+                    {item["severity"]
+                     for item in expected[case_id]["allowed_classifications"]["IP-MARK-4"]},
+                    {"info", "warn"},
+                    case_id,
+                )
+        with self.subTest(boundary="policy-severity classifications for copy and source cases"):
             self.assertIn(
-                {"severity": "warn", "authority_class": "conservative repository policy",
+                {"severity": "block", "authority_class": "conservative repository policy",
                  "fact_status": "fact"},
-                expected[case_id]["allowed_classifications"][code],
-                case_id,
+                expected["case-005"]["allowed_classifications"]["IP-COPY-1"],
             )
-
-        self.assertIn(["IP-MARK-2"], expected["case-001"]["required_code_groups"])
-        self.assertIn(
-            {"severity": "block", "authority_class": "conservative repository policy",
-             "fact_status": "fact"},
-            expected["case-005"]["allowed_classifications"]["IP-COPY-1"],
-        )
-        self.assertIn("IP-SRC-4", expected["case-011"]["required_code_groups"][0])
-        self.assertIn(
-            {"severity": "info", "authority_class": "conservative repository policy",
-             "fact_status": "fact"},
-            expected["case-012"]["allowed_classifications"]["IP-SRC-4"],
-        )
-        self.assertIn("IP-LIC-1", expected["case-019"]["required_code_groups"][0])
-        self.assertIn("IP-LIC-2", expected["case-022"]["required_code_groups"][0])
-        for case_id, code in (("case-040", "IP-MARK-5"), ("case-041", "IP-MARK-1")):
-            self.assertEqual(
-                {item["fact_status"]
-                 for item in expected[case_id]["allowed_classifications"][code]},
-                {"inference"},
-                case_id,
+            self.assertIn(
+                {"severity": "info", "authority_class": "conservative repository policy",
+                 "fact_status": "fact"},
+                expected["case-012"]["allowed_classifications"]["IP-SRC-4"],
             )
-        self.assertIn("interoperability guide", expected["case-039"]["evidence_anchors"])
 
     def test_blind_prompts_do_not_disclose_gate_verdict_or_counsel_conclusions(self) -> None:
         prompts = "\n".join(case["prompt"] for case in case_records())

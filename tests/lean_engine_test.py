@@ -1071,6 +1071,7 @@ class GitAwareReadRepo(unittest.TestCase):
             ghost.write_text("## H\n" + "word " * 60 + "\n", encoding="utf-8")
             files = eng.read_repo(root, root)
             self.assertIn("aud/skills/s1/SKILL.md", files)
+            self.assertNotIn(".worktrees/b/SKILL.md", files)
 
 
 class GitEnumerationParityTest(unittest.TestCase):

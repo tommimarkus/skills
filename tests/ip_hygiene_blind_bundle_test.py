@@ -281,31 +281,59 @@ class IpHygieneGuidanceContaminationGuardTest(unittest.TestCase):
                     "here would silently invalidate every future blind run",
                 )
 
-    def test_guidance_files_carry_no_distinctive_case_material(self) -> None:
-        """A case ID is the obvious leak; quoted scenario material is the quiet
-        one. The corpus already curates a distinctive descriptor per case as its
-        evidence anchors, so derive the watch list from those rather than
-        hand-maintaining a second copy that drifts as cases are added."""
-        anchors = {
+    @classmethod
+    def _distinctive_anchors(cls) -> set[str]:
+        return {
             anchor
             for record in read_jsonl(
                 "souroldgeezer-audit/skills/ip-hygiene/references/evals/"
                 "accuracy-corpus/expected.jsonl"
             )
             for anchor in record.get("evidence_anchors", [])
-            if len(anchor) >= self.DISTINCTIVE_ANCHOR_LENGTH
+            if len(anchor) >= cls.DISTINCTIVE_ANCHOR_LENGTH
         }
+
+    @staticmethod
+    def _leaked_anchors(text: str, anchors: set[str]) -> list[str]:
+        folded = text.casefold()
+        return sorted(a for a in anchors if a.casefold() in folded)
+
+    def test_guidance_files_carry_no_distinctive_case_material(self) -> None:
+        """A case ID is the obvious leak; quoted scenario material is the quiet
+        one. The corpus already curates a distinctive descriptor per case as its
+        evidence anchors, so derive the watch list from those rather than
+        hand-maintaining a second copy that drifts as cases are added."""
+        anchors = self._distinctive_anchors()
         self.assertTrue(anchors, "no distinctive anchors parsed — the corpus shape changed")
         for name in self.GUIDANCE_FILES:
             with self.subTest(file=name):
-                text = read(name).casefold()
-                found = sorted(a for a in anchors if a.casefold() in text)
+                found = self._leaked_anchors(read(name), anchors)
                 self.assertFalse(
                     found,
                     f"{name} quotes corpus case material {found}; "
                     "harness-injected guidance reaches every blind evaluator "
                     "before it reads EVALUATOR_INSTRUCTIONS.md, so this would "
                     "silently bias every future blind run",
+                )
+
+    def test_distinctive_material_check_catches_a_planted_leak(self) -> None:
+        """Positive control: the clean-repo check above passes vacuously if the
+        anchor match is broken, so plant a synthetic leak in a temporary copy
+        and require the check to catch it."""
+        anchors = self._distinctive_anchors()
+        planted = "".join(("Zq", "Synthetic", "Leak", " scenario-", "marker 9137"))
+        self.assertGreaterEqual(len(planted), self.DISTINCTIVE_ANCHOR_LENGTH)
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in self.GUIDANCE_FILES:
+                copy = Path(tmp) / name
+                copy.write_text(read(name) + f"\n{planted.upper()}\n", encoding="utf-8")
+                self.assertEqual(
+                    self._leaked_anchors(copy.read_text(encoding="utf-8"), anchors | {planted}),
+                    [planted],
+                    name,
+                )
+                self.assertEqual(
+                    self._leaked_anchors(read(name), anchors | {planted}), [], name
                 )
 
 
