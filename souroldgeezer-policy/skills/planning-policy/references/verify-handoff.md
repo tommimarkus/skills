@@ -6,8 +6,9 @@ generated `planning-verify-handoff-v1` packet (at most 16 KiB) and never the
 builder's notes, logs, or reasoning. The packet carries `schema`,
 `packet_sha256`, `plan_id`, `run_id`, `plan_sha256`, `step_id`, `attempt_id`,
 `agent_id`, `verify_id`, `verifier_tier`, `task`, `boundary`,
-`settled_decisions`, `write_set`, `acceptance_command`, `cohesive_outcome`,
-`acceptance_exit_code`, `base_commit`, `returned_commit`, `budget`,
+`settled_decisions`, `approved_decisions` (the plan's), `write_set`,
+`acceptance_command`, `cohesive_outcome`, `acceptance_exit_code`,
+`base_commit`, `returned_commit`, `budget`,
 `changeset`, `outside_write_set`, and `return_schema`. A retry's packet also carries `prior_verify`
 (`verify_id`, `rejected_commit`, `findings`).
 
@@ -18,12 +19,17 @@ most 8 surrounding files that the diff touches or depends on. You may run at
 most one targeted probe (for example a single `grep` or one focused read-only
 command) when a check cannot be settled by reading. Never edit, stage, or
 commit, and never re-run the test suite or the acceptance command; the packet's
-`acceptance_exit_code` is the recorded result.
+`acceptance_exit_code` is the recorded result. Evidence only in builder notes
+(for example controlled-break probe results) is not in the packet and cannot be
+verified: record it as a `notes` entry and never infer pass or fail from it.
+Where independent checking is needed, the plan makes that evidence executable
+in the leaf's acceptance command, whose exit code the packet carries.
 
 ## Five checks
 
 1. Task coverage: every part of `task` is done.
-2. Settled decisions: each entry of `settled_decisions` is respected.
+2. Decisions: each `settled_decisions` entry and each `approved_decisions`
+   entry that applies to this leaf is respected.
 3. Silent removal: no behavior, rule, test, or assertion was removed without
    the task asking for it.
 4. Scope creep: no unrequested change inside the write set. For each

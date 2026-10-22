@@ -394,6 +394,34 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "Never pass builder context", "do not silently downgrade",
         ), heading="## Dispatch and model mapping")
 
+    def test_verify_handoff_names_every_packet_field_and_both_decision_lists(self) -> None:
+        base = "souroldgeezer-policy/skills/planning-policy/references/"
+        verify = self.text(base + "verify-handoff.md")
+        for field in sorted(ledger.VERIFY_HANDOFF_FIELDS | ledger.VERIFY_HANDOFF_OPTIONAL):
+            with self.subTest(field=field):
+                self.assertIn(f"`{field}`", verify)
+        assert_phrases(self, verify, (
+            "2. Decisions: each `settled_decisions` entry and each `approved_decisions` "
+            "entry that applies to this leaf is respected.",
+        ), heading="## Five checks")
+        assert_phrases(self, verify, (
+            "Evidence only in builder notes (for example controlled-break probe results) is not "
+            "in the packet and cannot be verified: record it as a `notes` entry and never infer "
+            "pass or fail from it.",
+            "the plan makes that evidence executable in the leaf's acceptance command, whose "
+            "exit code the packet carries.",
+        ), heading="## Inputs and reads")
+        assert_phrases(self, self.text(base + "plan-contract.md"), (
+            "Verifiers see these and each leaf's `settled_decisions`; evidence a verifier "
+            "must check independently belongs in the leaf's `acceptance_command`, because "
+            "builder notes never reach it.",
+        ), heading="## Plan JSON")
+        assert_phrases(self, self.text(base + "ledger-compatibility.md"), (
+            "`validate-verify-return` refuses an older verify packet",
+            "fails `validate-verify-return` with `verify handoff predates approved_decisions; "
+            "re-run verify-handoff`.",
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

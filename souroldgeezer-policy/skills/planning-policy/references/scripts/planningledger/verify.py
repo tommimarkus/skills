@@ -277,10 +277,12 @@ def verify_handoff_digest(value: JsonObject) -> str:
 def valid_verify_handoff(value: JsonValue) -> JsonObject:
     if not isinstance(value, dict) or len(canon(value)) > MAX_VERIFY_HANDOFF:
         raise Error("planning-verify-handoff-v1 exceeds 16 KiB")
-    if (
-        set(value) - VERIFY_HANDOFF_OPTIONAL != VERIFY_HANDOFF_FIELDS
-        or value["schema"] != "planning-verify-handoff-v1"
-    ):
+    keys = set(value) - VERIFY_HANDOFF_OPTIONAL
+    schema = value.get("schema") == "planning-verify-handoff-v1"
+    if schema and keys == VERIFY_HANDOFF_FIELDS - {"approved_decisions"}:
+        # Issued by a ledger before packets carried the plan's decisions.
+        raise Error("verify handoff predates approved_decisions; re-run verify-handoff")
+    if keys != VERIFY_HANDOFF_FIELDS or not schema:
         raise Error("invalid planning-verify-handoff-v1 schema")
     if not isinstance(value["packet_sha256"], str) or value[
         "packet_sha256"
@@ -344,6 +346,7 @@ def verify_handoff_packet(
         "task": leaf["task"],
         "boundary": leaf["boundary"],
         "settled_decisions": leaf["settled_decisions"],
+        "approved_decisions": plan["approved_decisions"],
         "write_set": leaf["write_set"],
         "acceptance_command": leaf["acceptance_command"],
         "cohesive_outcome": unit["cohesive_outcome"],

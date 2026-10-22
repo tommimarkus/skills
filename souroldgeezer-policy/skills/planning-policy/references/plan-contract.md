@@ -12,6 +12,9 @@ invalid (the discriminator is never `version`).
 
 Version 5 requires `objective` (1–240 characters), `scope_summary` (1–480), and
 one to eight `approved_decisions` (1–240 each); leaves may rely on these facts.
+Verifiers see these and each leaf's `settled_decisions`; evidence a verifier
+must check independently belongs in the leaf's `acceptance_command`, because
+builder notes never reach it.
 
 The validator accepts only `contract_version: 5`; an absent discriminator or
 any other value is one validation error. Versions 1–4 were retired after

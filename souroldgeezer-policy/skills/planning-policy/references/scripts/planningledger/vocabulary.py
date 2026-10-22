@@ -411,6 +411,7 @@ VERIFY_HANDOFF_FIELDS = {
     "task",
     "boundary",
     "settled_decisions",
+    "approved_decisions",
     "write_set",
     "acceptance_command",
     "cohesive_outcome",

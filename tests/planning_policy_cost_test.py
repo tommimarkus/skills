@@ -102,7 +102,10 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # adapter dispatch (+314 measured claude; slack 5 kept).
         # v1-v4 retirement and the batch environment-stop rule: every route re-measured
         # and ratcheted down to its measured value rounded up to 10.
-        self.assertLessEqual(claude["load_total"], 8760)
+        # #143 verify-packet decisions: plan-contract.md says verifiers see both
+        # decision lists and independent evidence belongs in acceptance (+35 measured
+        # on every route loading it; rounded up to 10).
+        self.assertLessEqual(claude["load_total"], 8790)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -115,8 +118,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # codex was re-baselined once more, from 6350, alongside claude above
         # for the same shared plan-series pointers.
         # verify-loop contract docs: same shared additions plus codex verifier dispatch
-        # (+287 measured; slack 5 kept).
-        self.assertLessEqual(codex["load_total"], 8640)
+        # (+287 measured; slack 5 kept). #143: same plan-contract.md sentence (+35).
+        self.assertLessEqual(codex["load_total"], 8670)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -141,7 +144,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_worker_and_verifier_routes_charge_their_agent_and_handoff(self):
         for name, agent, handoff, budget in (
-            ("worker", "step", "worker", 2450), ("verifier", "verify", "verify", 1100),
+            # #143: verify-handoff.md names approved_decisions, widens check 2, and
+            # states the builder-notes evidence limit (+87 measured; rounded up to 10).
+            ("worker", "step", "worker", 2450), ("verifier", "verify", "verify", 1190),
         ):
             result = self.measure(f"planning-policy-{name}")
             files = [row["file"] for row in result["rows"]]
@@ -158,8 +163,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # charged above, this route measures 7,038 proxy tokens.
         series = self.measure("planning-policy-series-successor")
         # verify-loop contract docs: SKILL.md pointer and core-workflow verifier
-        # paragraph (+206 measured; slack 5 kept).
-        self.assertLessEqual(series["load_total"], 8380)
+        # paragraph (+206 measured; slack 5 kept). #143: plan-contract.md sentence (+35).
+        self.assertLessEqual(series["load_total"], 8410)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -182,8 +187,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # answer the same live failure: an over-long envelope line withheld
         # approval and a rejected ExitPlanMode was mistaken for approval.
         # verify-loop contract docs: same shared core-workflow/SKILL.md additions (+287
-        # measured; slack 5 kept).
-        self.assertLessEqual(result["load_total"], 9740)
+        # measured; slack 5 kept). #143: plan-contract.md sentence (+35).
+        self.assertLessEqual(result["load_total"], 9780)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

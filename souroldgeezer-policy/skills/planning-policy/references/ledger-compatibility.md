@@ -1,7 +1,8 @@
 # Legacy Ledger Compatibility
 
 Load only when a ledger command refuses a retained pre-v5 run, when `list` or
-`gc` reports one, or when a retained v5 run lacks a newer policy stamp.
+`gc` reports one, when a retained v5 run lacks a newer policy stamp, or when
+`validate-verify-return` refuses an older verify packet.
 
 Contract versions 1–4 are retired: the ledger initializes and runs only
 version-5 plans. A version-1 ledger kept `checkpoint.json` directly in its plan
@@ -36,3 +37,12 @@ integrated-or-cleaned readiness, while a step carrying `provisional_base`,
 `blocked:upstream_changed` makes every mutating command stop
 `blocked:contract_migration_required` (and `show --next-only` names
 `contract_migration_required`); `show`, `list`, and `gc` keep working.
+
+## Older verify packets
+
+A `planning-verify-handoff-v1` packet issued before packets carried
+`approved_decisions` fails `validate-verify-return` with `verify handoff
+predates approved_decisions; re-run verify-handoff`. Re-run `verify-handoff`:
+the fresh packet takes the decisions from the run's stored plan, and its new
+`verify_id` makes the old one stale. `record-verify` reads no packet, so a
+verdict already returned records unchanged unless `verify-handoff` was re-run.

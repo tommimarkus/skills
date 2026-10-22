@@ -110,6 +110,36 @@ class VerifyHandoffTest(VerifyHarness):
         code, again = self.verify_handoff()
         self.assertNotEqual(verify["verify_id"], again["handoffs"][0]["verify_id"])
 
+    def test_packet_carries_the_plan_approved_decisions_exactly(self):
+        # A plan-wide decision the leaf could violate reaches the verifier's check 2.
+        decisions = ["test-only: no SUT edits",
+                     "every strengthened test must fail under a controlled break"]
+        self.completed(approved_decisions=decisions)
+        code, issued = self.verify_handoff()
+        self.assertEqual(0, code, issued)
+        (verify,) = issued["handoffs"]
+        self.assertEqual(decisions, verify["approved_decisions"])
+        self.assertEqual("settled", verify["settled_decisions"])
+        self.assertEqual({
+            "schema", "packet_sha256", "plan_id", "run_id", "plan_sha256", "step_id",
+            "attempt_id", "agent_id", "verify_id", "verifier_tier", "task", "boundary",
+            "settled_decisions", "approved_decisions", "write_set", "acceptance_command",
+            "cohesive_outcome", "acceptance_exit_code", "base_commit", "returned_commit",
+            "budget", "changeset", "prior_verify", "return_schema",
+            "outside_write_set", "outside_write_set_count",
+        }, set(verify))
+        code, result = self.validate_verify(verify, self.verify_return(verify))
+        self.assertEqual((0, verify["packet_sha256"]), (code, result.get("packet_sha256")), result)
+
+    def test_packet_with_the_largest_approved_decisions_stays_within_16_kib(self):
+        decisions = [f"{index}" + "d" * 239 for index in range(8)]
+        self.completed(approved_decisions=decisions)
+        code, issued = self.verify_handoff()
+        self.assertEqual(0, code, issued)
+        (verify,) = issued["handoffs"]
+        self.assertEqual(decisions, verify["approved_decisions"])
+        self.assertLessEqual(len(ledger.canon(verify)), 16 * 1024)
+
     def test_packet_never_carries_builder_notes_blockers_or_remainder(self):
         packet = self.started()
         self.commit_file("src/alpha/a.txt", "one\n")
@@ -219,6 +249,22 @@ class VerifyReturnTest(VerifyHarness):
         packet = self.packet()
         code, result = self.validate_verify(packet, self.verify_return(packet, "inconclusive"))
         self.assertEqual(0, code, result)
+
+    def test_a_packet_issued_before_approved_decisions_is_refused_then_reissued(self):
+        packet = self.packet()
+        older = {key: value for key, value in packet.items() if key != "approved_decisions"}
+        older["packet_sha256"] = ledger.verify_handoff_digest(older)
+        code, result = self.validate_verify(older, self.verify_return(older))
+        self.assertEqual((3, "verify handoff predates approved_decisions; re-run verify-handoff"),
+                         (code, result["error"]))
+        code, again = self.verify_handoff()
+        self.assertEqual(0, code, again)
+        (fresh,) = again["handoffs"]
+        self.assertEqual(["settled"], fresh["approved_decisions"])
+        code, result = self.validate_verify(fresh, self.verify_return(fresh))
+        self.assertEqual(0, code, result)
+        code, stale = self.record_verify(self.verify_return(older))
+        self.assertEqual((3, "stale or foreign verify_id"), (code, stale["error"]))
 
 
 class RecordVerifyTest(VerifyHarness):
