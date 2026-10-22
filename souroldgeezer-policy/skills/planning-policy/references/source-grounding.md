@@ -526,6 +526,15 @@ builder edited a test outside its write set and left that path out of its
 reported `changed_paths`, so its return still validated; only the parent's diff
 review, which `check-changeset` now automates, found it.
 
+The 2026-10-22 test-audit series exposed the verifier's blind spot for
+plan-wide rules (issue #143). Slice 1 stated an evidence obligation only in
+`approved_decisions`: workers skipped the probes and every verifier passed.
+Slice 2 copied it into each leaf's `settled_decisions`: workers ran the probes,
+yet all nine verifiers reported them unverifiable, because probe results live
+in builder notes, and parent probes still caught one rewrite that had dropped
+guards. Packets therefore carry `approved_decisions`, and evidence that needs an
+independent check belongs in the acceptance command.
+
 The synthetic `planning-policy-behavior-verify-*` cases cover pass, coverage-gap
 retry, silent removal, over-budget, outside write set, inconclusive, style-only,
 closeout-only, and batch dispatch. They test the documented workflow, not model

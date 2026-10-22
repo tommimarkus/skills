@@ -8,9 +8,9 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `agent_id`, `verify_id`, `verifier_tier`, `task`, `boundary`,
 `settled_decisions`, `approved_decisions` (the plan's), `write_set`,
 `acceptance_command`, `cohesive_outcome`, `acceptance_exit_code`,
-`base_commit`, `returned_commit`, `budget`,
-`changeset`, `outside_write_set`, and `return_schema`. A retry's packet also carries `prior_verify`
-(`verify_id`, `rejected_commit`, `findings`).
+`base_commit`, `returned_commit`, `budget`, `changeset`, `outside_write_set`,
+`prior_verify` (null unless a retry: `verify_id`, `rejected_commit`,
+`findings`), and `return_schema`.
 
 ## Inputs and reads
 
@@ -51,7 +51,7 @@ Finding codes: `verify:coverage` (check 1), `verify:decision` (check 2),
 
 ## Re-verification
 
-With `prior_verify` present, check the delta since `rejected_commit` and each
+With `prior_verify` set, check the delta since `rejected_commit` and each
 prior finding (fixed, or still present); do not re-review unchanged hunks.
 
 ## Batches
