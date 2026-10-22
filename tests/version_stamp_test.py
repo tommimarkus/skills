@@ -36,6 +36,14 @@ class ComputeNextTest(unittest.TestCase):
             vs.compute_next("2026.07.0", "2026.06")
 
 
+class ComputeMonthRangeTest(unittest.TestCase):
+    def test_refuses_month_zero_and_thirteen_with_error(self):
+        for month in ("2026.00", "2026.13"):
+            with self.subTest(month=month):
+                with self.assertRaisesRegex(ValueError, "not a CalVer month"):
+                    vs.compute_next("2026.06.3", month)
+
+
 class VersionDiffTest(unittest.TestCase):
     def test_no_change(self):
         a = {"x": "2026.06.0"}
@@ -64,6 +72,12 @@ class ParseVersionTest(unittest.TestCase):
     def test_rejects_invalid_month(self):
         with self.assertRaises(ValueError):
             vs.parse_version("2026.13.1")
+
+    def test_rejects_month_zero_and_thirteen_with_error(self):
+        for value in ("2026.00.1", "2026.13.1"):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "not a CalVer version"):
+                    vs.parse_version(value)
 
     def test_codex_version_is_a_normalized_derivative(self):
         self.assertEqual(vs.codex_version("2026.07.24"), "2026.7.24")
@@ -217,6 +231,25 @@ class GuardTest(unittest.TestCase):
                 encoding="utf-8",
             )
             _git(root, "commit", "-qam", "premature codex stamp")
+            self.assertEqual(self._guard(root), 1)
+
+    def test_fails_when_branch_stamps_only_the_root_plugin_json_cell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self._seed(root)
+            manifest = root / "souroldgeezer-audit" / "plugin.json"
+            manifest.write_text(
+                json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.3"}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            _git(root, "add", "-A")
+            _git(root, "commit", "-qm", "root manifest on main")
+            _git(root, "checkout", "-q", "-b", "feature")
+            manifest.write_text(
+                json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.4"}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            _git(root, "commit", "-qam", "premature root stamp")
             self.assertEqual(self._guard(root), 1)
 
     def test_fails_when_branch_stamps_the_readme_cell(self):
