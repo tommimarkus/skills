@@ -105,7 +105,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # #143 verify-packet decisions: plan-contract.md says verifiers see both
         # decision lists and independent evidence belongs in acceptance (+35 measured
         # on every route loading it; rounded up to 10).
-        self.assertLessEqual(claude["load_total"], 8790)
+        # #135/#137 write-set closure: core-workflow.md names the pins the literal
+        # pin scan cannot see (+52 measured on every route loading it; rounded up to 10).
+        self.assertLessEqual(claude["load_total"], 8840)
         # codex.md and ledger-contract.md were re-baselined once, from 4100/4200,
         # to carry the bounded-step-return-v1 corrections: the optional blocker
         # evidence pair, `oversized` as a status rather than a `blocked:` code,
@@ -119,7 +121,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # for the same shared plan-series pointers.
         # verify-loop contract docs: same shared additions plus codex verifier dispatch
         # (+287 measured; slack 5 kept). #143: same plan-contract.md sentence (+35).
-        self.assertLessEqual(codex["load_total"], 8670)
+        # #135/#137: same core-workflow.md write-set closure sentence (+52).
+        self.assertLessEqual(codex["load_total"], 8720)
         # Normal v4 execution now drives every lifecycle edge through live bounded
         # results, so the 2,476-token runtime reference is exceptional rather than
         # repeated context. The fallback remains separately measurable and routed.
@@ -188,7 +191,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         series = self.measure("planning-policy-series-successor")
         # verify-loop contract docs: SKILL.md pointer and core-workflow verifier
         # paragraph (+206 measured; slack 5 kept). #143: plan-contract.md sentence (+35).
-        self.assertLessEqual(series["load_total"], 8410)
+        # #135/#137: core-workflow.md write-set closure sentence (+52).
+        self.assertLessEqual(series["load_total"], 8460)
         files = [row["file"] for row in series["rows"]]
         self.assertTrue(any(file.endswith("plan-series.md") for file in files))
         self.assertTrue(any(file.endswith("SKILL.md") for file in files))
@@ -212,7 +216,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # approval and a rejected ExitPlanMode was mistaken for approval.
         # verify-loop contract docs: same shared core-workflow/SKILL.md additions (+287
         # measured; slack 5 kept). #143: plan-contract.md sentence (+35).
-        self.assertLessEqual(result["load_total"], 9780)
+        # #135/#137: core-workflow.md write-set closure sentence (+52).
+        self.assertLessEqual(result["load_total"], 9830)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

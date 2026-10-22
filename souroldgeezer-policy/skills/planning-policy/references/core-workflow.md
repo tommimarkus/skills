@@ -34,6 +34,10 @@ overrides defaults.
    `read_set`, and a clean pin scan, and stops on an out-of-set change. Run
    `validate --pin-roots` before approval in both modes and act on each
    `PLANSCOPE-UNOWNED-PIN` (see the [plan contract](plan-contract.md)).
+   The scan sees only literal path mentions, so also give each leaf the tests
+   that build its paths from segments, the load-cost caps and snapshots its
+   edits move, fixtures whose outcome a changed default flips, and the index
+   that must advertise any file it adds.
    Review acceptance for actual task coverage; structural validation cannot.
    Leaf acceptance covers its write set; whole-suite verification stays with
    the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
