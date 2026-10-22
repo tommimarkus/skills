@@ -14,6 +14,12 @@ output; do not restate this catalog.
 - `LA-DUP-2` — content restated instead of citing its declared canonical home.
   Severity: block. Source: engine (registry-aware).
 
+A subagent body that carries its own working obligations is the only context
+sure to reach that subagent (a host-loaded skill aside). Remedy `LA-DUP-*`
+among such bodies with a declared carve-out, never a citation or hoist into a
+file the subagent must read, and accept a cut to one only with before/after
+behavior evidence from that subagent.
+
 ## Code duplication — Lean: inventory / over-processing (source surfaces)
 - `LA-CODE-DUP-1` — mechanical copy-paste clone in source code at or above the
   block band (token-window match ≥ 2× min-tokens; comments and string/number

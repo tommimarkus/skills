@@ -50,6 +50,8 @@ Exclusions (never enter the worklist):
 - Registry carve-outs (`[[carve_out]]` / `exempt_paths`) and
   `<!-- lean-audit:sync-intentional -->` / `lean-audit:dup-intentional` marked
   blocks — the engine already exempts them; do not re-nominate by hand.
+- `LA-DUP-*` among subagent bodies that carry their own obligations: the
+  [smell catalog](../smell-catalog.md) remedy is a carve-out, not a dedupe.
 - `LA-CODE-DUP-*` clones and any source-code rewrite: emit an `LA-MIN-3`
   referral to the owning skill (`software-design` for semantic restructure)
   instead. Minify rewrites prose/skill surfaces only.
