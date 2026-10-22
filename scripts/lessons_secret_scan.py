@@ -34,10 +34,16 @@ def scan_text(text: str) -> list[str]:
 
 def scan_diff(diff: str) -> list[str]:
     """Scan only the added lines of a unified diff (ignore context/removed/headers)."""
-    added = "\n".join(
-        line[1:] for line in diff.splitlines()
-        if line.startswith("+") and not line.startswith("+++")
-    )
+    added_lines = []
+    in_hunk = False
+    for line in diff.splitlines():
+        if line.startswith("diff --git"):
+            in_hunk = False
+        elif line.startswith("@@"):
+            in_hunk = True
+        elif in_hunk and line.startswith("+"):
+            added_lines.append(line[1:])
+    added = "\n".join(added_lines)
     return scan_text(added)
 
 

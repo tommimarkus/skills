@@ -1,8 +1,11 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
+import contextlib
+import io
 import json
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from tests.surface_test_lib import REPO_ROOT, load_script_module
 
@@ -117,6 +120,15 @@ class BuildTest(unittest.TestCase):
         self.assertIn("openai-key", str(raised.exception))
         self.assertNotIn(secret, str(raised.exception))
 
+    def test_scanner_failure_withholds_payload(self):
+        m = _mod()
+        with mock.patch.object(m.lessons_secret_scan, "scan_text",
+                               side_effect=RuntimeError("boom")):
+            with self.assertRaises(m.LessonIssueError) as raised:
+                m.build(trigger="t", summary="clean title",
+                        proposed_rule="always X", substrate="policy")
+        self.assertIn("payload withheld", str(raised.exception))
+
     def test_clean_payload_is_returned(self):
         m = _mod()
         out = m.build(trigger="self-correction", summary="safe title",
@@ -147,6 +159,17 @@ class CliTest(unittest.TestCase):
         payload = json.loads(out.stdout)
         self.assertEqual(payload["labels"], ["lesson-candidate", "lesson:policy"])
         self.assertIn("<!-- lesson-fp:", payload["body"])
+
+    def test_main_exits_nonzero_when_scanner_fails(self):
+        m = _mod()
+        with mock.patch.object(m.lessons_secret_scan, "scan_text",
+                               side_effect=RuntimeError("boom")), \
+                contextlib.redirect_stdout(io.StringIO()) as out, \
+                contextlib.redirect_stderr(io.StringIO()):
+            code = m.main(["build", "--trigger", "t", "--summary", "s",
+                           "--proposed-rule", "always X", "--substrate", "policy"])
+        self.assertNotEqual(code, 0)
+        self.assertEqual(out.getvalue(), "")
 
 
 if __name__ == "__main__":
