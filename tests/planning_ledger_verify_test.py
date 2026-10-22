@@ -10,6 +10,7 @@ from tests.planning_ledger_dispatch_test import (
     MAX_AGENT_ID,
     MAX_PLAN_ID,
     MAX_STEP_ID,
+    assert_awaits,
     batch_leaves,
     git,
     leaf,
@@ -618,11 +619,7 @@ class IdNeutralCapTest(VerifyHarness):
         code, started = self.call("dispatch", "--actor", "parent", "--run-id", self.run_id,
                                   "--step-id", sid, "--agent-id", MAX_AGENT_ID,
                                   "--create-from", "main")
-        attempt = self.checkpoint()["steps"][sid]["attempt_id"]
-        self.assertEqual(
-            (0, {"await_step_id": sid, "agent_id": MAX_AGENT_ID, "attempt_id": attempt}),
-            (code, started.get("next")),
-        )
+        assert_awaits(self, code, started, self.checkpoint(), sid, MAX_AGENT_ID)
         self.worktree = self.repo / ".worktrees" / sid
         self.commit_file(f"src/{sid}/a.txt", "one\n")
         self.assert_full_gate(started["handoffs"][0], sid)

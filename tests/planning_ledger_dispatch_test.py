@@ -53,6 +53,15 @@ def bare(entry):
     return {key: value for key, value in entry.items() if key not in ledger.DISPATCH_ENTRY_FIELDS}
 
 
+def assert_awaits(case, code, result, checkpoint, sid, agent):
+    """The command succeeded and its `next` awaits exactly this step's current attempt."""
+    attempt = checkpoint["steps"][sid]["attempt_id"]
+    case.assertEqual(
+        (0, {"await_step_id": sid, "agent_id": agent, "attempt_id": attempt}),
+        (code, result.get("next")),
+    )
+
+
 def leaf(sid, owner, dependencies=(), batch=None):
     value = {
         "id": sid,

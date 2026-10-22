@@ -17,7 +17,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.planning_ledger_dispatch_test import MAX_AGENT_ID, MAX_PLAN_ID, MAX_STEP_ID
+from tests.planning_ledger_dispatch_test import (
+    MAX_AGENT_ID,
+    MAX_PLAN_ID,
+    MAX_STEP_ID,
+    assert_awaits,
+)
 from tests.planning_ledger_dispatch_test import leaf as git_leaf
 from tests.planning_ledger_verify_test import VerifyHarness
 
@@ -999,11 +1004,7 @@ class IdNeutralCapLedgerTest(LedgerHarness):
                    f"--step-id {sid} --to in_progress")
         self.assertEqual((0, {"command": command}), (code, readied.get("next")))
         code, started = self.transition(sid, "in_progress")
-        attempt = self.checkpoint()["steps"][sid]["attempt_id"]
-        self.assertEqual(
-            (0, {"await_step_id": sid, "agent_id": MAX_AGENT_ID, "attempt_id": attempt}),
-            (code, started.get("next")),
-        )
+        assert_awaits(self, code, started, self.checkpoint(), sid, MAX_AGENT_ID)
 
     def test_long_ids_still_cap_the_concurrent_list_by_count(self):
         names = long_ids(8)
