@@ -1336,27 +1336,27 @@ class WorktreeResultBatchArtifactTest(unittest.TestCase):
 
     def test_a_map_entry_that_contradicts_the_returned_commit_is_refused(self):
         path = self.artifact(batch_source_commits={"b0": "4" * 40, "b1": self.commits["b1"]})
-        with self.assertRaises(ledger.Error):
+        with self.assertRaisesRegex(ledger.Error, "source does not match returned commit"):
             self.integrate(path)
 
     def test_a_non_member_keeps_the_source_commit_equality(self):
         path = self.artifact(batch_source_commits=self.commits)
-        with self.assertRaises(ledger.Error):
+        with self.assertRaisesRegex(ledger.Error, "source does not match returned commit"):
             self.integrate(path, batches={})
 
     def test_malformed_batch_source_commits_are_refused(self):
         for commits in ({}, {"b0": "z" * 40}, {"": self.commits["b0"]}, ["b0"], {"b0": 1}):
             with self.subTest(commits=commits):
-                with self.assertRaises(ledger.Error):
+                with self.assertRaisesRegex(ledger.Error, "invalid planning worktree batch source commits"):
                     self.integrate(self.artifact(batch_source_commits=commits))
 
     def test_a_non_boolean_tree_change_flag_is_refused(self):
-        with self.assertRaises(ledger.Error):
+        with self.assertRaisesRegex(ledger.Error, "invalid planning worktree tree-change flag"):
             self.integrate(self.artifact(rebased_tree_changed="false"))
 
     def test_an_oversize_artifact_is_still_refused(self):
         path = self.artifact(batch_source_commits={"x" * 4200: self.commits["b0"]})
-        with self.assertRaises(ledger.Error):
+        with self.assertRaisesRegex(ledger.Error, "invalid planning-worktree-result-v1"):
             self.integrate(path)
 
 

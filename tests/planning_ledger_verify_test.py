@@ -303,6 +303,7 @@ class LandGateTest(VerifyHarness):
         self.checkpoint_path().write_text(json.dumps(data))
         code, landed = self.land()
         self.assertEqual(3, code, landed)
+        self.assertIn("verification for its returned commit", landed["error"])
 
     def test_closeout_only_run_lands_without_a_verdict(self):
         self.completed(verification="closeout-only")
