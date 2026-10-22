@@ -86,32 +86,38 @@ Sources are linked and paraphrased; none of their text is bundled.
   [distilled by Herberto Graca](https://herbertograca.com/2018/08/27/distillation-of-tdd-where-did-it-all-go-wrong/),
   argues that the unit under test is a module rather than a class or method and
   that a new test is triggered by a new requirement, not by a new function. The
-  default seam, the public API of each module or package, follows from that;
-  the project may declare another rule, and the language's visibility markers
-  derive it otherwise.
+  unit-testing chapter of
+  [Software Engineering at Google](https://abseil.io/resources/swe-book/html/ch12.html)
+  asks for tests that call the system through its public API, as its users do,
+  and that need no change when the code is refactored. The default seam, the
+  public API of each module or package, follows from both; the project may
+  declare another rule, and the language's visibility markers derive it
+  otherwise. The Practical Test Pyramid
+  [article](https://martinfowler.com/articles/practical-test-pyramid.html)
+  treats the urge to test a private method as a design signal rather than a
+  testing need.
 - Retention check. Vladimir Khorikov's four properties of a good test
   (regression protection, resistance to refactoring, fast feedback,
   maintainability), in
   [one reader's notes](https://olano.dev/blog/unit-testing-principles), say that
   a test coupled to implementation details raises false alarms. Asking whether a
   behavior-preserving refactor would force the test to change puts that
-  maintenance cost on the cost axis. The Practical Test Pyramid
-  [article](https://martinfowler.com/articles/practical-test-pyramid.html)
-  treats the urge to test a private method as a design signal, advises deleting a
-  higher-level test that lower-level tests already cover, and warns against
-  keeping a test out of sunk cost.
+  maintenance cost on the cost axis.
 - Trivial code. The same notes describe Khorikov's four kinds of code: trivial
   code needs no test of its own, domain logic and algorithms get unit tests,
   controllers get a short integration test, and code both complex and highly
   connected is split first. That is the decision aid behind `trivial`; the split
-  is handed to `software-design` by skill name. `trivial` is a classification,
-  not an exception, so a trivial change that alters seam-visible behavior is
-  behavioral.
-- Scaffold tests. A test below the seam may drive out a design step, as Kent
-  Beck's [Canon TDD](https://newsletter.kentbeck.com/p/canon-tdd) turns one list
-  item at a time into a test. It is resolved in REFACTOR of the same cycle:
+  is handed to `software-design` by skill name. Kent Beck's
+  [answer on test depth](https://stackoverflow.com/a/153565) makes the same
+  trade: test only as much as the needed confidence requires, and skip the kinds
+  of mistake you do not make. `trivial` is a classification, not an exception,
+  so a trivial change that alters seam-visible behavior is behavioral.
+- Scaffold tests. A test below the seam may drive out an internal design step
+  while the seam RED is failing. It is resolved in REFACTOR of the same cycle:
   rewritten at the seam or deleted. Deleting it needs no supersession proof
-  because it never pinned seam behavior.
+  because it never pinned seam behavior. The Practical Test Pyramid advises
+  deleting a test once other tests cover the same condition, and warns against
+  keeping a hard-won test out of sunk cost.
 - Characterization expiry. Characterization coverage exists to protect a
   refactor in flight, so only what sits below the seam expires with it. Tests
   already at the seam are ordinary regression tests and leave only through
@@ -119,7 +125,10 @@ Sources are linked and paraphrased; none of their text is bundled.
 - Behavior removal. A test for behavior that no longer ships has nothing to
   regress against, so it goes in the same change and needs no successor. The
   coverage clause is intact: removed behavior is no longer shipped.
-- Examples per rule. Organizing by rules with a few examples under each is the
+- Examples per rule. Kent Beck's
+  [Canon TDD](https://newsletter.kentbeck.com/p/canon-tdd) starts from a list
+  of behavioral scenarios, kept free of implementation decisions. Organizing
+  them by rule with a few examples under each is the
   [Example Mapping](https://www.cucumber.io/docs/bdd/example-mapping) shape;
   splitting a rule that needs many examples, or covering it with one
   property-based test, is this policy's own corollary, not a claim of that page.
@@ -132,8 +141,8 @@ Sources are linked and paraphrased; none of their text is bundled.
   configured mutation tool to the changed code. A new test that kills no mutant
   the existing tests miss adds no distinct regression value. No new option is
   added; it follows the duplication-detector shape.
-- `structure-coupled` records. A test that a behavior-preserving refactor had to
-  edit is tied to internal structure. Listing it in the footer is evidence for
+- `structure-coupled` records. That a behavior-preserving refactor had to edit
+  a test is evidence the test is tied to internal structure. Listing it in the footer is evidence for
   `test-quality-audit`'s `verify-then-retire`, stronger than similarity or
   history, but it never retires a test by itself. The footer is the record; no
   telemetry is added.
