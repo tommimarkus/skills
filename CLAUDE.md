@@ -173,7 +173,7 @@ enablement is pending/unverified until re-read live. Keep sensitive reports out 
 public issues. [Security baseline](docs/security-baseline.md) owns the threat model,
 accepted residuals, and assurance limits. Public changes receive proportionate
 source/IP inspection; breaking or additive public-surface work retains in-depth
-IP hygiene and cosmetic work scoped triage. Never claim legal clearance.
+[IP hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) and cosmetic work scoped triage. Never claim legal clearance.
 
 ## Documentation and ownership
 

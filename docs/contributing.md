@@ -169,6 +169,10 @@ behavior; retain useful regression coverage even when no mutation operator model
 its failure. Report behavioral probes actually executed separately from authored
 cases or static contract checks.
 
+Public changes receive proportionate [IP hygiene](../souroldgeezer-audit/skills/ip-hygiene/SKILL.md):
+in-depth for breaking/additive public behavior and scoped triage for cosmetic work.
+It is source inspection, not legal clearance.
+
 ## Documentation map
 
 Use [README.md](../README.md) for installation and the published-plugin map.

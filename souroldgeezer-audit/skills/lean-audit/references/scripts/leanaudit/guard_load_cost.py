@@ -289,8 +289,6 @@ def main() -> int:
             patterns,
             source_root=repo_root,
         )
-        if decision is not None:
-            print(json.dumps(decision))
         denied = decision is not None and (
             decision["hookSpecificOutput"]["permissionDecision"] == "deny"
         )
@@ -311,7 +309,14 @@ def main() -> int:
             )
             warn = cost_warn_decision(msgs)
             if warn is not None:
-                print(json.dumps(warn))
+                if decision is None:
+                    decision = warn
+                else:
+                    decision["hookSpecificOutput"]["permissionDecisionReason"] += (
+                        "\n" + warn["hookSpecificOutput"]["permissionDecisionReason"]
+                    )
+        if decision is not None:
+            print(json.dumps(decision))
         return 0
     except Exception as exc:
         hook_envelope.fail_open_log("load-cost-guard", "pretooluse-decide", exc)

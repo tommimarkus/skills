@@ -290,31 +290,30 @@ class MainIntegrationTest(unittest.TestCase):
             # Must be fully silent: no deny decision and no stray output
             self._assert_silent_fail_open(payload, "non-skill path must stay silent")
 
-    def test_pretooluse_cost_warn_is_pending_edit_marginal_and_advisory(self):
-        with tempfile.TemporaryDirectory() as d:
-            root = Path(d)
-            skill_dir = self._mk_skill(root)
-            self._write_cost_data(root, "myskill", snapshot=None)
-            payload = {
-                "tool_name": "Edit",
-                "tool_input": {
-                    "file_path": str(skill_dir / "c.md"),
-                    "old_string": "LA-PUC-1 token",
-                    "new_string": "LA-PUC-1 token\n" + ("extra " * 250),
-                },
-                "cwd": str(root),
-            }
-
-            out, _ = self._run_guard_and_parse(
-                payload,
-                exit_msg="guard must keep marginal cost advisory-only",
-                lines_msg="expected a marginal cost advisory",
-            )
-
-            hook = out["hookSpecificOutput"]
-            self.assertEqual(hook["permissionDecision"], "allow")
-            self.assertIn("pending edit", hook["permissionDecisionReason"])
-            self.assertNotIn("snapshot", hook["permissionDecisionReason"])
+    def test_pretooluse_cost_and_inventory_warnings_share_one_envelope(self):
+        for retire_code in (False, True):
+            with self.subTest(retire_code=retire_code), tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                skill_dir = self._mk_skill(root)
+                self._write_cost_data(root, "myskill", snapshot=None)
+                replacement = "Rule deliberately retired" if retire_code else "LA-PUC-1 token"
+                payload = {
+                    "tool_name": "Edit",
+                    "tool_input": {
+                        "file_path": str(skill_dir / "c.md"),
+                        "old_string": "LA-PUC-1 token",
+                        "new_string": replacement + "\n" + ("extra " * 250),
+                    },
+                    "cwd": str(root),
+                }
+                result = _run_guard_raw(payload)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                hook = json.loads(result.stdout)["hookSpecificOutput"]
+                self.assertEqual(hook["permissionDecision"], "allow")
+                self.assertIn("pending edit", hook["permissionDecisionReason"])
+                self.assertNotIn("snapshot", hook["permissionDecisionReason"])
+                if retire_code:
+                    self.assertIn("inventory advisory", hook["permissionDecisionReason"])
 
     def test_pretooluse_neutral_edit_does_not_report_preexisting_snapshot_drift(self):
         with tempfile.TemporaryDirectory() as d:

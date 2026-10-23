@@ -243,7 +243,8 @@ spans) · fail-open skips (unreadable/binary/unknown-extension).
 
 [`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and
 [`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py)
-protect new block duplication and committed fidelity floors. Both ship OFF;
+offer optional duplication prevention and reference checks with advisory
+inventory/cost comparisons. Both ship OFF in consumer projects;
 [`references/hook-recipe.md`](references/hook-recipe.md) owns enablement,
 override, and fail-open semantics.
 

@@ -35,6 +35,7 @@
     "Load map",
     "Managed execution only",
     "New-plan admission",
+    "New-run executor selection",
     "Older handoffs",
     "Older verify packets",
     "Opt-In Usage Tracing",

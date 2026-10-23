@@ -5,6 +5,7 @@
     "files": [
       "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
       "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/core.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/nodejs/unit-integration.md",
@@ -18,6 +19,7 @@
     "files": [
       "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md",
@@ -37,6 +39,7 @@
     "files": [
       "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
       "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/core.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/extensions/python/unit.md",
@@ -49,6 +52,7 @@
     "files": [
       "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md",
@@ -64,6 +68,7 @@
     "files": [
       "souroldgeezer-audit/skills/test-quality-audit/SKILL.md",
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+      "souroldgeezer-audit/docs/quality-reference/testing-core.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/docs/audit-reference/sampling-projection.md",
       "souroldgeezer-audit/skills/test-quality-audit/references/procedures/deep-mode-output-format.md",
@@ -133,9 +138,9 @@
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/skills/lean-audit/references/procedures/fuzzy-waste.md",
-      "souroldgeezer-audit/skills/lean-audit/references/procedures/per-use-cost.md",
       "souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md"
-    ]
+    ],
+    "provenance": "Representative requested review/proposal without optional economics; not a universal preload."
   },
   {
     "id": "lean-audit-run-viability",
@@ -158,10 +163,10 @@
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/skills/lean-audit/references/procedures/fuzzy-waste.md",
-      "souroldgeezer-audit/skills/lean-audit/references/procedures/per-use-cost.md",
       "souroldgeezer-audit/skills/lean-audit/references/procedures/platform-redundancy.md",
       "souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md"
-    ]
+    ],
+    "provenance": "Representative requested review/proposal without optional economics; not a universal preload."
   },
   {
     "id": "lean-audit-declared-composed-profile",
@@ -232,10 +237,10 @@
       "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
       "souroldgeezer-audit/docs/audit-reference/materiality.md",
       "souroldgeezer-audit/skills/lean-audit/references/procedures/fuzzy-waste.md",
-      "souroldgeezer-audit/skills/lean-audit/references/procedures/per-use-cost.md",
       "souroldgeezer-audit/skills/lean-audit/references/procedures/minify.md",
       "souroldgeezer-audit/skills/lean-audit/references/smell-catalog.md"
-    ]
+    ],
+    "provenance": "Representative requested review/proposal without optional economics; not a universal preload."
   },
   {
     "id": "lookup-functions",
@@ -256,7 +261,8 @@
         "target": "souroldgeezer-design/skills/api-design/extensions/azure-functions-dotnet.md",
         "predicate": "conditional:azure-functions"
       }
-    ]
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "build-functions-cosmos",
@@ -269,7 +275,17 @@
       },
       {
         "entry": "api-design-skill",
-        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#2-principles",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#4-primitives-cheatsheet",
         "predicate": "conditional:build-core"
       },
       {
@@ -307,7 +323,8 @@
         "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb/build.md",
         "predicate": "conditional:build-cosmos"
       }
-    ]
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "review-functions-cosmos-blob",
@@ -320,7 +337,12 @@
       },
       {
         "entry": "api-design-skill",
-        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
         "predicate": "conditional:review-core"
       },
       {
@@ -368,7 +390,8 @@
         "target": "souroldgeezer-design/skills/api-design/extensions/azure-blob-storage/review.md",
         "predicate": "conditional:review-blob"
       }
-    ]
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "extract-functions-cosmos-factual",
@@ -381,7 +404,7 @@
       },
       {
         "entry": "api-design-skill",
-        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#4-primitives-cheatsheet",
         "predicate": "conditional:extract-core"
       },
       {
@@ -404,7 +427,8 @@
         "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb.md",
         "predicate": "conditional:cosmos"
       }
-    ]
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "extract-functions-cosmos-debt",
@@ -417,7 +441,12 @@
       },
       {
         "entry": "api-design-skill",
-        "target": "souroldgeezer-design/docs/api-reference/api-design.md",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
         "predicate": "conditional:extract-core"
       },
       {
@@ -450,110 +479,376 @@
         "target": "souroldgeezer-design/skills/api-design/extensions/azure-cosmosdb/review.md",
         "predicate": "conditional:debt-cosmos"
       }
-    ]
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "review-surface-architecture",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/surface-architecture.md", "predicate": "conditional:surface-architecture"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/surface-architecture.md",
+        "predicate": "conditional:surface-architecture"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "extract-python-factual",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:extract-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:extract"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:extract"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "extract-python-debt",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:extract-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:extract"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:debt-python"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:extract"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md",
+        "predicate": "conditional:debt-python"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "lookup-python-lifecycle",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md#315-hosting-and-runtime-selection", "predicate": "conditional:lookup-rule"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md", "predicate": "conditional:lookup-python-lifecycle"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#315-hosting-and-runtime-selection",
+        "predicate": "conditional:lookup-rule"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md",
+        "predicate": "conditional:lookup-python-lifecycle"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "build-python-asgi",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:build-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:build"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:build-final"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md", "predicate": "conditional:build-python"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#2-principles",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#4-primitives-cheatsheet",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:build"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:build-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python/build.md",
+        "predicate": "conditional:build-python"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "review-python-wsgi-clean",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:review-python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md",
+        "predicate": "conditional:review-python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "review-python-serverless",
     "skill": "api-design",
     "load_routes": [
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/SKILL.md", "predicate": "always"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/docs/api-reference/api-design.md", "predicate": "conditional:review-core"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md", "predicate": "conditional:review"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md", "predicate": "conditional:review-final"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python.md", "predicate": "conditional:python"},
-      {"entry": "api-design-skill", "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md", "predicate": "conditional:review-python"}
-    ]
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python.md",
+        "predicate": "conditional:python"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/extensions/python/review.md",
+        "predicate": "conditional:review-python"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
   },
   {
     "id": "app-review-react-vite",
     "skill": "app-design",
     "load_routes": [
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/SKILL.md", "predicate": "always"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/docs/app-reference/app-design.md", "predicate": "conditional:review-core"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/references/procedures/project-assimilation.md", "predicate": "conditional:existing-source"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/extensions/vite.md", "predicate": "conditional:vite"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/extensions/react.md", "predicate": "conditional:react-after-vite"}
-    ]
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#32-component-roles-and-composition",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#36-clientserver-rendering-boundaries-and-hydration",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#39-loading-error-empty-offline-and-unauthorized-states",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#7-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:existing-source"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/extensions/vite.md",
+        "predicate": "conditional:vite"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/extensions/react.md",
+        "predicate": "conditional:react-after-vite"
+      }
+    ],
+    "provenance": "Component/rendering/state review in Vite+React; no material layout redesign."
   },
   {
     "id": "app-build-layout-flow",
     "skill": "app-design",
     "load_routes": [
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/SKILL.md", "predicate": "always"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/docs/app-reference/app-design.md", "predicate": "conditional:build-core"},
-      {"entry": "app-design-skill", "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md", "predicate": "conditional:material-or-multi-screen-flow"}
-    ]
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#310-responsive-sizing-layout-and-container-behavior",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#315-screen-composition-and-information-order",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#316-flow-and-layout-traceability",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md",
+        "predicate": "conditional:material-or-multi-screen-flow"
+      }
+    ],
+    "provenance": "Layout/flow work selects composition, responsiveness, and traceability; alternatives depend on user intent."
   },
   {
     "id": "sd-lookup-principle",
@@ -566,45 +861,142 @@
   {
     "id": "sd-build-csharp",
     "skill": "software-design",
-    "files": [
-      "souroldgeezer-design/skills/software-design/SKILL.md",
-      "souroldgeezer-design/docs/software-reference/software-design.md",
-      "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/software-design/extensions/csharp.md"
-    ]
+    "load_routes": [
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#32-information-hiding-and-change-isolation",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#35-evolutionary-design-and-refactoring-safety",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#310-testability-and-seams",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#4-decision-defaults",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/extensions/csharp.md",
+        "predicate": "conditional:declared-task"
+      }
+    ],
+    "provenance": "Bounded C# module change: relevant isolation, safe evolution, seam, and local decision guidance."
   },
   {
     "id": "sd-review-typescript",
     "skill": "software-design",
-    "files": [
-      "souroldgeezer-design/skills/software-design/SKILL.md",
-      "souroldgeezer-design/docs/software-reference/software-design.md",
-      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
-      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
-      "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/software-design/extensions/typescript.md"
-    ]
+    "load_routes": [
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#34-coupling-cohesion-and-propagation-cost",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#39-concurrency-cancellation-and-error-contract-ownership",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#8-extract-and-review-checklist",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/extensions/typescript.md",
+        "predicate": "conditional:declared-task"
+      }
+    ],
+    "provenance": "Representative TypeScript ownership/lifecycle review, not every possible software review."
   },
   {
     "id": "sd-review-fragility",
     "skill": "software-design",
-    "files": [
-      "souroldgeezer-design/skills/software-design/SKILL.md",
-      "souroldgeezer-design/docs/software-reference/software-design.md",
-      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
-      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
-      "souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md"
-    ]
+    "load_routes": [
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#35-evolutionary-design-and-refactoring-safety",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md#310-testability-and-seams",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "software-design",
+        "target": "souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md",
+        "predicate": "conditional:declared-task"
+      }
+    ],
+    "provenance": "Changed-code fragility task selects safety/seam excerpts and its actual procedure."
   },
   {
     "id": "sd-native-evidence-procedure",
     "skill": "software-design",
-    "files": ["souroldgeezer-design/skills/software-design/references/procedures/native-tool-evidence.md"]
+    "files": [
+      "souroldgeezer-design/skills/software-design/references/procedures/native-tool-evidence.md"
+    ]
   },
   {
     "id": "sd-fragility-final-reporting",
     "skill": "software-design",
-    "files": ["souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md"]
+    "files": [
+      "souroldgeezer-design/skills/software-design/references/procedures/fragility-review.md"
+    ]
   },
   {
     "id": "arch-lookup-notation",
@@ -737,27 +1129,337 @@
   {
     "id": "infra-review-azure-bicep",
     "skill": "infra-design",
+    "load_routes": [
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#34-state-ownership",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#35-identity-boundaries",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#39-rollout-rollback-and-migration",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#7-checklist-with-verification-layers",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/extensions/azure.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/extensions/bicep.md",
+        "predicate": "conditional:declared-task"
+      }
+    ],
+    "provenance": "Azure+Bicep state/identity/rollout review; both stack mechanics matter to this declared task."
+  },
+  {
+    "id": "app-build-approved-dashboard",
+    "skill": "app-design",
+    "load_routes": [
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#310-responsive-sizing-layout-and-container-behavior",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#315-screen-composition-and-information-order",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#316-flow-and-layout-traceability",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md",
+        "predicate": "conditional:substantial-approved-dashboard"
+      }
+    ],
+    "provenance": "Layout/flow work selects composition, responsiveness, and traceability; alternatives depend on user intent."
+  },
+  {
+    "id": "sd-build-data-efficiency",
+    "skill": "software-design",
     "files": [
-      "souroldgeezer-design/skills/infra-design/SKILL.md",
-      "souroldgeezer-design/docs/infra-reference/infra-design.md",
-      "souroldgeezer-design/skills/infra-design/references/procedures/project-assimilation.md",
-      "souroldgeezer-design/skills/infra-design/extensions/azure.md",
-      "souroldgeezer-design/skills/infra-design/extensions/bicep.md"
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md"
     ]
   },
-  {"id":"app-build-approved-dashboard","skill":"app-design","load_routes":[{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/SKILL.md","predicate":"always"},{"entry":"app-design-skill","target":"souroldgeezer-design/docs/app-reference/app-design.md","predicate":"conditional:build-core"},{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md","predicate":"conditional:substantial-approved-dashboard"}]},
-  {"id":"sd-build-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/software-reference/software-design.md","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
-  {"id":"sd-review-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/software-reference/software-design.md","souroldgeezer-design/skills/software-design/references/smell-catalog.md","souroldgeezer-design/skills/software-design/references/smell-cards.jsonl","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
-  {"id":"sd-lookup-data-efficiency","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/docs/design-reference/data-efficiency.md"]},
-  {"id":"sd-file-edit-data-excluded","skill":"software-design","files":["souroldgeezer-design/skills/software-design/references/procedures/file-edit-lane.md"]},
-  {"id":"app-review-narrow-approved-layout","skill":"app-design","load_routes":[{"entry":"app-design-skill","target":"souroldgeezer-design/skills/app-design/SKILL.md","predicate":"always"},{"entry":"app-design-skill","target":"souroldgeezer-design/docs/app-reference/app-design.md","predicate":"conditional:narrow-approved-layout-review"}]},
-  {"id":"review-api-data-access","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md","predicate":"conditional:review-core"},{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/references/procedures/preflight.md","predicate":"conditional:review"},{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/references/procedures/red-flags.md","predicate":"conditional:review-final"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/design-reference/data-efficiency.md","predicate":"conditional:http-storage-review"}]},
-  {"id":"build-api-data-access","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md","predicate":"conditional:build-core"},{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/references/procedures/preflight.md","predicate":"conditional:build"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/design-reference/data-efficiency.md","predicate":"conditional:http-storage-build"}]},
-  {"id":"lookup-api-data-access","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md#316-data-access-contract","predicate":"conditional:lookup-rule"}]},
-  {"id":"lookup-api-status-no-data","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md#conditional-requests","predicate":"conditional:lookup-rule"}]},
-  {"id":"extract-api-data-access-debt","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md","predicate":"conditional:extract-core"},{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/references/procedures/preflight.md","predicate":"conditional:extract"},{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md","predicate":"conditional:explicit-debt"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/design-reference/data-efficiency.md","predicate":"conditional:http-storage-explicit-debt"}]},
-  {"id":"review-api-software-composed","skill":"api-design","load_routes":[{"entry":"api-design-skill","target":"souroldgeezer-design/skills/api-design/SKILL.md","predicate":"always"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/api-reference/api-design.md","predicate":"conditional:review-core"},{"entry":"api-design-skill","target":"souroldgeezer-design/docs/design-reference/data-efficiency.md","predicate":"conditional:http-storage-review"},{"entry":"software-design-skill","target":"souroldgeezer-design/skills/software-design/SKILL.md","predicate":"conditional:composed-sibling"},{"entry":"software-design-skill","target":"souroldgeezer-design/docs/software-reference/software-design.md","predicate":"conditional:composed-sibling"}]},
-  {"id":"sd-test-code-python","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/skills/software-design/extensions/python/test-code.md"]},
-  {"id":"sd-test-code-typescript","skill":"software-design","files":["souroldgeezer-design/skills/software-design/SKILL.md","souroldgeezer-design/skills/software-design/extensions/typescript/test-code.md"]},
-  {"id":"tdd-enforce","skill":"tdd-policy","files":["souroldgeezer-policy/skills/tdd-policy/SKILL.md","souroldgeezer-policy/skills/tdd-policy/references/core-workflow.md"]}
+  {
+    "id": "sd-review-data-efficiency",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md"
+    ]
+  },
+  {
+    "id": "sd-lookup-data-efficiency",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md"
+    ]
+  },
+  {
+    "id": "sd-file-edit-data-excluded",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/references/procedures/file-edit-lane.md"
+    ]
+  },
+  {
+    "id": "app-review-narrow-approved-layout",
+    "skill": "app-design",
+    "load_routes": [
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md",
+        "predicate": "conditional:narrow-approved-layout-review"
+      }
+    ]
+  },
+  {
+    "id": "review-api-data-access",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+        "predicate": "conditional:http-storage-review"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
+  },
+  {
+    "id": "build-api-data-access",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#2-principles",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#4-primitives-cheatsheet",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:build"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+        "predicate": "conditional:http-storage-build"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
+  },
+  {
+    "id": "lookup-api-data-access",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#316-data-access-contract",
+        "predicate": "conditional:lookup-rule"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
+  },
+  {
+    "id": "lookup-api-status-no-data",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#headers-that-matter",
+        "predicate": "conditional:lookup-rule"
+      }
+    ],
+    "provenance": "Conditional-request Lookup reads the existing header table without HTTP-to-storage analysis."
+  },
+  {
+    "id": "extract-api-data-access-debt",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:extract-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:extract"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:explicit-debt"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+        "predicate": "conditional:http-storage-explicit-debt"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
+  },
+  {
+    "id": "review-api-software-composed",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+        "predicate": "conditional:http-storage-review"
+      },
+      {
+        "entry": "software-design-skill",
+        "target": "souroldgeezer-design/skills/software-design/SKILL.md",
+        "predicate": "conditional:composed-sibling"
+      },
+      {
+        "entry": "software-design-skill",
+        "target": "souroldgeezer-design/docs/software-reference/software-design.md",
+        "predicate": "conditional:composed-sibling"
+      }
+    ],
+    "provenance": "Declared representative API task selects relevant reference excerpts; stack detection alone is not a mandatory load set."
+  },
+  {
+    "id": "sd-test-code-python",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/skills/software-design/extensions/python/test-code.md"
+    ]
+  },
+  {
+    "id": "sd-test-code-typescript",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/skills/software-design/extensions/typescript/test-code.md"
+    ]
+  },
+  {
+    "id": "tdd-enforce",
+    "skill": "tdd-policy",
+    "files": [
+      "souroldgeezer-policy/skills/tdd-policy/SKILL.md",
+      "souroldgeezer-policy/skills/tdd-policy/references/core-workflow.md"
+    ]
+  }
 ]

@@ -96,6 +96,7 @@ class PythonTestQualityDeepSurfaceTest(unittest.TestCase):
             [
                 SKILL,
                 "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
+                "souroldgeezer-audit/docs/quality-reference/testing-core.md",
                 "souroldgeezer-audit/docs/quality-reference/unit-testing.md",
                 core,
                 addon,

@@ -137,13 +137,12 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         )
         self.assertRegex(codex_manifest["version"], r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 
-    def test_repo_guidance_and_hooks_reference_public_skill(self) -> None:
+    def test_repo_guidance_routes_to_public_skill_without_automatic_hooks(self) -> None:
         checked_paths = [
             "README.md",
             "CLAUDE.md",
             "internal-skills/github-issue-lifecycle/SKILL.md",
-            "scripts/agent-hooks/stop-ip-hygiene.sh",
-            "scripts/test-stop-hooks.sh",
+            "AGENTS.md",
         ]
         for path in checked_paths:
             content = read(path)
@@ -153,15 +152,12 @@ class PublicIpHygieneSkillTest(unittest.TestCase):
         readme = read("README.md")
         self.assertIn("[ip-hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md)", readme)
 
-        claude = read("CLAUDE.md")
-        # CLAUDE.md was slimmed (0d28964); it now states the migration in prose
-        # rather than the old bolded "(plugin ...)" list format.
-        self.assertIn("now a public skill in `souroldgeezer-audit`", claude)
-        self.assertNotIn("**`ip-hygiene`** at [.claude/skills/ip-hygiene/SKILL.md]", claude)
-        self.assertIn(
-            "select the repository-required lane: in-depth for breaking or additive public-surface changes, scoped triage for cosmetic changes",
-            " ".join(claude.split()),
-        )
+        claude = " ".join(read("CLAUDE.md").split())
+        self.assertIn("breaking or additive public-surface work retains in-depth", claude)
+        self.assertIn("cosmetic work scoped triage", claude)
+        for config in (".claude/settings.json", ".codex/hooks.json"):
+            self.assertNotIn("stop-ip-hygiene.sh", read(config))
+
 
 
 if __name__ == "__main__":

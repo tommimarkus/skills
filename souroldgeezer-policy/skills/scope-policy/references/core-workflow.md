@@ -23,7 +23,10 @@ hunks that fall outside it, before they land.
 
 Applying a level to a change: identify the footprint the level permits (see
 Levels), then classify each planned edit as inside or outside it. Inside edits
-proceed. For a necessary adjacent edit, apply Escalation before proceeding.
+proceed. Classify actual ownership and boundary effects: a necessary caller edit
+is not by itself evidence of a wider footprint. If that boundary has not been
+inspected, describe possible escalation conditionally rather than claiming it
+occurred. Apply Escalation only for work actually outside the current level.
 Record unrelated wider findings with their reason; route to `issue-ops` only
 when issue handling is requested or otherwise authorized.
 

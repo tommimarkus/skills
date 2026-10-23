@@ -107,7 +107,7 @@ they exist to single-source contracts shared by sibling modules.
 | [`clones.py`](leanaudit/clones.py) | engine | The **source-code** copy-paste clone lens: per-language comment/string/number-stripping tokenizer, seed-and-extend window matcher, identifier-diversity filter, and the `LA-CODE-DUP-*` emitters. | `cli`, `discovery`, `source_boundary` |
 | [`workflow_cost.py`](leanaudit/workflow_cost.py) | engine | The **run-viability** analyzer: orchestrator nomination, local tool-schema and hook-registration inventory, static retry/progress/scope/checkpoint controls, three-lane stage simulation, fixed + per-item output forecast, verification reserve, worker/handoff multiplication, and optional metadata-only trace calibration (`LA-RUN-*`, `LA-ORCH-*`). | `context_trace`, `hook_cost`, `discovery`, `load_cost`, `source_boundary` |
 | [`guard_lean.py`](leanaudit/guard_lean.py) | driver | PreToolUse guard hook (opt-in, fail-open). Reconstructs the edit's added text, and if a guarded-markdown edit introduces a *new* block-severity dup (via `engine.evaluate_added_block`) returns a `deny`. No dup logic of its own. Public: `evaluate`, `main`. | `hook_envelope`, `discovery`, `engine` |
-| [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse: soft-block an edit that would drop an inventoried code/section/pointer below a skill's fidelity floor. Stop: enumerate session-changed `.md`, map each to its owning skill, block on fidelity regression; cost growth is advisory only. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
+| [`guard_load_cost.py`](leanaudit/guard_load_cost.py) | driver | Dual-mode per-use guard (opt-in, fail-open). PreToolUse denies a broken local reference; inventory/code/heading differences and cost changes are advisory, combined in one JSON envelope. Stop observes working-tree `.md` changes with nonblocking notices; it cannot attribute pre-existing changes to this session. Public: `decide`, `post_edit_content`, `cost_warn_decision`, `run_stop_mode`, `main`. | `hook_envelope`, `load_cost` |
 | `__init__.py` | — | Package docstring: states the stdlib-only / Py3.11+ runtime and that the entry paths are the published contract. | — |
 
 Every module declares an explicit `__all__`; the parity test asserts each shim
@@ -224,7 +224,7 @@ duplicate that here. What a maintainer needs to know about the code:
 - `lean_guard.py` is PreToolUse-only and adds no logic beyond
   `engine.evaluate_added_block`.
 - `load_cost_guard.py` branches on the payload: a `file_path` present ⇒
-  PreToolUse; absent ⇒ Stop mode (`run_stop_mode`, which diffs session-changed
+  PreToolUse; absent ⇒ Stop mode (`run_stop_mode`, which observes working-tree
   markdown against committed baselines). **The Stop path is the one wired into
   this repo**, via `scripts/agent-hooks/stop-lean-cost.sh` (at the marketplace
   source-repo root, registered in `.claude/settings.json`), which runs the guard
@@ -233,14 +233,16 @@ duplicate that here. What a maintainer needs to know about the code:
   fails open (exit 0) when neither is available. Stdlib-only is not enough on
   its own — `tomllib` is stdlib only from 3.11 — so the floor, not the dependency
   set, is what makes the interpreter choice matter.
-- Fidelity regression **blocks**. PreToolUse cost growth compares the current
+- Inventory differences are advisory; names/counts do not establish semantic loss.
+  The optional edit path denies broken local references. Stop never blocks.
+  PreToolUse cost growth compares the current
   scenario with the pending edit for affected scenarios only; a positive
   marginal increase beyond the 200-token tolerance is advisory and never
   blocks. Neutral/reducing pending edits stay silent even when a committed
   snapshot has pre-existing drift. Stop mode retains the committed-snapshot
   on-disk comparison, also advisory-only.
 - Ownership resolution includes referenced missing targets, so deleting a
-  closure file still selects its skill for the Stop fidelity check. The measured
+  closure file still selects its skill for the nonblocking Stop reference notice. The measured
   closure continues to contain only reachable existing files.
 
 If you add or change a hook event a guard handles, add an integration test that
@@ -257,8 +259,8 @@ lens; the operator procedure is [`../procedures/per-use-cost.md`](../procedures/
 |---|---|---|
 | `resolve_closure <SKILL.md>` | Print the transitive Load-Map markdown-link closure of a skill. | 0 |
 | `measure --scenarios … --id …` | Token-size one legacy file set or declared entry/predicate/anchor route profile, with optional separate selection metadata. | 0 |
-| `baseline --files … --code-patterns … --out …` | Build a `{codes, sections}` fidelity baseline from a closure. | 0 |
-| `diff --baseline … --files … --code-patterns …` | Report fidelity loss vs a baseline. | 1 if regressions, else 0 |
+| `baseline --files … --code-patterns … --out …` | Build a diagnostic `{codes, sections}` inventory from a closure. | 0 |
+| `diff --baseline … --files … --code-patterns …` | Report advisory inventory differences and broken references. | 1 for broken references, otherwise 0 |
 | `guard_tokens --before … --after … --code-patterns …` | G2v closed-token gate for a minify `tighten` rewrite: after must preserve every code/link/inline-code/number/ALL-CAPS-normative token and not drop a negation's count. | 1 if any dropped, else 0 |
 | `snapshot --scenarios … --out …` | Write the `{scenario: token-total}` cost floor. | 0 |
 
@@ -291,12 +293,12 @@ is still charged and is never treated as zero.
 
 | File | Shape | Meaning of a regression |
 |---|---|---|
-| `baselines/<skill>.json` | `{codes[], sections[]}` fidelity floor per guarded skill | An edit that drops a listed code/section below the floor → fidelity block. |
+| `baselines/<skill>.json` | `{codes[], sections[]}` diagnostic inventory per skill | Changes are advisory; validate required behavior through its actual consumers. |
 | `scenarios.json` | `[{id, skill, files[]}]` or `[{id, skill, load_routes[], selection_metadata?}]` | Defines legacy file sets or declared entry/predicate/anchor load profiles; the two route forms are mutually exclusive. |
 | `cost-snapshot.json` | `{scenario-id: token-total}` cost floor | Growth beyond tolerance → advisory only (never blocks). |
 | `code_patterns.json` | `[regex]` for smell/reference codes | Defines what `extract_inventory` counts as a "code". |
 
-**Regenerate a fidelity baseline the sanctioned way** — in the marketplace
+**Regenerate a diagnostic inventory** — in the marketplace
 source repo (the `tests/skill_load_cost/` paths below sit at its root), from
 the skill's own closure, never a directory glob (a glob-built floor would
 "protect" content the guard's closure cannot reach, yielding phantom
@@ -384,9 +386,9 @@ tests, then [§ Before you finish](#before-you-finish).
 - **Change guard behavior** → edit the driver in `leanaudit/`; add an integration
   test that drives its `main()` over a real payload for each event; update
   [`../hook-recipe.md`](../hook-recipe.md) if enablement or override changes.
-- **Onboard a new guarded skill's fidelity floor** → regenerate its baseline the
-  sanctioned way ([§ Config & data](#config-and-data-files)) and confirm the two
-  committed-baseline closure-parity tests pass.
+- **Record a new skill's optional diagnostic inventory** → regenerate its baseline the
+  documented way ([§ Config & data](#config-and-data-files)); run the retained
+  inventory/reference CLI and guard integration tests when their behavior changes.
 - **Touch a shim's boilerplate** → usually don't. The six paths are a published
   contract; keep the `dup-intentional` marker and re-export surface intact, and
   rerun `lean_audit_shims_test.py`. Restructuring the scanned engines requires a

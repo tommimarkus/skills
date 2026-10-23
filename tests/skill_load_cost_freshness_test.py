@@ -67,7 +67,11 @@ class CostSnapshotFreshnessTest(unittest.TestCase):
             scen = self.by_id.get(sid)
             if scen is None:
                 continue  # id parity is asserted separately above
-            current = slc.measure_scenario(scen, REPO_ROOT)["total"]
+            measured = slc.measure_scenario(scen, REPO_ROOT)
+            for row in measured["rows"]:
+                if "fallback" in row.get("resolution", ""):
+                    stale.append(f"{sid}: declared anchor did not resolve: {row['file']}")
+            current = measured["total"]
             drift = current - committed
             if abs(drift) > slc.COST_TOLERANCE:
                 stale.append(
