@@ -81,6 +81,8 @@ omit unused fields and routine negative disclosures.
 
 ## Stop Conditions
 
+<!-- lean-audit:sync-intentional: App and infra entries each retain the capability/evidence boundary inline so independently selected skills need not load one another. -->
+
 Stop the affected action when authority or essential evidence is missing, or
 when it would introduce a concrete unsafe or incompatible change. Disclose the
 limited conclusion and continue useful independent work. Missing runtime,

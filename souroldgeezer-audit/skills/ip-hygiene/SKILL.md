@@ -92,10 +92,8 @@ criterion:
   holder policy, and optional symbol convention.
 
 Conform to [audit-craft.md](../../docs/audit-reference/audit-craft.md) sections
-2, 3, and 5, including skepticism, fact-vs-inference, read-only audit stance,
-the 5 C's, independence, and the disclosure footer. Apply
-[materiality.md](../../docs/audit-reference/materiality.md) to the risk tier;
-do not let subject risk change finding severity or gate precedence.
+2, 3, and 5. Apply [materiality.md](../../docs/audit-reference/materiality.md)
+without letting subject risk change finding severity or gate precedence.
 
 ## Select A Lane
 
@@ -318,14 +316,8 @@ block.
 
 ## Disclosure And Verification
 
-Default to audit-craft section 5's compact close: reviewed boundary, assurance,
-material evidence limits, and the qualification that this is hygiene assessment,
-not legal clearance. Keep gate/decision/verdict tokens and counsel outcomes
-unchanged. For a requested detailed report, evaluation, or formal consumer,
-retain the footer: extensions loaded; tool/MCP availability; reference paths
-and authority classes; evidence limits
-(for triage, touched paths plus drive-by neighbors examined and untouched files
-not swept); independence (`independent | self-review | unknown`); and assurance
-level (`prospective bounded decision | limited triage | reasonable-hygiene
-in-depth`). Restate that the result is not legal advice, clearance,
-certification, or an FTO opinion.
+Default to audit-craft section 5's compact close: boundary, assurance, material
+limits, and no legal clearance. Preserve gate/decision/verdict and counsel meanings.
+For a requested detailed report, evaluation, or formal consumer, load
+[detailed disclosure](references/procedures/detailed-disclosure.md).
+This remains hygiene assessment, not legal advice, clearance, certification, or FTO.

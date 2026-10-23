@@ -116,6 +116,8 @@ retain their defined codes, file evidence, severity, consequence, and action;
 omit unused fields and routine negative disclosures.
 
 ## Stop Conditions
+
+<!-- lean-audit:sync-intentional: App and infra entries each retain the capability/evidence boundary inline so independently selected skills need not load one another. -->
 <!-- lean-audit:sync-intentional -->
 
 Stop the affected action when authority or essential evidence is missing, or
