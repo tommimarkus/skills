@@ -52,3 +52,10 @@ the parent records actual attempts and progress; resumption and retry decisions
 read that same bounded record. Review triggers are assessed during planning and
 against the returned diff; the parent dispatches a fresh reviewer when triggered.
 No new state machine or executable schema was introduced.
+
+The fidelity floor was regenerated after this mapping review: the retired
+`Readiness gate` heading becomes `Readiness diagnostics`, and the floor now
+protects standard/strict selection and native assignment/review sections. The
+TDD parent-owned suite handoff remains on both standard and managed routes.
+Host tool syntax is checked on each selected adapter's standard section rather
+than requiring host-specific calls in the runtime-neutral shared core.

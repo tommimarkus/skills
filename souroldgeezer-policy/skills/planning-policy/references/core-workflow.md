@@ -40,6 +40,8 @@ reinterpret malformed managed input as a lightweight assignment.
    verification once at closeout. Do not repeat the full suite per integration;
    rerun affected scoped acceptance when integration changes the tested tree.
    Preserve non-force cleanup proofs and report checks, limitations, and blockers.
+   When tdd-policy is in force, the parent runs its suite step once, at
+   integration, before final verification.
 
 Standard requires no executable JSON, digest envelope, capability-binding file,
 ledger, readiness score, line/file budget, mandatory pin scan, economics forecast,

@@ -4,7 +4,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, read_jsonl
+from tests.surface_test_lib import REPO_ROOT, read_jsonl, section
 
 
 AUDIT = REPO_ROOT / "souroldgeezer-audit"
@@ -126,13 +126,16 @@ class CrossRuntimeClaudeCompatibilityTest(unittest.TestCase):
         self.assertIn("planning-policy-behavior-enforce-initialized-codex", behaviors)
         self.assertIn("planning-policy-behavior-adopt-guidance-codex", behaviors)
 
-        workflow = (
-            POLICY / "skills" / "planning-policy" / "references" / "core-workflow.md"
-        ).read_text(encoding="utf-8")
-        self.assertIn("Claude Code lane", workflow)
-        self.assertIn("Codex lane", workflow)
-        self.assertIn("`EnterPlanMode`", workflow)
-        self.assertIn("`ExitPlanMode`", workflow)
+        skill = POLICY / "skills" / "planning-policy"
+        entry = (skill / "SKILL.md").read_text(encoding="utf-8")
+        for host in ("claude-code", "codex"):
+            self.assertIn(f"extensions/{host}.md#standard-workflow", entry)
+            adapter = section((skill / "extensions" / f"{host}.md").read_text(encoding="utf-8"),
+                              "## Standard workflow")
+            for tool in (("`EnterPlanMode`", "`ExitPlanMode`", "`Agent`") if host == "claude-code"
+                         else ("native Plan mode", "`spawn_agent`", '`fork_turns: "none"`')):
+                with self.subTest(host=host, tool=tool):
+                    self.assertIn(tool, adapter)
 
 
 if __name__ == "__main__":
