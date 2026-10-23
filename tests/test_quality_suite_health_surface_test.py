@@ -332,8 +332,11 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         for path in (REPO_ROOT / "docs/using-skills.md", REPO_ROOT / "CLAUDE.md", REPO_ROOT / "AGENTS.md"):
             with self.subTest(path=path.name):
                 text = read(path)
-                self.assertIn("suite health", text.lower())
-                self.assertIn("setup/teardown lifecycle", text.lower())
+                if path.name in ("AGENTS.md", "CLAUDE.md"):
+                    self.assertIn("(docs/using-skills.md)", text)
+                else:
+                    self.assertIn("suite health", text.lower())
+                    self.assertIn("setup/teardown lifecycle", text.lower())
 
     def test_suite_recovery_program_is_propose_only_and_deep_gated(self) -> None:
         self.assertTrue(RECOVERY.is_file(), RECOVERY)

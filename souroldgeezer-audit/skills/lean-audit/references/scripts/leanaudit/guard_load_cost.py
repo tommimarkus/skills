@@ -116,7 +116,8 @@ def decide(
     if inventory_changes:
         return hook_envelope.permission_decision(
             "allow",
-            "lean-audit inventory advisory — " + "; ".join(inventory_changes)
+            "lean-audit inventory advisory — "
+            + "; ".join(inventory_changes)
             + ". Review the intended change; names and counts do not prove semantic loss.",
         )
     return None

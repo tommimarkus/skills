@@ -43,17 +43,12 @@ class AuditLimitedGateContractTest(unittest.TestCase):
             with self.subTest(adoption=adoption):
                 self.assertIn(adoption, craft)
 
-    def test_public_docs_repeat_the_bounded_lane_contract(self) -> None:
+    def test_public_docs_route_to_the_owned_bounded_lane_contract(self) -> None:
+        usage = read(REPO_ROOT / "docs/using-skills.md")
+        self.assertIn("audit-craft.md#4a-bounded-lane-gate", usage)
         for path in PUBLIC_DOCS:
-            text = read(path)
             with self.subTest(path=path.name):
-                self.assertIn("bounded-lane gate", text)
-                self.assertIn("Quick gate: <status>", text)
-                self.assertIn("triage gate: <status>", text)
-                self.assertIn("limited-scope gate: <status>", text)
-                self.assertIn("pass-limited", text)
-                self.assertIn("not-evaluated", text)
-                self.assertIn("fail", text)
+                self.assertIn("(docs/using-skills.md)", read(path))
 
 
 if __name__ == "__main__":

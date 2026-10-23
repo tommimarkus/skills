@@ -23,6 +23,7 @@ ALLOWLIST = (
     # those load cues exactly as a real reviewer does.
     "souroldgeezer-audit/skills/ip-hygiene/references/procedures/in-depth-review.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/procedures/prospective-decision.md",
+    "souroldgeezer-audit/skills/ip-hygiene/references/procedures/detailed-disclosure.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/procedures/remediation.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/scripts/validate_ip_hygiene_actual.py",
     "souroldgeezer-audit/skills/ip-hygiene/references/source-code.md",
