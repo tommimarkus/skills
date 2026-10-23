@@ -39,7 +39,7 @@ is 360 seconds by default, configurable through the documented `DEDIREN_*`
 overrides. Codex Agent Plugins uses the host's 30-second startup default; the
 router answers initialization itself, before provisioning. In legacy adapters,
 `startup_timeout_sec` is seconds and Copilot `timeout` is milliseconds. See the
-[architecture adapter contract](../AGENTS.md#dediren-mcp-adapter-contract) for
+[architecture adapter contract](../AGENTS.md#repository-and-runtime-contracts) for
 all environment and process details.
 
 Generic local-client compatibility means local stdio launch with Bash, Python,

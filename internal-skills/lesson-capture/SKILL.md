@@ -1,11 +1,11 @@
 ---
 name: lesson-capture
-description: Use when the lesson-capture Stop hook fires — distill one generalizable, durable rule from a skill-authoring session or a read-only audit session (a user correction, question, or steering, or a self-correction) and file it as a lesson-candidate GitHub™ issue. Repo-internal; not a published plugin skill.
+description: Use when the user explicitly asks to capture a reusable skill-authoring lesson as a lesson-candidate GitHub issue. Not automatic; repo-internal and not a published plugin skill.
 ---
 
 # Lesson Capture
 
-A skill-authoring change happened this session, or an audit skill / skill-architecture report ran read-only. Your job: judge whether anything that
+Run only when explicitly invoked to capture a skill-authoring lesson. Your job: judge whether anything that
 happened holds a reusable lesson, then file **at most one** generalizable candidate as a
 `lesson-candidate` GitHub issue, or record nothing. The signal may be a correction, pointed
 question, or steering **from the user**, or a wrong path you took and **corrected yourself** —
@@ -27,8 +27,8 @@ corrections, questions, or steering (the user's or your own) that surfaced a can
 2. **Name the delta.** One concise sentence — it becomes the issue title. For a user
    signal: what did Claude do, and what did the user want instead? For self-correction:
    what wrong path did you take, and what was the correction?
-3. **Generalize.** Ask "what rule would have caught this, for any future similar case?"
-   If it does not generalize, report `no lesson`.
+3. **Generalize.** Identify the reusable improvement: a new rule, a narrower default,
+   or retiring an unnecessary restriction. If it does not generalize, report `no lesson`.
 4. **Route to the cheapest-to-enforce substrate**, in order:
    - `deterministic` — a future `SAC-T#####` report case / eval assertion (zero-token
      enforcement). Strongly preferred.
@@ -84,3 +84,15 @@ own **Definition of Done** — do not graduate here.
 
 Report one line: `lesson captured: #<n> (<substrate>)`, `duplicate of #<n>`,
 `no lesson`, or `no lesson (secret-scan tripped: …)` / `no lesson (capture unavailable)`.
+---
+name: lesson-capture
+description: Use when the user explicitly asks to capture a reusable skill-authoring lesson as a lesson-candidate GitHub issue. Not automatic; repo-internal and not a published plugin skill.
+---
+This is the Codex entrypoint for a shared repo-internal skill.
+Read `internal-skills/lesson-capture/SKILL.md` and follow it as the source of truth. Do not duplicate or override the shared workflow here.
+---
+name: lesson-capture
+description: Use when the user explicitly asks to capture a reusable skill-authoring lesson as a lesson-candidate GitHub issue. Not automatic; repo-internal and not a published plugin skill.
+---
+This is the Claude Code entrypoint for a shared repo-internal skill.
+Read `internal-skills/lesson-capture/SKILL.md` and follow it as the source of truth. Do not duplicate or override the shared workflow here.

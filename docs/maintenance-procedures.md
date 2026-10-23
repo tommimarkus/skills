@@ -14,6 +14,21 @@ publication preparation, use the [release checklist](release-checklist.md).
   change the live repository setting only after explicit approval and verify it
   before updating the security policy's status.
 
+## Guidance and verification maintenance
+
+Local changes follow the contributor guide's affected-check matrix. Broaden to
+the full suite and safety-isolated host smoke for cross-cutting changes; publication
+always retains the exact clean candidate receipt and unconditional smoke. The
+publication command uses fragmentation as the single owner of metadata parity.
+Changing these procedures must update both self-contained runtime guidance files,
+contributor navigation, and release instructions together.
+
+Default closeout runs only a nonblocking reference/inventory/cost notification.
+Generic architecture/IP workflow prompts and automatic lesson capture are retired.
+Their old hook tests are superseded by the retained guard's actual payload/wiring
+coverage and CLI inventory-versus-reference scenarios. Inventories are diagnostic;
+required behavior is protected by its owning tests and positive/negative cases.
+
 ## Private vulnerability reporting rollout
 
 The repository has selected GitHub private vulnerability reporting, but

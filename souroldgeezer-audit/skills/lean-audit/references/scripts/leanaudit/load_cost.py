@@ -589,8 +589,9 @@ def _cmd_diff(args: argparse.Namespace) -> int:
     current = union_inventory(
         [extract_inventory(p.read_text(encoding="utf-8"), patterns) for p in paths]
     )
-    problems = diff_inventory(baseline, current) + check_pointers(paths, patterns)
-    return _report_problems("FIDELITY REGRESSION", problems)
+    for change in diff_inventory(baseline, current):
+        print(f"INVENTORY ADVISORY: {change}", file=sys.stderr)
+    return _report_problems("BROKEN REFERENCE", check_pointers(paths, patterns))
 
 
 def _cmd_guard_tokens(args: argparse.Namespace) -> int:

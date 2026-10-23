@@ -348,6 +348,27 @@ class CliTest(unittest.TestCase):
                 0,
             )
 
+    def test_diff_allows_inventory_changes_but_rejects_broken_references(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target, base = root / "reference.md", root / "baseline.json"
+            target.write_text("# Original\nLA-PUC-1\n", encoding="utf-8")
+            self.assertEqual(slc.main([
+                "baseline", "--files", str(target), "--code-patterns",
+                str(self.patterns), "--out", str(base),
+            ]), 0)
+            for content, expected in (
+                ("# Renamed\nLA-PUC-1\n", 0),
+                ("# Renamed\nRule deliberately retired.\n", 0),
+                ("# Renamed\n[missing](absent.md)\n", 1),
+            ):
+                with self.subTest(content=content), contextlib.redirect_stderr(io.StringIO()):
+                    target.write_text(content, encoding="utf-8")
+                    self.assertEqual(slc.main([
+                        "diff", "--baseline", str(base), "--files", str(target),
+                        "--code-patterns", str(self.patterns),
+                    ]), expected)
+
     def test_measure_text_lists_selection_metadata_separately(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

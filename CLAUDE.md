@@ -1,549 +1,185 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-Codex uses the additive runtime guidance in `AGENTS.md`; neither file replaces
-the other runtime's contract.
+This is a cross-runtime plugin marketplace. Shared `<plugin>/skills/**` workflows
+are the source of truth; runtime adapters package the same behavior for Claude
+Code and Codex, with native Copilot CLI support where declared. This file is a
+self-contained runtime contract; do not load the other host's guidance first.
+
+## Start with the task
+
+For skill-related changes, read
+[working principles](docs/skill-architecture.md#working-principles), the affected
+skill's entry, and the references needed for the actual decision. The full
+architecture standard is an on-demand maintainer reference. Follow the user's
+authorized outcome and project contracts; bundled conventions are strong defaults.
+Use proportionate reading, planning, delegation, checks, and reporting. Expand
+inspection when uncertainty, dependencies, or consequences warrant it. Keep
+explicit user boundaries and record material exceptions once.
+
+Use [contributing](docs/contributing.md) for contributor tasks,
+[using skills](docs/using-skills.md) for routing, and
+[runtime support](docs/runtime-support.md) for installation and host behavior.
+Preserve source facts, tool results, and inference as distinct evidence. Missing
+essential evidence limits the conclusion that needs it; continue independent work.
 
 ## Operation status
 
-<!-- lean-audit:sync-intentional: AGENTS.md § Operation status states the same rule for Codex; each runtime file stays self-contained, so edit both together. -->
+Acknowledge known slow work and give meaningful milestones or confirmed waiting
+within 60 seconds when the host can emit them. Use real completed/total progress
+only when known; otherwise describe the state without invented percentages or ETA.
+Prefer host notifications and aggregate background updates. Clear busy status on
+success, failure, cancellation, or awaiting input. Surface actionable failures;
+disclose uninterruptible host calls. These timings are repository guidance.
 
-For every operation that crosses about one second, keep status discoverable.
-Immediately acknowledge known slow foreground work, then report meaningful
-milestones or confirmed waiting within 60 seconds when Claude Code can emit
-them. Use real completed/total progress only when a total is known; otherwise
-label the state indeterminate and never invent a percentage or ETA. Clear busy
-status on usable success, failure, cancellation, or awaiting input; keep
-housekeeping and terminal outcomes inspectable, with actionable failures
-surfaced. Prefer host notifications over polling and aggregate background status
-without repeated interruption. Do not promise an update during an
-uninterruptible host call; disclose that limit when it applies. The timing
-limits are repository guidance, not a host guarantee.
+## Repository and runtime contracts
 
-## What this repo is
-
-A **cross-runtime plugin marketplace**, not an application. The shared root `.claude-plugin/marketplace.json` registers the published plugins (`souroldgeezer-audit`, `-design`, `-architecture`, `-policy`, `-ops`). Each published plugin carries a `.claude-plugin/plugin.json` manifest. Codex support is additive through `.agents/plugins/marketplace.json` and per-plugin `.codex-plugin/plugin.json` mirrors over the same `skills/` tree. The MCP-equipped architecture plugin additionally has a native GitHub™ Copilot CLI `plugin.json`; all three hosts use the same shared skill source. Content is mostly Markdown + YAML + JSON; there is no plugin build, but a small `uv`-managed Python® surface backs the skill architecture report. Validation is structural (filenames, frontmatter, schema, manifest sync via `jq`), semantic (does the described workflow still match SKILL.md), and script-level for `scripts/skill_architecture_report.py`.
-
-## Runtime documentation cross-checks
-
-When changing plugin packaging, marketplace wiring, install instructions, or agent / skill exposure rules, cross-check each affected host's current official documentation before relying on memory.
-
-- Claude Code: [Create plugins](https://code.claude.com/docs/en/plugins), [Create and distribute a plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) — authority for `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, Claude Code `skills/` and `agents/`, plugin source resolution, and marketplace strict-mode behaviour. [Create custom subagents](https://code.claude.com/docs/en/sub-agents) is the authority for `agents/*.md` frontmatter — the supported field set, `model` / `effort` values, and which fields are ignored for plugin subagents. Verify a field against it before shipping one: an unsupported key is silently dropped, not rejected.
-- Codex: use the current official Codex plugin and marketplace documentation as
-  authority for `.agents/plugins/marketplace.json`, the Agent Plugins 1.0.0 root
-  `plugin.json` / `mcp.json` pair and its canonical `$schema`, the legacy
-  `.codex-plugin/plugin.json` fallback, `AGENTS.md`, plugin hooks, and
+- `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` publish
+  the same plugin set, order, names, descriptions, and source paths. Marketplace
+  entries have no version field.
+- Each plugin has Claude and legacy Codex manifests. A root `plugin.json`, when
+  present, is the Agent Plugins manifest and may also support Copilot CLI.
+  Its identity and strict-SemVer version match legacy Codex.
+- Shared skills live under `<plugin>/skills/<skill>/SKILL.md`; each has a matching
+  Claude router-only `agents/<skill>.md`. Keep descriptions aligned. Do not copy
+  workflows for another host. Internal sources live in `internal-skills/**`, with
+  thin wrappers in both `.agents/skills/**` and `.claude/skills/**`.
+- Preserve documented Claude content substitutions `${CLAUDE_SKILL_DIR}` and
+  `${CLAUDE_PLUGIN_ROOT}`; give Codex an absolute loaded-skill source-path form.
+  Claude hook commands use plugin-root/data variables; Codex hook commands use
   `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`.
-- Copilot CLI: use the official [plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference),
-  [command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference),
-  and [configuration-directory reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference)
-  as authority for root `plugin.json`,
-  `mcpServers`, `${PLUGIN_ROOT}`, marketplace commands, and isolated
-  `COPILOT_HOME` / `COPILOT_CACHE_HOME` state.
-- Keep `.claude-plugin/marketplace.json` as the single shared Claude Code marketplace. Keep the separate Codex catalog synchronized on plugin set, order, and source paths; shared skills remain one tree.
-- Local refresh: after local plugin source changes, refresh the changed plugin through `/plugin`, restart Claude Code if a session still shows an older materialized copy, and verify the installed cache path and bundled `skills/` directories.
-- **MCP packaging is host-adapted, while the server contract stays shared.**
-  Claude declares the launcher inline, Codex declares it in the root `mcp.json`
-  of its Agent Plugins manifest (with `.codex-plugin/plugin.json` +
-  `mcp/codex.mcp.json` retained as the legacy fallback lane). Spec-aware Copilot
-  reads that same root `mcp.json`; `mcp/copilot.mcp.json` is its legacy fallback.
-  The shared router preserves the
-  caller's workspace and requires an absolute `workspaceRoot` per operation.
-  It starts every upstream child in an explicit valid directory, independent of
-  the host launcher's inherited cwd, and mirrors child stderr while retaining a
-  bounded diagnostic excerpt for adapter errors.
-  It discovers the live upstream tool catalog and supports both legacy MCP
-  initialization and current stateless discovery. Cross-check all three
-  adapters against their official plugin references and MCP against the current
-  [protocol specification](https://modelcontextprotocol.io/specification/2026-07-28/server/discover);
-  the Dediren provisioning and host-adapter contract follows in
-  § "Dediren MCP adapter contract".
-
-### Dediren MCP adapter contract
-
-<!-- lean-audit:sync-intentional: AGENTS.md § Dediren MCP adapter contract states the same contract for Codex; each runtime file stays self-contained, so edit both together. -->
-
-Dediren is plugin-provisioned: on first use the launcher installs the pinned,
-checksum-verified release (pin `2026.10.0`, support floor `2026.07.28`, overridable by a CalVer
-`DEDIREN_VERSION` at or above that floor) into the host's own per-plugin
-writable data directory — `DEDIREN_HOME` (absolute) first, else
-`CLAUDE_PLUGIN_DATA` / `COPILOT_PLUGIN_DATA` / `PLUGIN_DATA` with `/dediren`
-appended, with no invented fallback: offered none, the launcher exits 78
-naming `DEDIREN_HOME`. Executables resolve in order: an explicit
-`DEDIREN_COMMAND` (honoured without a floor probe — the deliberate lane for
-pinning one executable for controlled validation), the managed install, a host
-`dediren` on `PATH` **reporting at or above the floor**, the legacy
-verified-release-cache migration lane (still never populated), then
-provisioning the pin. Provisioning fetches `SHA256SUMS` first and reads the
-archive name from it, verifies SHA-256 before unpacking, sanitises every
-archive member, and installs atomically under a bounded cross-session lock;
-`DEDIREN_AUTO_INSTALL=0` disables it for air-gapped hosts. Java stays
-host-managed and is never downloaded — the release ships jars with no bundled
-JRE, so Java 21+ is a host prerequisite, diagnosed before the download and
-again before exec. The plugin still never patches Dediren or resolves below
-the floor.
-
-Per-release Dediren behaviour (export assurance, import and render lanes,
-diagnostics, and schema migrations) is recorded in architecture-design's
-[source grounding](souroldgeezer-architecture/skills/architecture-design/references/source-grounding.md)
-and the references it routes to; adopt a new release through
-[docs/maintenance-procedures.md § Dediren upstream release adoption](docs/maintenance-procedures.md#dediren-upstream-release-adoption).
-The repo's fixture compatibility baseline is 2026.08.9; the support floor
-stays 2026.07.28.
-
-The architecture plugin's Dediren configuration is host-specific, while the
-shared launcher/router has no harness detection. Its maintained adapters are
-Claude Code, Codex, and Copilot CLI:
-
-| Host | Root/path interpolation | Process cwd | Environment overrides | Host timeout unit |
-|---|---|---|---|---|
-| Claude Code | `${CLAUDE_PLUGIN_ROOT}` in the inline manifest command; `DEDIREN_HOME` set explicitly from `${CLAUDE_PLUGIN_DATA}` | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | `DEDIREN_COMMAND`, `DEDIREN_MCP_STARTUP_TIMEOUT_SEC`, `DEDIREN_MCP_REQUEST_TIMEOUT_SEC` | Router values are seconds |
-| Codex | Agent Plugins root `plugin.json` + `mcp.json`, which declares only `type` / `command` and exports `PLUGIN_ROOT` / `PLUGIN_DATA` into the child; the retained legacy `.codex-plugin` + `mcp/codex.mcp.json` lane stays literal (plugin-relative command, `cwd: "."`) and gets no plugin data root at all | Plugin root for the launcher; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides, plus `DEDIREN_HOME` / `DEDIREN_VERSION` / `DEDIREN_AUTO_INSTALL` on every host | Agent Plugins has no MCP startup-timeout field, so Codex's 30s default applies; the legacy `startup_timeout_sec` is seconds |
-| Copilot CLI | Once the root manifest declares the Agent Plugins `$schema`, Copilot consumes that same root `mcp.json` and **ignores** `mcp/copilot.mcp.json` (verified live: it reports `sourcePluginSpec`, resolves the `./` command, and leaves any `env` / `cwd` token verbatim). It exports `PLUGIN_DATA`, `COPILOT_PLUGIN_DATA`, and `CLAUDE_PLUGIN_DATA` into the child as absolute paths. `mcp/copilot.mcp.json` remains the legacy lane for builds without spec support | Host launch cwd; router sets the upstream child cwd to `workspaceRoot` | Same three `DEDIREN_*` overrides | `timeout` is milliseconds (legacy lane only) |
-
-Because that one file serves two hosts that expand it differently, it declares
-no `env` and no `cwd`: a token there would reach Codex expanded and Copilot
-verbatim. Both hosts export the plugin data directory into the child instead,
-which is what the resolver reads.
-
-Codex's 30s startup default is safe because the router answers `initialize`
-itself without touching Dediren; provisioning happens later, on the first
-`tools/list`.
-
-Generic local-client compatibility means a local stdio process launch with
-Bash, Python, and Dediren access; `DEDIREN_COMMAND` is optional and every tool
-call supplies an absolute `workspaceRoot`. A client that offers no plugin data
-directory must set `DEDIREN_HOME` to an absolute path, or supply the runtime
-through `DEDIREN_COMMAND`. It does not add another maintained
-harness. Preserve the legacy verified-release-cache fallback. Streamable HTTP
-is future work only for an explicit remote/shared multi-client service need:
-it would require authentication, origin validation, port/service lifecycle,
-session isolation, and workspace authorization. See the MCP
-[transport guidance](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
-
-## Keeping CLAUDE.md and README.md current (MUST)
-
-**Both MUST be kept current as the repo evolves** — each is load-bearing, and stale guidance causes downstream bugs. Treat drift as a blocking bug; fix it in the same commit that introduced it. Before finishing any task that changes repo structure or a skill's contract, re-read both and amend any section now wrong or incomplete.
-
-**CLAUDE.md** (audience: Claude Code authoring/editing skills here; first file Claude reads). Keep it lean — orientation + the cross-cutting MUST rules + the skills index and delegation map. Per-skill contract depth lives in each skill's own `SKILL.md`, never duplicated here. Update when:
-- a plugin is added/removed/renamed (→ "Directory layout", plugin references, "Published skills index");
-- a skill is added/removed/renamed or moved between plugins or `undecided/` (→ "Published skills index" and the delegation map);
-- a skill's mode set, output contract, or bundled-reference path changes (→ the skill's `SKILL.md` is the source of truth; touch "Skill architecture" / the delegation map here only when a *cross-skill* convention shifts);
-- a new cross-skill convention emerges — reference category (e.g. `docs/app-reference/`), extension layout, supporting-file kind, required SKILL.md section (→ "Directory layout", "Skill architecture");
-- any statement here becomes factually wrong.
-
-**README.md** (audience: humans browsing the marketplace). Update when:
-- a plugin is added/removed/renamed (the "What this is" intro table and the relevant "Detailed docs" pointer);
-- a skill is added/removed within a plugin (its row in the "What this is" table);
-- install commands or marketplace slugs change (→ "Install");
-- the local-development or validation workflow changes (→ "Local development" / "Validation");
-- a skill's audience-facing behaviour changes — new mode, output format, reference path (→ the "What this is" table and any "Examples" entry that shows it).
-
-## Skill architecture craft standard (MUST)
-
-Architecture Review keeps original package artifacts authoritative. When a Review
-needs reproducibility evidence, use the architecture-design isolated-review
-procedure and its persistent byte-accounted copy; never rebuild the original.
-
-For any task that creates, edits, reviews, triages, plans, or fixes a skill-related surface, read [docs/skill-architecture.md](docs/skill-architecture.md) **before** deciding scope or making edits. This covers published plugin skills, matching agents, runtime metadata, bundled references, extensions, deterministic machinery, manifests, marketplace entries, shared repo-internal `internal-skills/**` authoring skills, both runtime wrapper families, and the README / AGENTS / CLAUDE sections describing them.
-
-The standard is the first design input; the report is the repeatable check. Loading the standard only at closeout misses trigger precision, workflow shape, context discipline, runtime parity, and release-hygiene decisions made while changing the code. Before finishing, apply the standard and run `scripts/skill-architecture-report.sh` when available; if it cannot run, record why and what narrower verification was used. When you delegated the edit to a subagent and told it not to run the deterministic gates, its "verified" reports only its own drafting checks — run `scripts/skill-architecture-report.sh` and the lean-audit cost/fidelity guard yourself before integrating, since the Stop hooks fire only at session end (a mid-session integration lands first). The canonical silent breach is a description reword that trips the 1024-char `SAC-TRIGGER-DESC-LENGTH` cap.
-
-A repo `Stop` hook (`scripts/agent-hooks/stop-skill-architecture.sh`, registered in `.claude/settings.json`) fires once per session when a skill/plugin/agent/manifest surface changes and prompts you to run `scripts/skill-architecture-report.sh` and address findings on the changed targets — the first-party replacement for the former external `plugin-eval` / `plugin-dev` evaluate-skill and plugin-validator hooks. A second `Stop` hook (`scripts/agent-hooks/stop-lean-cost.sh`) runs lean-audit's deterministic per-use cost/fidelity guard (`souroldgeezer-audit/skills/lean-audit/references/scripts/load_cost_guard.py`); it is fail-open and silent unless a skill with a committed `tests/skill_load_cost/baselines/<skill>.json` floor regresses. A third fail-open `Stop` hook (`scripts/agent-hooks/stop-ip-hygiene.sh`) fires once per session when an IP-hygiene-scoped surface changes and prompts you to run [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) over the changed surfaces and select the repository-required lane: in-depth for breaking or additive public-surface changes, scoped triage for cosmetic changes. Report its coded finding, counsel, and gate/verdict output contract without claiming legal clearance.
-
-Also read the affected skill's own `SKILL.md` (and its `references/` / `extensions/`) before scoping — that is the source of truth for its modes, owns/delegates, finding namespaces, and extension set. The "Published skills index" only orients you to which skill that is and how it hands off to others.
-
-## Structured-file tooling
-
-Use `jq` for JSON inspection, validation, and sync checks. Use Mike Farah `yq` for YAML frontmatter, TOML, and XML. Avoid Python® one-liners or `python3 -m json.tool` for structured JSON / YAML / TOML / XML checks unless `jq` / `yq` cannot express the check.
-
-## Git ignore hygiene (MUST)
-
-Treat `.gitignore` as a hard staging boundary. Do not force-add ignored files (`git add -f` / `--force`, `git update-index --add`, or equivalents) unless the user explicitly names the exact ignored path and says it should be tracked. Broad approval to stage or commit is not approval to bypass `.gitignore`.
-
-Before committing, run `git ls-files -ci --exclude-standard`. The output must be empty unless the same task documents a deliberate, path-specific tracked exception. If it lists a tracked ignored path, uncommit it immediately with `git rm --cached -- <path>` (keeping the working-tree copy); don't defer cleanup.
-
-Ignored local state and scratch trees — `docs/superpowers/**`, `.cache/**`, `.worktrees/**`, `.venv/**`, `.mcp.json` — are local-only. Tracked plugin adapters live under each plugin's `mcp/` directory instead.
-
-## Git worktree location (MUST)
-
-<!-- lean-audit:sync-intentional: Claude's self-contained worktree contract mirrors the Codex-facing AGENTS.md requirement so either runtime receives the same safety boundary without loading the other runtime's file. -->
-
-`git-workflow-policy: feature branches, persistent repo-local worktrees, clean
-worktree, no direct main`.
-
-Create every task worktree under the primary checkout's gitignored, persistent
-`.worktrees/<task-name>/` directory. Never use `/tmp`, `$TMPDIR`, `/var/tmp`, a
-tmpfs/ramdisk, or another ephemeral location for a Git worktree or uncommitted
-task work, even when the task is expected to be short. Gitignored does not mean
-disposable. Run worktree creation from the primary checkout. Native
-Claude/Codex worktree helpers are acceptable only when their resolved path is
-under that `.worktrees/`; otherwise use
-`git worktree add -b <branch> .worktrees/<task-name> <base>`. If that directory
-is unavailable, stop and ask before selecting another persistent location.
-
-## Repo-local Python® tooling
-
-The public validation command is `scripts/skill-architecture-report.sh [repo-root]`, a thin `uv`-run wrapper around the Python® engine `scripts/skill_architecture_report.py`. It is tool-first: use its deterministic findings and JSON output to keep skill workflows thin, and reserve LLM judgment for explicit manual prompts the tool cannot decide. Use the repo-local `pyproject.toml` / `uv.lock` and a local `.venv/` from `uv venv`; do not commit `.venv/`. The wrapper also composes the native `claude plugin validate --strict` structural validator as a fail-open pre-pass (engine flag `--native-validate`); per-plugin manifest / frontmatter / hooks-schema failures fold into Runtime Parity as `SAC-RUNTIME-NATIVE-VALIDATE`, catching malformed metadata the report's lenient frontmatter parser accepts, and it skips silently when the Claude Code™ CLI is absent.
-
-The lean-audit, test-quality-audit, and planning-policy bundled scripts follow an enforced Python® standard: ruff + `mypy --strict` scoped to each skill's `references/scripts/**` tree (config in `pyproject.toml`, gate test `tests/lean_audit_python_standard_test.py`, Python floor 3.11). The six lean-audit script paths are stable entry shims over the `leanaudit/` implementation package, including the metadata-only workflow-cost/trace analyzer. Its native Codex lane streams rollout JSONL, sums complete `last_token_usage` records rather than cumulative totals, and emits explicit coverage plus bounded content-free lifecycle counters; missing or partial usage cannot calibrate drift. For the tooling's architecture and a safe-change guide (shim→package contract, module map, finding codes, config/data files, test matrix), read [souroldgeezer-audit/skills/lean-audit/references/scripts/README.md](souroldgeezer-audit/skills/lean-audit/references/scripts/README.md) before modifying it.
-
-Normal Markdown scans report the resolved root, requested scope, comparison count, and in-scope count; no eligible in-scope Markdown is an input error. A workflow forecast is feasible or at-risk only when its core context, reserve, base, per-stage prompt/output, and verification-stage evidence is complete; known expected overflow still blocks an incomplete forecast.
-
-`pyproject.toml` sets `[tool.uv] cache-dir = ".cache/uv"`. Run `uv` from the repo root, or via wrappers (such as `scripts/skill-architecture-report.sh`) that `cd` there first. Do not add `UV_CACHE_DIR=/tmp/uv-cache` to plans or normal verification; confirm the repo-local cache with `uv cache dir` and override `UV_CACHE_DIR` only as a one-off fallback when the repo config isn't applied or the reported path isn't writable.
-
-Run repo-scanning gates (the skill-architecture report, the full unittest suite) in the **clean persistent task worktree under `.worktrees/`**, not the primary checkout that contains it — scanners may recurse into nested checkouts and over-count findings. When forced to read primary-checkout numbers, discount findings whose path contains `.worktrees/` and verify the changed surface specifically.
-
-When restructuring files the deterministic engines scan, gate on a **classified** before/after finding-set diff — every difference must be a path rename of a base finding, an in-class declared suppression, or an adjudicated new class; byte/set equality against the pre-refactor baseline is unachievable by design (paths rename, dedupe keying shifts). Residual intentional parallels (identifier-rich test bodies, mandated shim boilerplate) take the whole-file `lean-audit:dup-intentional` line comment on the data/boilerplate file, never on a logic module — a logic module that genuinely needs a declaration scopes it to the clone with a `lean-audit:dup-intentional:begin` … `:end` line-comment pair, which suppresses only the clones fully contained in that span. The marker counts only inside a line comment of the file's own language; in a string literal it declares nothing. A dedupe-to-canonical-core hoist is not done when the shared prose moves: the thinned per-skill citing wrappers it leaves behind predictably become a *new* near-identical **prose** pair, so plan that pair's declaration while designing the hoist — mark it `lean-audit:sync-intentional` (the prose near-duplicate counterpart of the `dup-intentional` code marker above), or carve it out in the registry, with a rationale, and re-run the engine to a clean exit before landing, not as a gate-time surprise.
-
-### Primary checks
-
-<!-- lean-audit:sync-intentional: AGENTS.md § Validation › Primary checks states the same check list for Codex; each runtime file stays self-contained, so edit both together. -->
-
-```bash
-python scripts/check-runtime-metadata-parity.py --check .
-scripts/validate-fragmentation.sh
-scripts/skill-architecture-report.sh --strict .
-uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .  # exit 1 on block findings; info/warn stay advisory
-uv run python -m unittest discover -s tests -p '*_test.py'  # one full-suite run at closeout
-scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
-git diff --check
-uv run python scripts/version_stamp.py guard
-```
-
-The lean engine gate fails only on block findings, so its exit 0 proves only that no block is new. Info and warn findings already on the base stay advisory (run `lean-audit` periodically for them); compare the engine's findings on the paths a change touches against a base run, and fix each one the change introduced or declare it with a rationale.
-
-### Gate order and evidence
-
-<!-- lean-audit:sync-intentional: AGENTS.md § Validation › Gate order and evidence states the same gate-order, evidence-survival, fast-gate, exit-status, zero-test, and host-smoke rules for Codex; each runtime file stays self-contained, so edit those rules in both together. -->
-
-Run focused changed-surface checks first, then these ordered candidate gates
-from the clean persistent task worktree. The version guard follows them and
-runs before fast-forward integration. The exact candidate and gate sequence
-own full verification evidence, which exact fast-forward integration preserves.
-After integration, only an atomic version-cell follow-up may reuse that
-evidence. Its complete fixed surface is the Claude manifest, normalized legacy
-Codex and root Agent Plugins/Copilot manifests when present, and matching
-README version-table cell. Run focused version and metadata-parity checks for
-that surface. Any other source, plan, evidence, surface, or integration drift
-requires the full candidate gates again. The explicit `*_test.py` command owns
-the one full-suite run at closeout. A run that collects zero tests fails.
-
-A plan leaf whose write set touches a surface one of the fast gates covers runs
-that gate in its own acceptance command, from its own worktree, whenever the
-base already passes it: `scripts/validate-fragmentation.sh` for JSON/TOML,
-manifest, marketplace, runtime-metadata, and Stop-hook paths; the stdlib report
-engine `python3 -B scripts/skill_architecture_report.py --strict .` for skill,
-agent, reference, manifest, and repo-guidance paths; and
-`python3 -B -m unittest tests.test_code_clone_ratchet_test` for `tests/`. Each
-takes about a second, so a defect fails the leaf that introduced it rather than
-a later slice's closeout. The full suite and the host smoke stay closeout-only.
-
-When reading a gate's exit status, never let a pipeline stage or a `||` fallback own the reported code — `cmd | tail` or `cmd | grep ... || fallback` reports the downstream stage's status, not the gate's, and can read green while the gate itself failed. Capture `${PIPESTATUS[0]}` right after the pipe, redirect output to a file and test the bare command, or run the gate unpiped; a status that provably came from a downstream stage is no evidence the gate ran or passed, the same way a 0-collected-tests run is treated as a failed gate.
-
-The cross-runtime host smoke installs supported surfaces into fresh temporary
-`CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `COPILOT_HOME`, and `COPILOT_CACHE_HOME`
-trees without substituting `HOME`. It checks Codex prompt-input discovery,
-Claude installed components and strict validation, Copilot installation and MCP
-inventory, then handshakes the plugin-provisioned Dediren server through all three
-adapters. It fingerprints every normal plugin/config profile before and after.
-Keep both safety flags; the current Codex CLI's lack of a standalone plugin
-validator is an explicit skip. With `--changed-since REV` it skips, printing
-`SKIP: no host-relevant surface changed since REV (N changed paths)`, only when
-git proves no changed path is host-relevant; a dirty tree, unresolvable `REV`, or
-git error runs it.
-
-Report-engine coverage is ledger-backed. Add cases one at a time to `tests/skill_architecture_report_ledger.jsonl` with contiguous `SAC-T#####` IDs, ordered complexity (`simple` → `moderate` → `complex` → `adversarial`), and a unique intent; the unittest suite rejects duplicate IDs, intents, and fixture/expectation fingerprints before executing the cases. The report's primary replacement claim is empirical: the `Replacement Calibration` section runs the local gold ledger and reports how many skill-only findings the tool detects automatically — keep ≥500 gold-finding cases and ≥90% automated replacement recall (catalog coverage is secondary metadata, not the success criterion). When cases are bulk-generated, update `tests/generate_skill_architecture_report_ledger.py` and regenerate the JSONL in the same change.
-
-## Repo-internal skills
-
-The repo ships a small set of **internal** skills under `internal-skills/` — shared repo-scoped workflows, deliberately *not* bundled with the published `souroldgeezer-*` plugins. Keep shared workflow text, references, evals, fixtures, and helper material there. Thin auto-discovery wrappers live under both `.claude/skills/<name>/SKILL.md` and `.agents/skills/<name>/SKILL.md`, pointing back to `internal-skills/<name>/SKILL.md`. They encode how *we* author this repo, not capabilities shipped downstream.
-
-`ip-hygiene` formerly lived here but is now a public skill in `souroldgeezer-audit` at [souroldgeezer-audit/skills/ip-hygiene/SKILL.md](souroldgeezer-audit/skills/ip-hygiene/SKILL.md).
-
-Current internal skills:
-
-- **`github-issue-lifecycle`** at [internal-skills/github-issue-lifecycle/SKILL.md](internal-skills/github-issue-lifecycle/SKILL.md) — repo-local overlay for explicit GitHub™ issue lifecycle requests here. Composes the public `issue-ops` skill, the GitHub™ provider extension, and this repo's defaults (`ip-hygiene`, `.worktrees/**`, direct-main handling, skill-architecture verification, published-surface sync, lifecycle status, cleanup). Claude Code has a thin wrapper at [.claude/skills/github-issue-lifecycle/SKILL.md](.claude/skills/github-issue-lifecycle/SKILL.md).
-- **`lesson-capture`** at [internal-skills/lesson-capture/SKILL.md](internal-skills/lesson-capture/SKILL.md) — invoked by the `scripts/agent-hooks/stop-lesson-capture.sh` Stop hook, registered in `.claude/settings.json`. The hook fires/prompts when a skill-authoring surface changes, or — with no change — when the transcript records an audit-skill (`lean-audit`, `ip-hygiene`, `devsecops-audit`, `test-quality-audit`) or skill-architecture report run, and asks `lesson-capture` to judge whether the session holds a reusable lesson; transcript correction phrases are hints, not the gate. Distills one generalizable, Layer-2 (developing-the-skills) lesson and files it as a `lesson-candidate` GitHub™ issue (rendered by the pure `scripts/lessons_issue.py`, hard secret-scanned at capture since the repo is public, deduped by fingerprint, fail-open). Graduation is separate: handle the issue with `issue-ops` / `github-issue-lifecycle` against the Definition of Done embedded in the issue body. Claude Code has a thin wrapper at [.claude/skills/lesson-capture/SKILL.md](.claude/skills/lesson-capture/SKILL.md).
-
-Add here when new internal skills appear. Internal skills must not appear in `.claude-plugin/marketplace.json` or any plugin's `.claude-plugin/plugin.json`.
-
-When a repo-internal skill's tooling order prefers an MCP server (e.g. `github-issue-lifecycle` → GitHub™ MCP), it must also state that this harness may expose those MCP tools as **deferred** — loaded via `ToolSearch` before first use — and that the model should not fall back to an always-loaded CLI/Bash equivalent (e.g. `gh`) as its first move while an MCP server is connected and exposes the operation needed for that step. Use the documented provider fallback when no such server is connected or its available operations do not cover the step. Keep this harness-specific loading guidance in repo-internal skills and agent guidance only; published `souroldgeezer-*` skills stay harness-agnostic and express tool *preference*, not `ToolSearch` mechanics.
-
-## Directory layout
-
-```
-docs/skill-architecture.md             ← canonical skill architecture craft standard
-docs/contributing.md                   ← contributor entry point and guide map
-scripts/skill-architecture-report.sh   ← craft-standard validation wrapper for agent iteration
-scripts/skill_architecture_report.py   ← Python® validation engine and JSON/Markdown reporter
-tests/skill_architecture_report_test.py ← unittest coverage for report fixtures and wrapper smoke
-tests/skill_architecture_report_ledger.jsonl ← one-case-per-line report-engine test ledger
-tests/generate_skill_architecture_report_ledger.py ← deterministic 500+ case ledger generator
-pyproject.toml / uv.lock               ← uv-managed repo-local tooling project
-internal-skills/<name>/SKILL.md        ← shared repo-internal skill source of truth
-.claude/skills/<name>/SKILL.md         ← Claude Code wrappers for repo-internal skills
-.agents/skills/<name>/SKILL.md         ← Codex wrappers for repo-internal skills
-.claude-plugin/marketplace.json        ← Claude Code marketplace manifest
-.agents/plugins/marketplace.json       ← native Codex marketplace manifest
-souroldgeezer-ops/          ← published operations plugin (issue-ops, pr-ops)
-  docs/provider-reference/  ← shared GitHub™/GitLab™ provider mechanics + provider-agnostic lifecycle/escalation core + extension-authoring template (github.md, gitlab.md, provider-lifecycle-core.md, authoring.md)
-souroldgeezer-policy/       ← published passive policy plugin (git-workflow-policy, release-policy, tdd-policy, planning-policy, scope-policy)
-  docs/policy-reference/    ← shared enforcement-posture core (policy-posture-core.md) all five policy skills cite
-souroldgeezer-audit/        ← published audit plugin (devsecops-audit, test-quality-audit, ip-hygiene, lean-audit)
-  docs/audit-reference/     ← shared audit craft core (audit-craft.md, materiality.md, sampling-projection.md, scaled-audit.md)
-souroldgeezer-design/       ← published design plugin (software-design, app-design, api-design, infra-design)
-  docs/design-reference/    ← shared design-skill core (architecture-pairing-core.md) the pairing procedures cite
-souroldgeezer-architecture/ ← published architecture plugin (architecture-design)
-<plugin-name>/
-  .claude-plugin/plugin.json           ← Claude Code plugin manifest
-  .codex-plugin/plugin.json            ← native Codex plugin manifest
-  docs/<kind>-reference/*.md           ← bundled reference prose (rubric, playbook, or similar)
-  agents/<skill-name>.md               ← one router-only Claude Code subagent per skill, same name
-  skills/<skill-name>/SKILL.md         ← skill workflow
-                     /extensions/      ← per-stack cores and optional mode lanes (see below)
-                     /references/      ← smell catalog + reusable procedures / scripts / packaged runtime artifacts where needed
-                     /config.yaml      ← optional, skill-specific (not a Claude Code standard)
-undecided/                             ← skills not yet assigned to a plugin (NOT in marketplace.json, NOT production-ready; do not reference from other skills)
-  agents/<name>.md                     ← matching Claude Code subagents sit here too
-  <skill-name>/                        ← same shape as a plugin's skill dir
-```
-
-Current `<kind>-reference/` directories in use:
-- `souroldgeezer-audit/docs/security-reference/devsecops.md` — DevSecOps rubric; `devsecops-asvs-crosswalk.md` beside it is the on-demand ASVS 5.0.0 requirement-ID crosswalk
-- `souroldgeezer-audit/docs/quality-reference/{unit,integration,e2e}-testing.md` — test-quality rubrics; `testing-core.md` beside them holds the shared lane core (shared discipline + shared sources) the rubrics cite
-- `souroldgeezer-audit/docs/audit-reference/audit-craft.md` — shared audit discipline + output contracts (independence disclosure, assurance level, consequence field, worklist prioritisation)
-- `souroldgeezer-audit/docs/audit-reference/materiality.md` — risk-tier procedure: materiality = max(signal strength, declared tier); orthogonal to smell severity, combined at the worklist
-- `souroldgeezer-audit/docs/audit-reference/sampling-projection.md` — sampling and projection procedure for Deep / in-depth modes when full enumeration exceeds budget
-- `souroldgeezer-audit/docs/audit-reference/scaled-audit.md` — the rung *before* sampling: bounded per-item evidence records, the delegation protocol (parent owns population lanes; workers return records, not material), the divisible / parent-only lane table for all four audit skills, and the rung + coverage-reconciliation disclosure
-  For delegated Deep/in-depth audit population and coverage reconciliation,
-  follow [§3](souroldgeezer-audit/docs/audit-reference/scaled-audit.md#3-delegation-protocol),
-  including authoritative enumeration before slicing.
-- `souroldgeezer-design/docs/software-reference/software-design.md` — software-design playbook
-- `souroldgeezer-design/docs/app-reference/app-design.md` — app-design playbook
-- `souroldgeezer-design/docs/api-reference/api-design.md` — api-design playbook
-- `souroldgeezer-design/docs/infra-reference/infra-design.md` — infra-design playbook
-- `souroldgeezer-design/docs/design-reference/architecture-pairing-core.md` — shared architecture-pairing mechanics the api-design / software-design pairing procedures and Load Maps cite
-- [data-efficiency](souroldgeezer-design/docs/design-reference/data-efficiency.md) — shared procedure; api-design applies it to HTTP-to-storage paths while software-design owns non-HTTP data paths
-- `souroldgeezer-architecture/docs/architecture-reference/architecture.md` — architecture-design playbook (ArchiMate® 3.2, with UML® notation overlays under the skill references); `source-weighting.md` beside it is the source-evidence evaluator the skill loads when weighting extracted / reverse-lifted inputs
-- `souroldgeezer-policy/docs/policy-reference/policy-posture-core.md` — shared enforcement-posture core (passive install, standing-line authority, invariant-inline standing blocks, low-friction opt-out, honest limits) all five policy skills cite
-- `souroldgeezer-ops/docs/provider-reference/{github,gitlab}.md` — shared provider mechanics both ops skills' extensions cite; `provider-lifecycle-core.md` beside them holds the provider-agnostic lifecycle-marker and escalation core that both providers and both skills' SKILL.md / extensions cite; `authoring.md` is the shared extension-authoring template the two `extensions/README.md` entrypoints cite
-
-Migration note: `architecture-design` moved from `souroldgeezer-design` to `souroldgeezer-architecture` — if you installed `souroldgeezer-design` for architecture work, see [docs/maintenance-procedures.md § architecture-design plugin migration](docs/maintenance-procedures.md) for the install and canonical-handoff details.
-
-When moving a skill out of `undecided/` into a plugin (or vice versa), **also move its matching subagent file** in `agents/<name>.md`. Skill and subagent are paired by identical name.
-
-## Plugin registration
-
-Adding a new plugin:
-1. `<plugin-name>/.claude-plugin/plugin.json` (required `name`, `version`, `description`; `author: {name, email}` and `license: MIT` defaults from memory; start at the current CalVer stamp `YYYY.0M.0`, e.g. `2026.06.0`).
-2. Add to `.claude-plugin/marketplace.json` under `plugins[]` (`name`, `source: ./<plugin-name>`, `description`).
-3. `name` / `description` must stay in sync across the Claude manifest and `marketplace.json#plugins[]`. `version` lives only in the Claude `plugin.json` as the release authority and never appears in the marketplace entry — Claude Code always resolves `plugin.json` over a marketplace-entry copy without warning, so a stray copy is a silent drift risk.
-4. Add the additive Codex mirror at `<plugin-name>/.codex-plugin/plugin.json` and the matching `.agents/plugins/marketplace.json` entry. Keep plugin set, order, and source paths aligned without changing the Claude surfaces above.
-5. Derive the Codex strict-SemVer version from the Claude CalVer authority by normalizing the month (`YYYY.0M.MICRO` → `YYYY.M.MICRO`). Neither marketplace carries a version key.
-6. When the plugin is exposed natively to Copilot CLI, add root `plugin.json` and
-   keep its strict-SemVer version aligned with Codex. MCP configuration belongs under
-   `mcp/`, not in an ignored root `.mcp.json`.
-
-**Removing a runtime's or tool's support**: on any runtime/tool support-removal, follow [docs/maintenance-procedures.md § Removing a runtime's or tool's support](docs/maintenance-procedures.md) — scope the cut to marketplace-owned surfaces, preserve downstream target-repo conventions, optional handoffs to external plugins, and vendor-named detection patterns, and re-diff the report and gold ledger.
-
-## Security and local publication
-
-<!-- lean-audit:sync-intentional: AGENTS.md § Security and local publication states the same cross-runtime repository contract; each runtime file stays self-contained, so edit both together. -->
-
-[`SECURITY.md`](SECURITY.md) owns supported versions, the reporting channel,
-response targets, and coordinated disclosure. Private vulnerability reporting
-is the chosen GitHub channel, but its enablement is pending and unverified;
-never claim it is enabled until the repository state is re-read after the live
-change. Keep sensitive report content out of public issues. The threat model,
-OWASP SCVS Level 1 target and gap matrix, non-claim of SLSA, and accepted
-writer-trust residuals live in [`docs/security-baseline.md`](docs/security-baseline.md).
-
-A push of `main` is publication. From the exact clean candidate commit, run:
-
-```text
-python3 -B scripts/publication_check.py --repo-root . record
-```
-
-This runs the ordered candidate gates with the unconditional safety-flagged
-host smoke and stores a commit/tree-bound local receipt in the Git common
-directory. After the one allowed atomic version-only follow-up, run `record
---version-followup`. `check-push` is the pre-push entrypoint; `install-hook` and
-`uninstall-hook` manage only this repository's hook and refuse to overwrite or
-remove a different hook. Installing the hook, pushing, and changing GitHub
-security settings require the task's explicit authority. The receipt and hook
-are bypassable local controls; they are not CI, a required status check,
-independent approval, artifact provenance, or proof of attained SCVS
-conformance.
-
-## Plugin versioning (MUST)
-
-Plugins follow **CalVer** in the Claude manifest and README in the format `YYYY.0M.MICRO` (four-digit year, zero-padded month, then a within-month micro counter) — e.g. `2026.06.0`. The Claude `plugin.json#version` remains the release authority; Claude Code always resolves it over a marketplace-entry copy without warning, so marketplace entries never carry a `version` key. Codex and native Copilot manifests mirror the same semantic version in strict-SemVer form (`YYYY.M.MICRO`). A stamp updates every applicable manifest cell and the README together. **Where that stamp lands depends on where the work happens:**
-
-- **Work done directly on `main`** (the writable subset — `CLAUDE.md`, repo tooling): stamp in the **same commit** as the content change. Never defer.
-- **Work done in a worktree / feature branch** (the normal case — the published plugin tree is read-only in the primary checkout, so all plugin-content edits happen in a worktree): the feature branch carries content **only** and **MUST NOT touch any version cell**. The stamp is applied **at integration, directly on `main`, after the branch merges**, computed against `main`'s actual state then. The within-month micro counter is a main-line sequence number; assigning it at integration (not against a stale worktree base) is what keeps it correct and conflict-free when several worktrees merge.
-
-Verify the exact clean candidate with the ordered gates in "Primary checks",
-then run `uv run python scripts/version_stamp.py guard` before integration. It
-compares the branch against its merge-base with `main` and fails if the branch
-stamped an existing version cell, or if any marketplace entry carries a
-`version` key (presence, not diff). Fast-forward that exact commit. At
-integration, get the correct padded Claude/README stamp with
-`uv run python scripts/version_stamp.py compute --plugin <name>`, normalize its
-month for Codex, and apply every applicable cell in an integration commit that
-contains only version changes. Exact candidate evidence survives this atomic
-follow-up only with proved fast-forward ancestry and changes limited to the
-complete version surface: Claude manifest, normalized legacy Codex and root
-Agent Plugins/Copilot manifests when present, and matching README version-table
-cell. Run focused version and metadata-parity checks. Any other source, plan,
-evidence, surface, or integration drift requires the full candidate gates
-again. A newly added Copilot manifest may start at the existing release's
-SemVer-normalized value as packaging content.
-
-**Stamp mechanics:**
-- Compute the stamp from the calendar month of the commit that lands it (the integration commit on `main` for worktree work). If the plugin's current Claude version on `main` is from an **earlier** month (or a pre-CalVer semver), reset to `YYYY.0M.0`. If it is **already** in the current month, increment the micro counter (`2026.06.0` → `2026.06.1`). `uv run python scripts/version_stamp.py compute --plugin <name>` does exactly this against `main`'s current version; the Codex cell is its normalized mirror.
-- The number encodes *when*, not *how big*. CalVer is monotonic across the semver→CalVer switch (`2026.06.0` sorts above the old `2.8.1`), so installed-plugin update checks pick up the change.
-
-**Mandatory stamp** when a change lands that touches, under a `<plugin>/`: `skills/<skill>/SKILL.md`, `agents/<name>.md`, `docs/<kind>-reference/**`, `skills/<skill>/references/**`, `skills/<skill>/extensions/**`; or adds/removes/renames a top-level artefact (skill, extension, agent, reference file, reference section, mode, smell namespace). One stamp per plugin per landing regardless of how many of its files changed; for worktree work the landing point is the integration commit on `main` (see "Where that stamp lands"), not the feature-branch commit.
-
-**Change significance** is now decoupled from the version number but still classified, because it drives the IP-hygiene gate and the sync obligations below:
-- **Breaking** — something a downstream consumer relied on breaks. E.g. a skill removed/renamed; a reference file moved/renamed; an output contract changes (smell-code prefix renamed, canonical path changed, frontmatter field removed); a mode removed; `plugin.json#name` changes.
-- **Additive** — new capability, no regression. E.g. a new skill, extension, mode, or `references/procedures/` entry; a new reference section shaping new output (new `AD-L*` namespace, new `§6.4a`); a new SKILL.md frontmatter field downstream tooling may read.
-- **Cosmetic** — prose-only or no-op behavioural. E.g. rubric/reference tightening, typos, clarifying rewrites, description language that doesn't change behaviour.
-
-**Breaking/additive IP hygiene gate.** Every breaking or additive change requires an in-depth `ip-hygiene` run before finishing, scoped to the whole changed plugin surface (added/moved/renamed/removed/contract-shaping skills, agents, references, extensions, deterministic machinery, manifests, marketplace entries, public repo guidance); load every hit bucket from the workflow and report its normal output contract in closeout. Cosmetic changes use the normal scoped IP hygiene triage.
-
-**No stamp needed:** fixing broken links, whitespace, `docs/<kind>-reference/` cross-references between sections that already existed, repo-level `README.md` / `CLAUDE.md` edits outside the plugin tree, or packaging metadata that doesn't alter shipped behaviour or need pickup by installed-plugin update checks.
-
-**Sibling-file sync** (one commit — the stamp's landing commit; the integration commit on `main` for worktree work):
-- `.claude-plugin/plugin.json#version`, its normalized `.codex-plugin/plugin.json#version` mirror, any native Copilot `plugin.json#version`, and the plugin's `README.md` version-table cell. The README preserves the Claude CalVer spelling; Codex and Copilot use its normalized strict-SemVer form. Marketplace entries never carry a version.
-- both manifest descriptions and the Claude marketplace description — when the
-  change alters the plugin's surface (new skill, new mode).
-- `description:` frontmatter in any affected `SKILL.md` and matching `agents/<name>.md` — when what the skill does changes (required by the subagent pattern; see "Subagents").
-- `README.md` and `CLAUDE.md` — per the currency rule above; one commit.
-
-**Don't stamp without content change.** A stamp must pair with content — but for worktree work that content is the *just-integrated* merge, so the integration stamp commit on `main` is expected and is **not** a bare increment. A genuinely bare increment — a stamp with no corresponding content (in the same commit for direct-`main` work, or in the just-merged branch for integration work) — remains a smell (earlier commits skipped stamps); carry the catch-up in the next content or integration commit. Multiple content commits within the same month at one stamp are fine to leave; the next stamp increments the micro counter.
-
-**Dediren upstream release adoption** (MUST): before adopting a new `tommimarkus/dediren` release, follow [docs/maintenance-procedures.md § Dediren upstream release adoption](docs/maintenance-procedures.md) — gated smoke suite, feature-parity diff, re-stamp classification.
-
-## Skill architecture (shared pattern across skills)
-
-Skills here follow a recurring shape. Understand it before editing any SKILL.md:
-
-- **Reference vs workflow separation.** SKILL.md is a *workflow* for applying a bundled reference; the reference prose lives under `<plugin>/docs/<kind>-reference/*.md` (rubric for audits, playbook for design — see "Directory layout"). Relative paths like `../../docs/app-reference/app-design.md` resolve from a skill dir. SKILL.md **cites** reference sections and codes, never duplicates prose.
-- **Mode dispatch.** Each SKILL.md lists its modes. Audit skills (`devsecops-audit`, `test-quality-audit`): **Quick** (single file / PR diff, per-finding output only) vs **Deep** (whole-repo, full sectioned rollup, may use MCP probes). Every Deep test-quality audit includes suite health: management evidence precedes sampling, current results and runtime distributions are explicit, and project-declared feedback budgets replace universal runtime or layer-ratio limits. Deep also includes a bounded setup/teardown lifecycle assessment for cost attribution, safe amortization, per-test isolation, and failure-safe cleanup. Deep appends a propose-only suite recovery program when Suite health substantiates a feedback or efficiency finding. Design skills: **Build / Extract / Review / Lookup** — Extract is first-class for existing-code, frontend-app, API, and IaC baselines and code-to-diagram lifting. Ambiguous request → the skill asks.
-- **Output cites codes / sections, not prose.** Audit reports cite smell codes (`DSO-HC-2`, `HC-1`, `dotnet.I-HC-A1`); design output cites reference sections (`§3.11`, `§5.8`) plus WCAG SC numbers (`SC 1.4.10`, `SC 2.5.8`). Never duplicate reference prose.
-- **Shared audit craft core.** All four audit skills (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, `lean-audit`) cite `docs/audit-reference/audit-craft.md` for the canonical output contracts: independence disclosure, assurance level, SUT risk tier, Consequence finding field, and worklist prioritisation. Its bounded-lane gate uses `Quick gate: <status>` for test-quality / DevSecOps, `triage gate: <status>` for IP, and `limited-scope gate: <status>` for bounded Lean: `fail` for a substantiated in-scope block, otherwise `not-evaluated` when required evidence or machinery cannot rule out blockers, otherwise `pass-limited`. It is mechanical, not a Deep/in-depth/full-repo rollup or reasonable-assurance verdict. `ip-hygiene` conforms by named principle (§2/§3/§5) to preserve its triage / in-depth mode shape; `lean-audit` likewise conforms by principle with one adaptive path (no Quick/Deep), deriving its assurance level from the scanned scope. Materiality (risk tier) is orthogonal to smell severity; they combine at the worklist via a priority grid (P0–P3) keyed on both axes — neither overrides the other. All four also cite `docs/audit-reference/scaled-audit.md` (via audit-craft `§6a`) when a Deep / in-depth subject is large enough that per-item evidence may not reach the rollup intact: bounded records inline, delegation when the host offers it, sampling only after both. Delegation is a conditional host capability disclosed like MCP availability, never assumed — so the contract stays harness-agnostic; each citing skill carries an escalation cue, and the divisible / parent-only lane table is single-sourced in that file.
-- **Extensions are on-demand packs** in `skills/<skill>/extensions/`, loaded from detected target / provider. Most packs are a flat `<stack>.md`; `api-design` keeps that file as the compact stack core and may add `<stack>/build.md` or `<stack>/review.md` according to the selected mode; `software-design` adds a guidance-only `<stack>/test-code.md` per stack (test-code structure idioms, no key codes) reached through its own Load Map route. Audit and design extensions are per-stack; `issue-ops` / `pr-ops` use provider extensions; `git-workflow-policy` / `release-policy` start provider-agnostic, adding extensions later only when initialized options can't stay compact. For audits, extensions **ADD** namespaced smells (`<ext>.HC-N` / `.LC-N` / `.POS-N`) or **CARVE OUT** core smells for idiomatic framework patterns; for design, they also add stack-specific primitives, patterns, and project-assimilation rules; for operations, they add provider lifecycle mechanics; policy skills prefer declarative initialization options. Extensions **never override** core rules. Each skill's extension-authoring convention lives in `extensions/README.md` or a `references/procedures/*extension*.md` loaded from SKILL.md — follow its required-sections list exactly. `ip-hygiene` follows `devsecops-audit`'s convention location, `references/procedures/extension-authoring.md`, for its per-language packs. Multi-extension composition order is summarized in "Published skills index"; each skill's own `extensions/README.md` and SKILL.md carry the authoritative per-stack composition and the orthogonal finding namespaces (so findings never collide).
-- **Supporting files live under `references/`** (audit skills, and design skills when needed): `smell-catalog.md` (compact code index), `procedures/*.md` (reusable sub-procedures the workflow steps into), `scripts/*.sh` (allowed when a deterministic executable gate ships with the skill), `evals/*.jsonl` + `source-grounding.md` (behavioral evidence for trigger / workflow / source-grounding / high-risk-gate evals). `software-design`, `app-design`, `api-design`, `infra-design` use skill-local `references/procedures/project-assimilation.md` for existing-codebase discovery, reuse/debt classification, and migration disclosure. `app-design` keeps stack rules under `extensions/`; `software-design` uses a compact smell catalog + evidence; `infra-design` keeps evidence/source-grounding under `references/` while Azure® / Terraform™ / Bicep™ rules live under `extensions/`; `architecture-design` uses `references/` for notation references, finding catalog, package workflow procedures, source-lifting rules, evals, source grounding, and the dediren package fixture. `test-quality-audit` keeps its per-stack packs nested under `references/extensions/<stack>/<lane>.md` (e.g. `nodejs/core.md`) behind a thin `extensions/index.md`.
-- **Cross-skill coupling is via filesystem convention** (design skills). `architecture-design` owns `docs/architecture/<feature>.dediren/`; `app-design`, `api-design`, `infra-design`, `software-design` check that path when a paired model may need drift review. Siblings don't reach into the architecture-design surface beyond this path.
-- **Project assimilation is one-way** (design skills). In Build, Review, and explicit debt/compliance Extract, assimilate the *project* to the *reference*, not vice versa: new code follows the reference; existing infrastructure is reused only when substantively compliant, otherwise record it as legacy debt. Load skill-local `project-assimilation.md` when that evidence is in scope. Factual API Extract loads and uses this procedure for discovery when existing source or API/runtime evidence is in scope, but reports observed facts and evidence gaps without compliance or debt judgments and has no debt footer. The explicit debt/compliance Extract route classifies debt and emits its `Project assimilation:` footer (`Reused`, `Legacy debt`, `Migrations performed`).
-- **Output footers disclose state.** Reports and Build outputs end with the required footer listing loaded extensions, MCP availability, cost stance (if applicable), reference path, and (design skills) project-assimilation state when that mode requires it. Factual API Extract reports observations and evidence gaps without a debt footer. Don't remove required disclosures — they're how users audit the auditor / verify the builder.
-
-## Subagents
-
-Two agent classes live under `<plugin>/agents/`.
-
-**Skill wrappers** (the default). Every skill has exactly one matching Claude Code subagent at `<plugin>/agents/<skill-name>.md`. Its body is a canonical router-only adapter: use the `Skill` tool to load and follow `../skills/<skill-name>/SKILL.md` as the source of truth, then present the result in the shape that skill requires. Do not repeat modes, workflow steps, commands, stop conditions, output fields, footers, or host-capability caveats in the wrapper. Frontmatter remains the host adapter: `name`, `description` (mirror the skill's for discoverability), `tools`, `model`.
-
-`scripts/check-runtime-metadata-parity.py` derives the canonical router body from the paired skill name and rejects any extra or changed body text, so a wrapper cannot quietly become a second workflow. It also rejects unpaired published agents except the six exact execution-tier names below: four `souroldgeezer-policy/agents/plan-step-*.md` and `plan-verify-standard` / `plan-verify-analytical`. When a skill's invocation contract changes, update the shared `SKILL.md`; touch its wrapper only when the mirrored trigger metadata or Claude-specific frontmatter must change.
-
-**Managed execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four builder definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier, and stops for a parent re-cut rather than expanding when a step outgrows its size band. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Two read-only verifiers join them: `plan-verify-standard` (sonnet/medium, verifies mechanical and standard builds) and `plan-verify-analytical` (opus/high, verifies analytical and deep builds), tools Read, Grep, Glob, Bash with Edit and Write disallowed. They are contract-bound, not restatements of a native reviewer such as `feature-dev:code-reviewer`: packet-only inputs, fixed checks, a bounded ledger-ingested verdict, and enforced read-only. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
-
-### Planning-policy execution contract (Claude Code)
-
-<!-- lean-audit:sync-intentional: AGENTS.md § Planning-policy execution contract (Codex) is the Codex counterpart; each runtime file stays self-contained, so edit both together. -->
-
-Default `workflow: standard`: readable approval, native delegation, risk-based
-review, parent integration and verification. Explicit `workflow: strict` uses
-the managed v5 contract below. `precision` controls paths, not workflow selection;
-existing approved runs retain their settings. Tier mappings are managed-only.
-
-The contract lives in the skill, not here. Load it through the
-[SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which
-routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/references/plan-contract.md),
-[ledger contract](souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md),
-[approval](souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md),
-[worker](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md) and
-[verify](souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md) handoffs,
-[plan series](souroldgeezer-policy/skills/planning-policy/references/plan-series.md),
-[usage tracing](souroldgeezer-policy/skills/planning-policy/references/usage-tracing.md), and
-[ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
-Strict plans use `contract_version: 5` and
-[plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
-versions 1–4 are retired; retained pre-v5 runs follow compatibility above.
-
-Claude host adapter ([claude-code.md](souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md)):
-portable aliases only — `haiku`/`low`, `sonnet`/`medium`, `opus`/`high`,
-`opus`/`xhigh` for mechanical, standard, analytical, and deep work. They are
-aliases, not claims about a resolved version; if one is unavailable, return
-`blocked:model_unavailable` and never silently downgrade. Plan prose is written
-for a fresh parent per [orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
-The opt-in fresh-context comparison is
-`uv run python scripts/planning_policy_forward_eval.py --harness both --output-dir /secure/path --execute`.
-
-## Published skills index
-
-One row per published skill. **Each skill's own `SKILL.md` is its binding contract** — modes, owns/delegates, finding namespaces, extension set — so read it before creating, editing, reviewing, or planning that skill; this table and the delegation map below are orientation only, deliberately not a second copy of those contracts. Internal skills are in § "Repo-internal skills".
-
-| Skill | Plugin | Purpose |
-|---|---|---|
-| `issue-ops` | `souroldgeezer-ops` | Explicit issue / work-item operations; tracker-agnostic core + GitHub™ / GitLab™ provider extensions |
-| `pr-ops` | `souroldgeezer-ops` | Explicit PR/MR operations and prepared branches; provider-agnostic core + GitHub™ / GitLab™ extensions |
-| `git-workflow-policy` | `souroldgeezer-policy` | Passive developer git workflow policy; standing enforcement once initialized in target-repo guidance |
-| `release-policy` | `souroldgeezer-policy` | Passive distribution policy (versions, changelog, tags, publication); standing enforcement once initialized |
-| `tdd-policy` | `souroldgeezer-policy` | Passive test-first (TDD) policy; enforced-by-default posture once initialized in target-repo guidance, low-friction opt-out, plus an on-demand enforce path; a declared observable-behavior seam (default: each module's public API); behavioral / refactor / trivial / requirement-change / behavior-removal classification, cost- and retention-aware RED selection, execution-scope ladder; REFACTOR resolves scaffold tests and retires superseded, expired-characterization, and removed-behavior tests |
-| `planning-policy` | `souroldgeezer-policy` | Active opt-out plan-first policy; install-passive, enforced-by-default once initialized; opens plan mode (EnterPlanMode) and runs a light brainstorm before work covered by the standing line, approving the approach via ExitPlanMode with no spec file; low-friction opt-out |
-| `scope-policy` | `souroldgeezer-policy` | Passive change-footprint policy; bounds a change to a declared level (`targeted` / `balanced` / `open`), records out-of-level findings instead of doing them, and escalates one rung only when a level is insurmountable; bare initialization defaults to `balanced` |
-| `devsecops-audit` | `souroldgeezer-audit` | Security audit for CI/CD, IaC, containers, releases, supply chain, and evidence-backed .NET / Python / JavaScript/TypeScript application-security paths, with an on-demand ASVS 5.0.0 crosswalk for declared levels; cost stance from `config.yaml` or the target repository's `AGENTS.md` / `CLAUDE.md` guidance |
-| `test-quality-audit` | `souroldgeezer-audit` | Test-quality audit; dispatches unit / integration / E2E rubric per detected test type and stack, including Deep suite health and Node/React async lifecycle ownership; propose-only suite recovery program when Deep substantiates a budget or efficiency finding |
-| `ip-hygiene` | `souroldgeezer-audit` | Copyright / trademark / licence / bundled-asset hygiene for publication surfaces and repo-wide source, configuration, and build files |
-| `lean-audit` | `souroldgeezer-audit` | Duplication & waste (Lean *muda*) audit of prose / skill surfaces; deterministic engines + judgment; surface-gated per-use cost (`LA-PUC-*`) and staged-workflow run viability/orchestrator survivability (`LA-RUN-*`, `LA-ORCH-*`) with metadata-only trace calibration; read-only; plus explicit-request-only propose-only minify (`LA-MIN-*`) and live-verified platform redundancy (`LA-NAT-*`) |
-| `software-design` | `souroldgeezer-design` | Code/module/script design plus an early-return File Edit lane for bounded non-code text/data changes needing no design or sibling decision; core `SD-*` + per-language extensions including the shared JavaScript/TypeScript lane, each with a guidance-only `<stack>/test-code.md` test-code lane |
-| `app-design` | `souroldgeezer-design` | Frontend app user-flow mapping and adaptive screen layout (Vite / React / Next.js / Blazor™ WASM); screen composition; modal versus nonmodal overlay semantics; Server Function prop-boundary rules; WCAG 2.2 / i18n / Core Web Vitals baselines Approved direction skips alternatives; substantial multi-screen, dashboard, and material-layout work retains flow analysis. Only routine component/state work and narrow approved-layout changes skip the whole procedure. Unsettled direction needs two or three meaningful alternatives with tradeoffs and a selection checkpoint. |
-| `api-design` | `souroldgeezer-design` | HTTP API endpoint and surface architecture; portfolio cohesion, fragmentation, sprawl, consolidation, overlap, consumer chattiness; OpenAPI™ 3.1 / problem+json / security / reliability + composable runtime extensions |
-| `infra-design` | `souroldgeezer-design` | Infrastructure / IaC design; core `ID-*` + Azure® / Terraform™ / Bicep™ extensions |
-| `architecture-design` | `souroldgeezer-architecture` | ArchiMate® 3.2 + UML® dediren packages; SVG / OEF / XMI evidence, shareable HTML gallery, drift, reverse lookup |
-
-Inspect existing tests before selecting the RED test, and classify the change
-first by its effect at the seam (by default each module's public API): new or
-changed observable behavior there needs a focused failing test at the cheapest
-level that proves it through the seam; a change with no effect at the seam is a
-behavior-preserving refactor and runs under existing passing tests, adding
-bounded characterization coverage only where protection is missing; trivial
-wiring, delegation, accessors, and declarative config get no RED of their own.
-Extend a suitable cohesive scenario without weakening coverage; create a new
-test when the scenario is distinct or reuse would weaken clarity or regression
-coverage, reusing existing fixtures. A pre-existing failure counts as RED only
-when it precisely represents the intended behavior. Run the focused scenario per
-RED/GREEN step and the full suite at the declared cadence. REFACTOR includes the
-suite: retire or consolidate a test the new one supersedes, naming its
-successor; rewrite at the seam or delete any scaffold test below it before GREEN
-lands; removing a behavior removes its tests. Reuse `tests/surface_test_lib.py`
-helpers before defining new ones; share only immutable setup; no fixed sleeps,
-real clocks, or reliance on the machine's locale or timezone. Budget full-suite: 47s for the closeout
-`unittest discover` lane (measured 46.4 s for 1,688 tests on 2026-10-23 at load
-3.8 on 16 CPUs, up from 32.9 s for 1,417 tests on 2026-10-15: the suite grew
-19%, and the slowest 20 tests — led by the complex-eval fork/join lifecycle, the
-code-clone ratchet, the committed load-cost baselines, and the ruff/mypy
-standard gate — take only 10.8 s, so the growth is spread across the tail;
-re-record the budget to the latest measured run after each landed batch, target
-30s).
-
-Design and audit skills share the Build / Extract / Review / Lookup (design) and Quick / Deep (audit) mode dispatch from § "Skill architecture (shared pattern across skills)".
-
-**Delegation map** (the cross-skill handoff view no single `SKILL.md` gives):
-- `software-design` → `app-design` (frontend), `api-design` (HTTP), `infra-design` (IaC), `architecture-design` (ArchiMate®/UML® drift), `devsecops-audit` (security), `test-quality-audit` (test adequacy).
-- `app-design` / `api-design` / `infra-design` / `software-design` → `architecture-design` drift review via the paired package at `docs/architecture/<feature>.dediren/`; `app-design` ↔ `api-design` at the frontend/API boundary.
-- `git-workflow-policy` → `pr-ops`, `issue-ops`, `release-policy`; `release-policy` applies `git-workflow-policy` preflight then → `pr-ops`; `issue-ops` ↔ `pr-ops` handoff.
-- `tdd-policy` → `test-quality-audit` (test adequacy, similarity/history retirement, `structure-coupled` records as `verify-then-retire` evidence), `software-design` (design, splitting code that is both complex and highly connected, and language test-code idioms by skill name), `git-workflow-policy` preflight; siblings hand test-first enforcement to `tdd-policy`.
-- `planning-policy` → the design skills (`software-design`, `app-design`, `api-design`, `infra-design`), `architecture-design`, the audits, and `pr-ops` / `issue-ops` once the approach is approved; composes with `tdd-policy` (plan first, then test-first); siblings hand pre-implementation approach planning to `planning-policy`. A plan states the declared scope level and escalation mode among its settled decisions; each leaf's existing `boundary`/`write_set` materializes it, with no new plan field.
-- `lean-audit` → `devsecops-audit` (security), `test-quality-audit` (tests), `ip-hygiene` (copyright / marks / licence), the design skills (code / structure); sibling skills may hand duplication / waste assessment to `lean-audit`.
-- `scope-policy` → `issue-ops` (record out-of-level findings), the design skills' project assimilation (existing-code disposition), `lean-audit` (duplication / waste), `software-design` (solution minimalism and design), `planning-policy` (plan-first approach), `tdd-policy` (test-first), `git-workflow-policy` (commit/branch); siblings hand change-footprint bounding to `scope-policy`.
-
-**Extension composition order** (load in order when the target spans layers): app `vite.md` → `react.md` for Vite + React, while React + Next.js stays `react.md` → `nextjs.md` and Vite/Blazor™ WASM can load standalone; api picks one base core — `azure-functions-dotnet.md` (Azure® Functions™ .NET), `nodejs.md` (hosted Node, then `nextjs.md` for Next.js), or `python.md` (ASGI/WSGI/serverless API routing) — plus the `azure-cosmosdb.md` / `azure-blob-storage.md` cores as needed, then loads only the lane selected by Build, Review, or the narrow Extract/Lookup route; infra `azure.md` + (`bicep.md` | `terraform.md`); test-quality `references/extensions/nodejs/core.md` → `references/extensions/nextjs/core.md` (Next.js is a strict superset of Node.js).
-
-## Things that are not standard Claude Code
-
-- `skills/<skill>/config.yaml` — skill-internal, not read by the Claude Code runtime. Safe to leave alone when editing plugin metadata.
-- `skills/<skill>/extensions/` and `references/` — skill-internal supporting files (docs allow arbitrary files beside `SKILL.md`), not a Claude Code feature. Executable helpers under `references/scripts/` are bundled resources the skill invokes, not runtime-discovered commands. A skill that invokes such a helper must resolve its path through a documented substitution (`${CLAUDE_SKILL_DIR}`, or `${CLAUDE_PLUGIN_ROOT}` which also substitutes inline in skill/agent content) — never a bare `$SKILL_DIR`, which is unset and silently breaks installed users; see [docs/skill-architecture.md § Deterministic machinery](docs/skill-architecture.md).
+- Codex root Agent Plugins MCP configuration supports root/data interpolation;
+  legacy `.codex-plugin` plus `mcp/codex.mcp.json` is literal and has no plugin data
+  root. Keep the separate legacy Copilot adapter. Shared root `mcp.json` declares
+  no `env` or `cwd`, since Codex and Copilot handle those differently.
+- Architecture's router requires an absolute `workspaceRoot` per operation and
+  launches the upstream process there. It preserves explicit runtime overrides,
+  checksum-verified provisioning, and host-managed Java 21+. Use the authoritative
+  [installation procedure](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md)
+  for pins, writable plugin data, offline operation, and diagnosis. A generic local
+  stdio client must provide absolute `DEDIREN_HOME` when no plugin data root exists.
+  Per-release behavior follows [source grounding](souroldgeezer-architecture/skills/architecture-design/references/source-grounding.md).
+- Architecture Review preserves original package evidence. Reproduce only through
+  its isolated-review procedure and persistent byte-accounted copy; never rebuild
+  or refresh the reviewed original.
+- Check official host documentation when changing packaging or launch semantics.
+  Do not select contributor models, approval policy, or sandbox settings in a
+  checked-in `.codex/config.toml`.
+
+## Git and tooling
+
+`git-workflow-policy: feature branches, persistent repo-local worktrees,
+clean worktree, no direct main`.
+
+Create task worktrees from the primary checkout under its gitignored persistent
+`.worktrees/<task-name>/`. Never put a worktree or uncommitted task work under
+`/tmp`, `$TMPDIR`, `/var/tmp`, tmpfs, or another ephemeral location. If that root
+is unavailable, stop and ask. Preserve unrelated work and runtime data. Stage
+explicit paths; do not force-add ignored files. Before committing,
+`git ls-files -ci --exclude-standard` must be empty unless the user explicitly
+approved the exact tracked exception.
+
+Parent integration is local and fast-forward only after review and required
+verification. Keep concurrent writers in separate worktrees. Before cleanup,
+prove each task branch appears in `git branch --merged <target>`, remove only its
+clean worktree, run `git worktree prune`, then `git branch -d`. Never force delete.
+Stop cleanup on a failed proof. Integration does not authorize pushing.
+
+Use `rg` for search, `jq` for JSON, and Mike Farah `yq` for YAML frontmatter, TOML,
+and XML. Preserve Python 3.11 and repo-local `uv` configuration. Bundled Lean,
+test-quality, and planning Python helpers follow ruff plus `mypy --strict` in
+`pyproject.toml`. Run repository-wide checks in the task worktree, so nested
+checkouts do not contaminate enumeration.
+
+## Implementation and evidence
+
+Inspect existing tests and classify changes at the observable seam. Changed
+behavior gets a focused failing test first at the cheapest sufficient level;
+refactors use existing passing tests, and trivial wiring/config gets no invented
+RED. Keep cohesive scenarios and reuse `tests/surface_test_lib.py`. Run focused
+checks during development. Remove obsolete tests when behavior is removed, naming
+successors where coverage is replaced; retain meaningful regression protection.
+Avoid fixed sleeps, real clocks, and machine locale/timezone assumptions.
+
+Use evidence-backed findings beyond scanner nominations without misattributing
+them to tools. Inventory differences and load-cost proxies are advisory evidence,
+not semantic-fidelity or user-value proof. Keep actual broken references and
+runtime defects visible. No generic Stop hook may require another workflow or
+create an issue; lesson capture is explicitly invoked. Optional prevention hooks
+are documented in [the hook recipe](souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md).
+
+For delegated audits, establish authoritative item identities before slicing;
+reconcile coverage by identity, not counts alone. Missing optional evidence is
+unknown. Retain explicit no-rerun and existing-results-only limits. API design owns
+HTTP-to-storage efficiency; software design owns other data paths; report defects
+once. Stack composition retains Vite before React, React before Next, and Node
+before Next when the combined mechanics matter. Test-quality deep work assesses
+suite management and setup/teardown before attributing suite cost; source inspection
+cannot establish observed browser behavior or performance. DevSecOps cost policy
+comes from the target repository's host-scoped guidance, including both runtime
+files as evidence when applicable.
+
+## Planning-policy execution contract (Claude Code)
+
+Standard planning is proportionate: explicit implementation authority and settled
+behavior do not require redundant approval, and small cohesive work may stay
+inline. Explicit plan-first instructions require approval. Delegate when it helps;
+the parent owns review, integration, and final verification. Routine necessary
+adjacent work stays within the approved outcome; material scope or authority changes
+need a decision. Independent review remains risk-based.
+
+Explicit strict execution retains v5 contracts, bound worker/verifier handoffs,
+and immutable approved leaves. Existing runs and explicit model pins retain their
+settings. For new unpinned runs, use available suitable executors through existing
+explicit assignment/capability bindings; do not guess capabilities or silently
+weaken a requirement. The [planning entry](souroldgeezer-policy/skills/planning-policy/SKILL.md)
+routes to standard and strict host instructions. No root-level model mapping or
+managed ledger is required for ordinary work.
+
+## Verification and local publication
+
+Use the [contributor verification guide](docs/contributing.md#validate-the-change)
+for the affected commands. Routine bounded changes run owning tests and relevant
+structural checks. Cross-cutting changes and publication run the full candidate
+sequence once, including `uv run python -m unittest discover -s tests -p '*_test.py'`
+and the isolated host smoke with **both** `--fresh --assert-profile-isolation`.
+Metadata parity is owned by fragmentation in the full sequence. Missing tools are
+reported as skips or blockers; zero collected tests is a failure. Preserve the
+actual command's exit status; a downstream pipeline stage is not gate evidence.
+
+The host smoke uses temporary host/plugin-data state without replacing `HOME`,
+clears inherited provisioning roots, and fingerprints normal host control planes.
+Never provision into a user's normal plugin-data root during a smoke. A missing
+standalone Codex validator is a disclosed skip.
+
+A push of `main` is publication. Before an explicitly authorized push, run
+`python3 -B scripts/publication_check.py --repo-root . record` from the exact clean
+candidate. It retains the full ordered gates and unconditional isolated smoke.
+The existing `record --version-followup` accepts only the documented single atomic
+version-only descendant. Other publication-source drift needs a new receipt;
+proportionate local checks cannot authorize a push. Installing the pre-push hook,
+pushing, and changing external security settings need explicit task authority.
+The local receipt is bypassable, not independent approval or artifact provenance.
+
+Feature branches carry content, with no existing version-cell increments. After
+verified local integration, run `uv run python scripts/version_stamp.py guard` and
+`compute --plugin <name>` on `main`. Apply padded CalVer to the Claude manifest and
+README version cell, normalized strict SemVer to legacy Codex and root manifests,
+in one version-only integration commit. Run focused version/parity checks afterward.
+Full verification evidence survives that fixed follow-up only under the documented
+ancestry/content proof. New manifests may carry the current normalized version.
+
+[SECURITY.md](SECURITY.md) owns reporting and supported versions; private reporting
+enablement is pending/unverified until re-read live. Keep sensitive reports out of
+public issues. [Security baseline](docs/security-baseline.md) owns the threat model,
+accepted residuals, and assurance limits. Public changes receive proportionate
+source/IP inspection; breaking or additive public-surface work retains in-depth
+IP hygiene and cosmetic work scoped triage. Never claim legal clearance.
+
+## Documentation and ownership
+
+Keep this file, the other runtime's self-contained guidance, and README current
+when public contracts, structure, runtime support, install commands, or validation
+change. Update contributor navigation and release/maintenance guides when their
+procedures change. Keep executable hook configuration and scripts in CODEOWNERS.
+Use outcome, checks, and material limitations in the final response; avoid routine
+policy inventories unless requested or required by a real consumer.

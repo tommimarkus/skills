@@ -1,5 +1,5 @@
 # lean-audit:dup-intentional — parallel per-case test bodies kept literal for readability
-import contextlib, io, json, subprocess, sys, tempfile, unittest
+import contextlib, io, json, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 from tests.surface_test_lib import load_leanaudit_module, run_git
@@ -95,7 +95,7 @@ class GuardDecisionTest(unittest.TestCase):
         patterns_path.write_text(json.dumps(patterns))
         return root / "SKILL.md", base, patterns_path
 
-    def test_denies_when_edit_drops_a_smell_code(self):
+    def test_advises_when_edit_retires_a_smell_code(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             skill_md, base, patterns = self._fixture(
@@ -106,7 +106,7 @@ class GuardDecisionTest(unittest.TestCase):
             decision = guard.decide(
                 target=root / "c.md", new_content="## Sec\n(removed)\n",
                 skill_md=skill_md, baseline=base, patterns=patterns)
-            self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
+            self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "allow")
 
     def test_allows_when_nothing_unreachable(self):
         with tempfile.TemporaryDirectory() as d:
@@ -119,7 +119,7 @@ class GuardDecisionTest(unittest.TestCase):
                 target=root / "c.md", new_content="## Sec\nLA-PUC-1 still here\n",
                 skill_md=skill_md, baseline=base, patterns=patterns))
 
-    def test_denies_when_edit_orphans_linked_file_by_removing_link(self):
+    def test_advises_when_edit_removes_a_load_route(self):
         """Removing a Load-Map link from SKILL.md must shrink the closure and
         cause codes in the orphaned file to become unreachable (Fix C)."""
         with tempfile.TemporaryDirectory() as d:
@@ -135,8 +135,8 @@ class GuardDecisionTest(unittest.TestCase):
                 new_content="# S\nHC-1 here\n(no link to c.md)\n",
                 skill_md=skill_md, baseline=base, patterns=patterns)
             self.assertIsNotNone(decision,
-                "expected deny when link removal orphans a code-bearing file")
-            self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "deny")
+                "expected advisory when a load route is removed")
+            self.assertEqual(decision["hookSpecificOutput"]["permissionDecision"], "allow")
 
     def test_denies_when_edit_introduces_dangling_pointer(self):
         """An edit introducing a dangling pointer must deny (Fix C)."""
@@ -244,10 +244,10 @@ class MainIntegrationTest(unittest.TestCase):
         self.assertEqual(result.stdout, "", msg)
         self.assertEqual(result.stderr, "", msg)
 
-    # -- PreToolUse: deny when code is dropped --
+    # -- PreToolUse: inventory changes are advisory --
 
-    def test_pretooluse_deny_drops_code(self):
-        """PreToolUse payload that drops a code → deny decision on stdout, exit 0."""
+    def test_pretooluse_inventory_change_is_advisory(self):
+        """PreToolUse payload that drops a code → advisory decision on stdout, exit 0."""
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
             skill_dir = self._mk_skill(root)
@@ -265,8 +265,8 @@ class MainIntegrationTest(unittest.TestCase):
                 exit_msg="guard must exit 0 (fail-open contract)",
                 lines_msg="expected at least one output line")
             self.assertEqual(
-                out["hookSpecificOutput"]["permissionDecision"], "deny",
-                f"expected deny, got: {lines}")
+                out["hookSpecificOutput"]["permissionDecision"], "allow",
+                f"expected advisory, got: {lines}")
 
     # -- PreToolUse: non-skill path → no output --
 
@@ -338,10 +338,10 @@ class MainIntegrationTest(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(lines, [])
 
-    # -- Stop-mode: fidelity block when code is removed from disk --
+    # -- Stop: inventory and reference diagnostics cannot block completion --
 
-    def test_stop_mode_fidelity_block(self):
-        """Editing or deleting a referenced file cannot bypass the baseline floor."""
+    def test_stop_mode_inventory_and_broken_reference_notifications_never_block(self):
+        """Inventory loss and reference defects remain visible without blocking completion."""
         for change in ("edit", "delete", "staged-delete"):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as d:
                 root = Path(d)
@@ -356,13 +356,38 @@ class MainIntegrationTest(unittest.TestCase):
                         run_git(root, "add", "--", "lean-skill/c.md")
 
                 payload = {"hook_event_name": "Stop", "cwd": str(root)}
-                out, lines = self._run_guard_and_parse(
-                    payload,
-                    exit_msg="guard must exit 0 even on block",
-                    lines_msg="expected block output")
+                code, lines = _run_guard(payload)
+                self.assertEqual(code, 0)
+                notice = "\n".join(lines)
+                self.assertIn("LA-PUC-1", notice)
+                self.assertNotIn('"decision": "block"', notice)
+                if change != "edit":
+                    self.assertIn("dangling pointer", notice)
 
-                self.assertEqual(out["decision"], "block", lines)
-                self.assertIn("LA-PUC-1", out["reason"])
+    def test_registered_host_stop_commands_report_without_blocking(self):
+        # Successor to procedural Stop-hook tests: execute the actual retained wiring.
+        for config in (".codex/hooks.json", ".claude/settings.json"):
+            with self.subTest(config=config), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                skill = self._mk_skill(root)
+                wrapper = root / "scripts/agent-hooks/stop-lean-cost.sh"
+                wrapper.parent.mkdir(parents=True)
+                shutil.copy2(REPO_ROOT / "scripts/agent-hooks/stop-lean-cost.sh", wrapper)
+                bundled = root / SCRIPTS.relative_to(REPO_ROOT)
+                shutil.copytree(SCRIPTS, bundled, ignore=shutil.ignore_patterns("__pycache__"))
+                _init_git_repo(root)
+                (skill / "c.md").write_text("# Deliberately renamed\n", encoding="utf-8")
+                settings = json.loads((REPO_ROOT / config).read_text())
+                commands = [hook["command"] for group in settings["hooks"]["Stop"]
+                            for hook in group["hooks"]]
+                for command in commands:
+                    result = subprocess.run(
+                        ["bash", "-c", command], cwd=root, text=True, capture_output=True,
+                        input=json.dumps({"hook_event_name": "Stop", "cwd": str(root)}),
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("LA-PUC-1", result.stdout)
+                    self.assertNotIn('"decision": "block"', result.stdout)
 
     def test_stop_mode_unrelated_deletion_is_silent(self):
         with tempfile.TemporaryDirectory() as d:

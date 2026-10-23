@@ -7,7 +7,9 @@ for example, “review only” or “implement the approved change.” You can n
 skill explicitly when several tasks overlap.
 
 The examples below are starting requests. The linked `SKILL.md` files own the
-complete workflows, evidence requirements, and stop conditions.
+task-specific defaults, evidence requirements, and authority boundaries. Agents
+may use compatible project conventions and relevant reference excerpts; detailed
+reporting is available when requested or consumed. Material limits remain explicit.
 
 ## Review risks and evidence
 
@@ -16,7 +18,7 @@ complete workflows, evidence requirements, and stop conditions.
 | [devsecops-audit](../souroldgeezer-audit/skills/devsecops-audit/SKILL.md) | “Run a Quick security audit of this Dockerfile and release workflow.” | Findings tied to file evidence and security criteria; Quick includes a bounded gate. Deep also assesses the wider posture. |
 | [test-quality-audit](../souroldgeezer-audit/skills/test-quality-audit/SKILL.md) | “Audit this test diff for assertions that could pass despite a broken feature.” | Per-test findings and a Quick gate. Deep also examines suite health and setup/teardown lifecycle evidence, and appends a propose-only suite recovery program when a budget or efficiency finding is substantiated. |
 | [ip-hygiene](../souroldgeezer-audit/skills/ip-hygiene/SKILL.md) | “Review these bundled examples and notices for source and licence hygiene.” | Provenance and notice findings, evidence gaps, and the applicable prospective decision, triage gate, or in-depth verdict. |
-| [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) | “Audit this skill's workflow for repeated prose and unnecessary context.” | Deterministic duplication findings plus evidence-based waste observations. A bounded scope includes a limited-scope gate. |
+| [lean-audit](../souroldgeezer-audit/skills/lean-audit/SKILL.md) | “Audit this skill's workflow for repeated prose and unnecessary context.” | Deterministic findings when available plus independently evidenced waste observations; economics is selected when needed. A bounded scope includes a limited-scope gate. |
 
 Audits are read-only unless repairs are explicitly requested. Security,
 software design, test quality, and source/IP hygiene are different questions;
@@ -38,7 +40,7 @@ for the shared gate rules.
 | Skill | Example request | What to expect |
 |---|---|---|
 | [software-design](../souroldgeezer-design/skills/software-design/SKILL.md) | “Review this parser's module boundaries and where format changes would spread.” | Evidence about ownership, dependencies, coupling, and evolution, with bounded design recommendations. |
-| [app-design](../souroldgeezer-design/skills/app-design/SKILL.md) | “Map this signup flow and propose a responsive layout for its three screens.” | User-flow and layout guidance, component/state decisions, and appropriate browser evidence. Unsettled material layouts include alternatives and a selection checkpoint. |
+| [app-design](../souroldgeezer-design/skills/app-design/SKILL.md) | “Map this signup flow and propose a responsive layout for its three screens.” | User-flow and layout guidance, component/state decisions, and appropriate browser evidence. Authorized reversible layouts can proceed; requested alternatives or consequential unresolved product choices retain a checkpoint. |
 | [api-design](../souroldgeezer-design/skills/api-design/SKILL.md) | “Design a versioned HTTP API for creating and cancelling reservations.” | An API contract covering request/response behavior, errors, concurrency, security, reliability, and verification limits. |
 | [infra-design](../souroldgeezer-design/skills/infra-design/SKILL.md) | “Review this Terraform environment's identity boundaries and rollback plan.” | Infrastructure findings and operational handoff guidance grounded in topology, state, deployment, and ownership. |
 | [architecture-design](../souroldgeezer-architecture/skills/architecture-design/SKILL.md) | “Create a maintained UML deployment model for this service in the repository.” | A Dediren package and, for a build, validated/rendered evidence with readiness limits. A review assesses original evidence first. When reproducibility needs a build, it uses one retained isolated copy; successful rebuilding does not clear defects in the originals. |

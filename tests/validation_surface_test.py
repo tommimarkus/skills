@@ -71,12 +71,17 @@ class ValidationSurfaceTest(unittest.TestCase):
         self.assertIn("all 16 shared public skills", release)
         self.assertNotIn("docs/refactor/fragmentation-execplan.md", release)
 
-    def test_default_validation_runs_stop_hook_regression_script(self) -> None:
+    def test_fragmentation_owns_parity_without_procedural_stop_workflows(self) -> None:
         fragmentation = read("scripts/validate-fragmentation.sh")
         self.assertIn("python scripts/check-runtime-metadata-parity.py --check .", fragmentation)
-        self.assertIn("bash scripts/test-stop-hooks.sh", fragmentation)
-        self.assertNotIn("python -m unittest", fragmentation)
-        self.assertIn("scripts/test-stop-hooks.sh", read("README.md"))
+        self.assertNotIn("scripts/test-stop-hooks.sh", fragmentation)
+        for config in (".codex/hooks.json", ".claude/settings.json"):
+            hooks = json.loads(read(config))["hooks"]["Stop"]
+            commands = [hook["command"] for group in hooks for hook in group["hooks"]]
+            self.assertEqual(1, len(commands))
+            self.assertIn("stop-lean-cost.sh", commands[0])
+            for removed in ("stop-lesson-capture", "stop-ip-hygiene", "stop-skill-architecture"):
+                self.assertNotIn(removed, commands[0])
 
     def test_runtime_guide_keeps_operator_and_optional_smoke_destinations(self) -> None:
         runtime = " ".join(read("docs/runtime-support.md").split())

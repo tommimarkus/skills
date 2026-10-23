@@ -14,19 +14,24 @@ Install the plugin that owns the task, then describe the work in ordinary langua
 
 The repo currently ships five plugins:
 
-`planning-policy` follows the consuming repository's initialized scope, including
-nontrivial fixes and refactors when covered. Its default `workflow: standard`
-uses a concise readable plan, approval once, and native delegation of cohesive
-outcomes. Workers can discover routine facts and report necessary adjacent
-edits; the parent retains review, integration, and final verification. Independent
-read-only review is required on risk, including public contracts, security,
-destructive operations, required behavior/rule/assertion removal, and effects
-the parent cannot bound. See the [shared workflow](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md).
+The workflows use judgment-led defaults: preserve compatible project contracts,
+read guidance relevant to the decision, and scale preparation and checks to the
+consequences. Reports give the result, useful evidence, and material limits;
+detailed classifications remain available for explicit requests and consumers.
+
+`planning-policy` follows the consuming repository's initialized scope. Standard
+work uses a proportionate approach: settled authorized implementation may proceed
+inline, explicit plan-first requests retain approval, and delegation is selected
+when parallelism, isolation, or independent analysis warrants it. Necessary
+adjacent work stays within the approved outcome under parent review. Material
+scope/authority changes and risk-based independent review remain explicit. See
+the [shared workflow](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md).
 
 Explicit `workflow: strict` retains validated v5 plans, exact capability
 bindings, managed workers, ledger recovery, changeset budgets, pin scans, and
 per-leaf verification. Path `precision` is a separate v5 setting; existing
-approved plans and runs retain their recorded settings. Tier mix and execution
+approved plans and runs retain their recorded settings. New unpinned runs may
+use available suitable executors through existing explicit capability bindings. Tier mix and execution
 cost findings are advisory in both workflows; detailed forecasts and tracing
 are opt-in. See the [strict workflow](souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md),
 [worker handoff](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md),
@@ -160,7 +165,10 @@ channel, but its enablement is pending and must not be represented as live until
 it is verified on GitHub.
 
 Lean Audit reports explicit requested-scope coverage for normal Markdown scans and treats an empty eligible scope as an input error. Its workflow forecast reports `indeterminate` until its declared core budget evidence is complete, except when known expected usage already proves an overflow.
-Intentional clone regions preserve detection between unmarked copies. The Stop fidelity guard checks deleted references, and trace totals include provider-specific cache input.
+Intentional clone regions preserve detection between unmarked copies. The sole
+default Stop notice reports reference defects and advisory inventory/cost changes
+without blocking completion. Lesson capture is explicitly invoked; names and counts
+do not establish semantic fidelity. Trace totals include provider-specific cache input.
 
 ## Examples
 
@@ -174,13 +182,13 @@ Each skill’s expected output and boundaries are in [using skills](docs/using-s
 
 ## Validation
 
-The contributor guide defines the ordered changed-surface and clean candidate
-checks, including the lean-audit markdown engine (`lean_engine.py`, exit 1 on block findings; info and warn stay advisory). Its fragmentation gate runs metadata validation and
-`scripts/test-stop-hooks.sh`, and the full test suite runs once at closeout.
-Evidence from an exact clean candidate survives fast-forward integration. Only
-the documented atomic version cell follow-up uses focused version and metadata
-checks. Other drift requires the full candidate gates again. The
-[release checklist](docs/release-checklist.md) covers release preparation.
+The [contributor guide](docs/contributing.md#validate-the-change) defines focused
+local checks and the full cross-cutting candidate sequence. Fragmentation owns
+metadata parity. Full-suite and isolated host verification remain mandatory for
+cross-cutting changes and publication, rather than every bounded prose edit.
+Local evidence is reused according to its actual scope; publication still needs
+an exact clean commit/tree receipt, with only the documented atomic version-only
+follow-up. The [release checklist](docs/release-checklist.md) covers that boundary.
 
 ## Detailed docs
 

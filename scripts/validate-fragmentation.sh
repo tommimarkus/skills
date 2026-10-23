@@ -118,5 +118,3 @@ validate_toml
 validate_marketplace_paths
 validate_plugin_manifests
 python scripts/check-runtime-metadata-parity.py --check .
-bash scripts/test-stop-hooks.sh
-echo "Stop hook regressions OK"

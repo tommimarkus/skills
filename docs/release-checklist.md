@@ -1,6 +1,7 @@
 # Release Checklist
 
-Use this before publishing a release or bumping a plugin version. Start with
+Use this before publishing a release. Local version preparation follows the
+contributor guide's proportionate checks; it does not itself authorize publication. Start with
 [the contributor guide](contributing.md) for worktree and validation ownership,
 and use the [maintenance procedures](maintenance-procedures.md) for rare
 operational changes.

@@ -107,133 +107,77 @@ or changed project hook.
 
 ---
 
-# lean-audit per-use cost guard — enablement recipe
+# Reference, inventory, and cost notifications
 
-The `lean-audit` engine backs an **opt-in** per-use cost guard (`load_cost_guard.py`)
-that defends a skill's **fidelity floor** and warns on **cost regressions**. It ships
-**off** — installing the plugin does not enable enforcement. Enable it deliberately,
-per this recipe.
+`load_cost_guard.py` can compare reachable guidance with a diagnostic inventory.
+Installing the plugin does not enable a consumer hook. This marketplace registers
+only its nonblocking Stop form; generic architecture/IP prompts and automatic
+lesson capture are removed.
 
-## What it does
+## Inventory and reference behavior
 
-On `Edit` / `Write` / `MultiEdit` to any `.md` file in a skill's Load-Map closure,
-`load_cost_guard.py` applies the session's diff against the skill's fidelity baseline:
+- A pending Claude `Edit` / `Write` / `MultiEdit` that introduces a broken local
+  reference can be denied by the optional edit guard.
+- Missing inventoried codes or headings are advisory. A rename, refactor, or
+  intentional policy retirement is not proof of semantic loss. Explain material
+  behavior changes in the normal change rationale; no per-sentence preservation
+  map or ritual baseline lowering is required.
+- Cost increases are advisory and measured with the stable proxy, not a tokenizer.
+  Pending-edit costs compare proposed content with current content; Stop costs
+  compare the on-disk routes with the committed snapshot. Neither proves latency
+  or model quality.
+- Stop notices never block, invoke another skill, or authorize repairs. The Git
+  diff may include pre-existing user changes; a read-only session may finish.
+  Owning validation and publication checks retain responsibility for real defects.
 
-- **Fidelity block (deny):** if the edit would make an inventoried smell code or
-  reference section unreachable in the skill's closure — dropping an item below the
-  baseline floor — it returns `permissionDecision: deny` and names the lost item.
-  The fidelity floor must hold.
-- **Cost advisory (allow):** on PreToolUse, if the fidelity check passes and the
-  proposed edit adds more than the configured tolerance (200 proxy tokens by
-  default) to affected scenarios, it returns an advisory `permissionDecision: allow`
-  with a warning. Neutral or reducing edits stay silent even if the current tree
-  is already above its committed snapshot. The separate Stop check compares final
-  on-disk scenarios with `cost-snapshot.json`; this remains a distinct snapshot
-  freshness/maintenance concern. Cost warnings are informational — they never block.
+The helper requires Python 3.11+. Missing tools, malformed events, unavailable
+baselines, and errors fail open. It cannot verify meaning from names or counts.
+Use behavior evidence for an obligation that matters to an actual consumer.
+`skill_load_cost.py diff` reports inventory differences as advisory and exits 1
+for broken local references; bad input remains exit 2. `baseline` and `snapshot`
+retain their existing data formats. Regenerate diagnostic snapshots deliberately
+when their declared routes change, using the documented snapshot command.
 
-It is **fail-open**: any engine error, non-`.md` file, path outside every skill's
-closure, missing baseline, missing patterns file, or exception → the edit is allowed
-silently. It adds no judgment logic — inventory and closure come from the engine.
+## Optional edit checks
 
-## Override a block
-
-When the guard denies an edit, do one of:
-- **Restructure** so the removed item is still reachable in the closure (move, not
-  delete);
-- **Cite** the item's smell code in prose rather than removing the section entirely;
-- if the loss is intentional (deliberate removal of a code that no longer applies),
-  update the fidelity baseline
-  (`tests/skill_load_cost/baselines/<skill-name>.json`) to reflect the new floor
-  before editing. Regenerate it from the skill's own closure — `resolve_closure
-  <SKILL.md>` fed to `baseline --files` — never from a directory glob, so the
-  floor never protects content the guard's closure cannot reach.
-
-## Enable in Claude Code — Stop hook (default)
-
-At session end the guard runs over all skill closure files changed in the session.
-Deleted references still select their owning skill for baseline and dangling-link checks.
-This is the **recommended** enablement form — it adds no per-edit latency, and the
-on-disk closure at Stop time IS the post-edit state, so cost measurement is accurate.
-
-Add to your project `.claude/settings.json` (or `~/.claude/settings.json`):
+Merge this into a consumer's existing Claude configuration only when requested:
 
 ```json
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
-          }
-        ]
-      }
-    ]
+    "PreToolUse": [{
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [{"type": "command", "command": "uv run /absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py"}]
+    }]
   }
 }
 ```
 
-> **About `${CLAUDE_PLUGIN_ROOT}`:** same note as the lean_guard recipe — Claude Code
-> substitutes this variable only in plugin-defined hook commands. For a hook you add
-> to your own `settings.json`, substitute the real installed path — find it via
-> `/plugin` (the `souroldgeezer-audit` install path), e.g.
-> `~/.claude/plugins/cache/<marketplace>/souroldgeezer-audit/<version>/skills/lean-audit/references/scripts/load_cost_guard.py`.
-> Re-point it after a plugin update.
+Use the real installed absolute path. For Claude skill-body commands, resolve it
+from `${CLAUDE_SKILL_DIR}`; Codex resolves `<skill-dir>` from the loaded source
+path. Project-owned hooks use a real installed path rather than assuming plugin
+variable substitution. The edit path handles the named Claude-shaped payloads;
+do not claim `apply_patch` edit coverage from a matcher alias alone. Codex may use
+the nonblocking Stop form below.
 
-## Enable in Codex — Stop hook (default)
+## Nonblocking Stop notifications
 
-Use the same post-edit default in project `.codex/hooks.json`, again replacing
-the installed path from `codex plugin list --json`:
+For either host, merge the following command into its supported Stop hook
+configuration, using the actual installed path:
 
 ```json
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
-          }
-        ]
-      }
-    ]
+    "Stop": [{"hooks": [{
+      "type": "command",
+      "command": "uv run /absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py"
+    }]}]
   }
 }
 ```
 
-This post-edit Stop lane is the supported Codex form. The at-edit load-cost
-guard below consumes Claude's structured edit payload and does not reconstruct
-a full post-edit file from Codex's patch command; keep it off in Codex until
-that adapter exists. Review and trust the project hook before relying on it.
-
-## Enable in Claude Code — PreToolUse opt-in (at-edit)
-
-For immediate at-edit blocking, add a `PreToolUse` hook instead:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run \"/absolute/installed/plugin/path/skills/lean-audit/references/scripts/load_cost_guard.py\""
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-This intercepts every edit at the moment it is applied. Use this form when you want
-to block fidelity regressions in-flight rather than at session close. Note that
-closure resolution adds per-edit latency; the Stop hook form avoids this. The
-cost-warn advisory at PreToolUse time measures the pending edit's positive marginal
-growth against affected scenarios, not inherited snapshot drift. Stop separately
-compares the final on-disk closure with its committed snapshot; maintain that
-snapshot independently of the per-edit warning.
+The marketplace wrapper additionally checks interpreter availability. The guard
+reads `cwd` from the event and does not execute hook text discovered in a target
+repository. Notifications are observational; they cannot turn pre-existing changes
+into the current task's write authority. Consumer hook enablement and host trust
+review remain explicit choices.

@@ -492,7 +492,7 @@ The generic core should usually prefer:
 - Ordered steps that change decisions.
 - Conditions before actions.
 - Explicit ask, stop, continue, and validation rules.
-- Fixed output contracts for repeatable comparison.
+- Concise reports by default; fixed contracts for actual comparison consumers.
 - Deterministic helpers for structural, repetitive, or high-risk checks.
 - Plain active language with hard mandatory terms reserved for hard gates.
 
@@ -634,9 +634,10 @@ Use the improvement loop when changing skill architecture, trigger behavior,
 workflow wording, runtime metadata, references, or deterministic machinery.
 
 1. Capture a baseline report from `scripts/skill-architecture-report.sh`.
-2. Run the fixed eval prompts or pressure scenarios for the target skill.
+2. Select the fixed eval prompts or pressure scenarios that exercise the changed
+   decisions. Reuse unrelated evidence within its actual scope.
 3. Make one focused change.
-4. Rerun the report and the same eval prompts.
+4. Rerun the owning checks and selected prompts; broaden for cross-cutting effects.
 5. Optionally run a fresh-agent forward test when actionability matters more
    than local reasoning.
 6. Classify the result as improvement, neutral, or degradation.
@@ -655,25 +656,15 @@ Classification rules:
 Do not claim improvement from prose preference alone. Tie the claim to the
 report, eval prompts, or forward-test behavior.
 
-Beyond this per-change loop, the repository runs a cross-session capture
-loop. A Stop hook invokes the `lesson-capture` skill to distill one
-generalizable (Layer-2, developing-the-skills) lesson from a session
-and file it as a `lesson-candidate` GitHub™ issue (rendered by the pure
-`scripts/lessons_issue.py`, hard secret-scanned at capture, deduped
-by fingerprint, fail-open). Graduation is ordinary issue handling:
-`issue-ops` (or the repo-internal `github-issue-lifecycle` overlay)
-drives each issue to the Definition of Done embedded in its body, which
-routes prose and policy lessons into the relevant docs (this standard,
-`CLAUDE.md`, or a skill's own files) and deterministic lessons into a
-`tests/skill_architecture_report_ledger.jsonl` (`SAC-T#####`) fixture when
-the report engine already detects the smell. That capture → graduate
-path is how a one-off correction becomes a standing rule that feeds
-back into this document. Two further `Stop` hooks run first-party gates:
-`stop-skill-architecture.sh` prompts the `skill_architecture_report.py` run
-(trigger metadata + manifest/marketplace/agent sync), and `stop-lean-cost.sh`
-runs lean-audit's per-use cost/fidelity guard. Both run as first-party
-Stop hooks registered in `.claude/settings.json` and replaced the former
-external-plugin `evaluate-skill` / `plugin-eval` hooks.
+Lesson capture is an explicitly invoked internal workflow. A useful correction
+may justify a new rule, a narrower default, or retiring an existing rule; it does
+not automatically create a standing obligation or a public issue. Its issue
+renderer retains secret scanning and deduplication before authorized publication.
+Default closeout notifications never invoke it or require another skill workflow.
+
+The remaining nonblocking Stop notification reports concrete reference defects
+and advisory inventory/load changes. Owning validators and publication gates
+establish structural evidence; headings and counts are not semantic fidelity.
 
 ## Degradation Checks
 
@@ -694,7 +685,7 @@ Before finishing a skill change, inspect for these common regressions:
 - Heavy reference material moved into always-loaded context.
 - Plugin manifest, marketplace entry, and matching subagent metadata diverged.
 - Deterministic checks were replaced by prose-only reminders.
-- Output fields became optional without a compensating reason.
+- A required consumer lost fields it actually uses, or material evidence limits disappeared.
 - Rerun guidance was removed or became ambiguous.
 - Source anchors were copied as prose instead of linked and paraphrased.
 - Feature utilization of a version-pinned or vendored upstream tool was judged

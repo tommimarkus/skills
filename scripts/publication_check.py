@@ -118,11 +118,8 @@ def _gates(*, version_followup: bool = False) -> tuple[tuple[str, tuple[str, ...
             ),
             ("version-guard", ("uv", "run", "python", "scripts/version_stamp.py", "guard")),
         )
+    # Fragmentation owns metadata parity; run each candidate gate once.
     return (
-        (
-            "runtime-metadata-parity",
-            (sys.executable, "scripts/check-runtime-metadata-parity.py", "--check", "."),
-        ),
         ("fragmentation", ("scripts/validate-fragmentation.sh",)),
         ("skill-architecture", ("scripts/skill-architecture-report.sh", "--strict", ".")),
         (

@@ -1,18 +1,12 @@
-"""lean-audit per-use guard (opt-in, fail-open).
+"""Fail-open reference guard and nonblocking inventory/cost notification.
 
-PreToolUse path: soft-blocks an Edit/Write/MultiEdit that would make a smell
-code, section, or Load-Map pointer unreachable in a guarded skill's closure
-(the fidelity floor). Reads PreToolUse JSON on stdin, emits a `deny` decision
-on a fidelity regression.
-
-Stop path: enumerates session-changed .md files, maps each to its owning skill,
-checks the current on-disk closure against the committed baseline, and emits a
-Stop-hook `decision:block` for any fidelity regression. Cost growth is advisory
-and NEVER blocks in either path.
-
-ALWAYS allows (exit 0, no stdout) on any error, non-skill path, missing
-baseline, or git failure. Adds no judgment logic — inventory + closure come
-from the engine."""
+Opt-in PreToolUse denies a broken local reference in the pending edit; code and
+heading inventory changes are advisory. Stop checks changed working-tree Markdown
+and reports reference defects and inventory/cost changes without blocking. It
+cannot infer which session authored pre-existing changes or require remediation
+outside the current task's authority. Names/counts do not prove semantic fidelity.
+Errors, unguarded paths, and unavailable baselines/tools fail open.
+"""
 
 from __future__ import annotations
 
@@ -83,7 +77,7 @@ def decide(
     patterns: Path,
     source_root: Path | None = None,
 ) -> dict[str, Any] | None:
-    """Return a deny-decision dict, or None to allow. Pure; fail-open is the caller's."""
+    """Return a reference denial, inventory advisory, or None. Pure."""
     pats = json.loads(Path(patterns).read_text(encoding="utf-8"))
     base = json.loads(Path(baseline).read_text(encoding="utf-8"))
     target_p = Path(target).resolve()
@@ -101,9 +95,10 @@ def decide(
     for f in closure:
         text = new_content if f.resolve() == target_p else f.read_text(encoding="utf-8")
         invs.append(slc.extract_inventory(text, pats))
-    problems = slc.diff_inventory(base, slc.union_inventory(invs))
+    inventory_changes = slc.diff_inventory(base, slc.union_inventory(invs))
     # Also check for dangling pointers introduced by the pending edit (Fix C)
     target_inv = slc.extract_inventory(new_content, pats)
+    problems: list[str] = []
     for pointer in target_inv["pointers"]:
         tgt_file = pointer.split("#", 1)[0]
         if not tgt_file or tgt_file.startswith(("http://", "https://", "mailto:")):
@@ -114,14 +109,17 @@ def decide(
             or not pointer_target.exists()
         ):
             problems.append(f"{target_p}: dangling pointer in pending edit: {pointer}")
-    if not problems:
-        return None
-    return hook_envelope.permission_decision(
-        "deny",
-        "lean-audit per-use guard: fidelity regression — "
-        + "; ".join(problems)
-        + ". Cite the lost item or restructure; the fidelity floor must hold.",
-    )
+    if problems:
+        return hook_envelope.permission_decision(
+            "deny", "lean-audit reference defect — " + "; ".join(problems)
+        )
+    if inventory_changes:
+        return hook_envelope.permission_decision(
+            "allow",
+            "lean-audit inventory advisory — " + "; ".join(inventory_changes)
+            + ". Review the intended change; names and counts do not prove semantic loss.",
+        )
+    return None
 
 
 def _load_snapshot_and_scenarios(
@@ -149,9 +147,8 @@ def _load_scenarios(repo_root: Path) -> list[dict[str, Any]] | None:
 def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
     """Core of Stop-mode: check changed skill closure files against committed baselines.
 
-    Outputs a Stop-hook block decision ({"decision":"block","reason":"..."}) for
-    fidelity regressions. Cost growth is advisory — emitted as plain text and
-    NEVER blocks. Returns 0 always (fail-open).
+    All notices are plain text and nonblocking, including reference defects.
+    Owning validation decides whether an artifact is usable. Returns 0 always.
 
     changed_mds: list of absolute path strings for changed .md files this session.
     repo_root: resolved Path to the repo root."""
@@ -172,7 +169,8 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
             continue
         skills_to_check[skill_md] = bl
 
-    fidelity_problems: list[str] = []
+    inventory_changes: list[str] = []
+    reference_problems: list[str] = []
     cost_warnings: list[str] = []
 
     for skill_md, bl in skills_to_check.items():
@@ -186,10 +184,10 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
         )
         existing = [f for f in closure if f.exists()]
         invs = [slc.extract_inventory(f.read_text(encoding="utf-8"), pats) for f in existing]
-        problems = slc.diff_inventory(base, slc.union_inventory(invs))
-        problems += slc.check_pointers(existing, pats)
-        for p in problems:
-            fidelity_problems.append(f"{skill_name}: {p}")
+        for problem in slc.diff_inventory(base, slc.union_inventory(invs)):
+            inventory_changes.append(f"{skill_name}: {problem}")
+        for problem in slc.check_pointers(existing, pats):
+            reference_problems.append(f"{skill_name}: {problem}")
 
         # Cost advisory (never blocks)
         loaded = _load_snapshot_and_scenarios(repo_root)
@@ -203,22 +201,10 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
                 msgs = slc.cost_regressions(snap_filtered, skill_scens, repo_root)
                 cost_warnings.extend(msgs)
 
-    if fidelity_problems:
-        skills_str = ", ".join(sorted({p.split(":")[0] for p in fidelity_problems}))
-        problems_str = "; ".join(fidelity_problems)
-        print(
-            json.dumps(
-                {
-                    "decision": "block",
-                    "reason": (
-                        f"lean-audit per-use guard: fidelity regression in {skills_str} — "
-                        f"{problems_str}. Restore the lost code/section/pointer or cite it; "
-                        "the fidelity floor must hold."
-                    ),
-                }
-            )
-        )
-        return 0
+    if reference_problems:
+        print("lean-audit reference defect — " + "; ".join(reference_problems))
+    if inventory_changes:
+        print("lean-audit inventory advisory — " + "; ".join(inventory_changes))
 
     if cost_warnings:
         # Cost is advisory — plain text only, never a block decision.
@@ -232,7 +218,7 @@ def _run_stop_mode_with_changed(changed_mds: list[str], repo_root: Path) -> int:
 
 
 def run_stop_mode(repo_root: Path) -> int:
-    """Enumerate session-changed .md files via git and run the Stop-mode check.
+    """Enumerate working-tree .md changes via git and run the Stop-mode notice.
 
     Uses the union of unstaged and staged changes relative to HEAD. Any git
     failure → fail-open (return 0)."""
@@ -305,7 +291,10 @@ def main() -> int:
         )
         if decision is not None:
             print(json.dumps(decision))
-        scenarios = _load_scenarios(repo_root) if decision is None else None
+        denied = decision is not None and (
+            decision["hookSpecificOutput"]["permissionDecision"] == "deny"
+        )
+        scenarios = None if denied else _load_scenarios(repo_root)
         if scenarios is not None:
             # PreToolUse attributes only the proposed edit's marginal increase.
             # Snapshot drift remains a Stop-mode observation and cannot make a

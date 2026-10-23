@@ -7,6 +7,10 @@ exempt_paths = [
   "souroldgeezer-audit/skills/ip-hygiene/references/evals/accuracy-corpus/**",
 ]
 
+[[carve_out]] # Both host contracts intentionally stand alone without loading the other's file.
+a = "AGENTS.md"
+b = "CLAUDE.md"
+
 [[carve_out]]                                   # compact catalog restates its own plugin's rubric
 a = "{plugin}/skills/*/references/smell-catalog.md"
 b = "{plugin}/docs/*-reference/**/*.md"

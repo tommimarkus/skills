@@ -9,18 +9,18 @@ for their respective runtimes.
 
 - For a skill, manifest, marketplace, agent wrapper, hook, bundled reference,
   extension, or related repository documentation, read the
-  [skill architecture standard](skill-architecture.md) before choosing the
-  change shape. Then read the affected skill's `SKILL.md` and only the
+  [working principles](skill-architecture.md#working-principles), then only the
+  architecture-standard sections relevant to the change. Then read the affected skill's `SKILL.md` and only the
   references selected by its load map.
 - For evaluation cases and source-grounding records, follow the
   [evaluation evidence guide](skill-evaluation.md). Keep bundled prompts and
   examples original or safely paraphrased.
 - For a release or a version change, use the
   [release checklist](release-checklist.md). Feature branches carry content
-  without version increments. Verify and fast-forward the exact clean candidate;
+  without version increments. Verify the candidate proportionately and fast-forward the exact clean commit;
   after integration, `main` owns computing and applying the version stamp. The
   release policy documents the fixed version cell follow-up and its focused
-  checks; any other drift requires full candidate verification again.
+  checks; publication receipts still require their exact clean candidate; local changes rerun the checks their impact requires.
 - For a security-sensitive change or vulnerability report, use the
   [security policy](../SECURITY.md) and
   [security baseline](security-baseline.md). Do not put sensitive details in a
@@ -101,68 +101,73 @@ adapter instead of copying a runtime-specific workflow.
 
 ## Validate the change
 
-Run focused checks for the files you changed first. From the clean persistent
-task worktree at repository root, run the candidate gates in this order before
-integration, preserving each command's exit status:
+Choose checks from the changed behavior and its consumers. Explain material gaps;
+there is no new verification profile or selection service.
+
+| Change | Local verification |
+|---|---|
+| Bounded prose/reference edit | Owning content/eval checks, relevant strict architecture report and local links, scoped Lean check for introduced duplication, and `git diff --check`. |
+| Skill behavior or load route | Owning contract tests and positive/negative behavior cases; update affected declared load scenarios and regenerate their shared snapshot after integration. Source tests establish consistency, not observed model behavior. |
+| Executable helper, hook, manifest, or runtime config | Focused behavioral tests, fragmentation (including metadata parity), architecture checks where relevant, and configured Python lint/type checks for changed helpers. |
+| Cross-cutting policy/tooling, packaging/bootstrap/provisioning, or changes whose effects cannot be bounded | Full candidate sequence below, including the safety-isolated host smoke. |
+| Publication | Full exact-commit receipt, regardless of earlier local selections. |
+
+Use a clean persistent task worktree for repository-wide checks. Run focused
+checks during development, then the full sequence once for a cross-cutting
+candidate, preserving each command's actual exit status:
 
 ```text
-python scripts/check-runtime-metadata-parity.py --check .
 scripts/validate-fragmentation.sh
 scripts/skill-architecture-report.sh --strict .
-uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .  # exit 1 on block findings; info/warn stay advisory
+uv run python souroldgeezer-audit/skills/lean-audit/references/scripts/lean_engine.py .
 uv run python -m unittest discover -s tests -p '*_test.py'
 scripts/check-runtime-host-smoke.py --fresh --assert-profile-isolation --changed-since main .
 git diff --check
 uv run python scripts/version_stamp.py guard
 ```
 
-The lean engine gate fails only on block findings; its info and warn bands stay advisory, so run `lean-audit` periodically for them.
+Fragmentation owns metadata parity; do not repeat it as a separate full-candidate
+gate. The explicit discovery command owns the full-suite run; zero tests fails.
+Lean info/warn findings stay advisory; review introduced block findings and compare
+changed-path findings against the base. Use available first-party host validators;
+a missing standalone Codex validator is a disclosed skip.
 
-Before an authorized push of `main`, run the same gates as a clean,
-commit-bound publication record:
+Ordinary local edits rerun the checks their affected behavior needs. A change to
+one report paragraph does not erase unrelated test evidence. Do not claim an old
+full-suite run covered a newer tree. Exact fast-forward integration preserves the
+checks run on that candidate; if integration changes behavior, rerun affected
+checks and broaden when the effects cannot be bounded.
+
+Before an explicitly authorized push of `main`, run:
 
 ```text
 python3 -B scripts/publication_check.py --repo-root . record
 ```
 
-The command uses the unconditional safety-flagged host smoke. If integration
-adds exactly one atomic version-only follow-up allowed by the repository
-contract, run `record --version-followup` from that clean commit. The optional
-pre-push hook's `check-push` entrypoint accepts only a `main` source commit
-covered by the stored receipt.
+Publication retains the complete ordered gates and an unconditional host smoke
+with both safety flags. The receipt binds commit and tree. After exactly one
+allowed atomic version-cell follow-up, use `record --version-followup`; any other
+publication-source drift needs a fresh full receipt. Only the documented Claude,
+normalized Codex/root-manifest and README version cells qualify. Proportionate
+local verification never substitutes for publication evidence or authority.
 
-The version guard runs after the candidate gates and before fast-forward
-integration. The fragmentation script runs metadata and stop-hook checks. The explicit
-`*_test.py` discovery command owns the one full-suite run at closeout. This
-clean candidate and ordered gate sequence own full verification evidence, and
-an exact fast-forward preserves it. Only an atomic follow-up that changes
-version cells may reuse that evidence, limited to the Claude version, normalized
-legacy Codex and root Agent Plugins/Copilot versions, and matching README
-version-table cell for each stamped plugin; run focused version guard and
-metadata-parity checks afterward. Any other source, plan, evidence, surface,
-or integration drift requires the full candidate gates again.
+Do not report a pipeline's downstream status as the check's status. Host smoke
+uses temporary host/plugin-data state, never replaces `HOME`, and must preserve
+normal host profiles. Missing tools and blocked checks remain explicit limits.
 
-Do not use a pipeline or `||` fallback as evidence that a gate passed: capture
-the actual command's exit status or run it unpiped. The host smoke's two safety
-flags are required. It uses temporary host configuration and plugin-data state,
-and must not replace `HOME`.
+The only default Stop notification reports reference defects and advisory load/
+inventory changes. It cannot require another workflow, block a read-only session,
+or publish a lesson. Optional prevention guards and their overrides are described
+in the [hook recipe](../souroldgeezer-audit/skills/lean-audit/references/hook-recipe.md).
+Invoke lesson capture explicitly when wanted. Real artifact failures are caught by
+owning tests and structural validation; arbitrary heading preservation is not a
+semantic-fidelity gate.
 
-A test run that collects zero tests fails the gate. Use the available
-first-party plugin validators as well: the architecture report invokes
-`claude plugin validate --strict` when installed; the host smoke checks for a
-Codex validator and reports its absence as a skip. Before changing the
-published surface, apply the repository's in-depth IP-hygiene review;
-cosmetic edits use scoped triage.
-
-Mutation testing is not configured, by decision rather than omission. The suite
-loads the production scripts by file path (`load_script_module` in
-`tests/surface_test_lib.py`) and drives them as subprocesses, so an
-import-interception mutator such as Mutmut never sees the module under test;
-adopting one needs a path-aware harness first. Until then, effectiveness
-evidence comes from the controlled-break check the test-quality audit's
-recovery gates use: in the task worktree, alter one literal or branch of the
-module under test, run its focused tests, confirm they fail, then revert that
-file with `git checkout -- <file>` before making any other edit to it.
+Mutation testing is not configured in this repository. Do not adopt a new harness
+just for a routine change. Use focused regression tests for changed executable
+behavior; retain useful regression coverage even when no mutation operator models
+its failure. Report behavioral probes actually executed separately from authored
+cases or static contract checks.
 
 ## Documentation map
 

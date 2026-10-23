@@ -76,7 +76,7 @@ def eval_ids(path: str) -> set[str]:
 def load_script_module(name: str, path: Path):
     """Dynamically load a scripts/*.py file as an importable module, registering it
     in sys.modules under `name`. Shared by the tests that exercise repo scripts
-    (version_stamp, lessons_issue, lessons_capture_signals, lessons_secret_scan, ...)
+    (version_stamp, lessons_issue, lessons_secret_scan, ...)
     directly rather than via a package import."""
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)

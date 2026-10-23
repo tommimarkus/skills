@@ -57,6 +57,15 @@ class PublicationCheckCliTest(unittest.TestCase):
             target.write_text('#!/bin/sh\nexit "${PUBLICATION_TEST_FAIL:-0}"\n', encoding="utf-8")
             target.chmod(0o755)
 
+        (self.repo / "scripts/validate-fragmentation.sh").write_text(
+            '#!/bin/sh\nset -e\npython3 scripts/check-runtime-metadata-parity.py --check .\n'
+            'exit "${PUBLICATION_TEST_FAIL:-0}"\n', encoding="utf-8",
+        )
+        (self.repo / "scripts/check-runtime-metadata-parity.py").write_text(
+            "from pathlib import Path\n"
+            "with Path('.git/parity-calls').open('a') as stream: stream.write('call\\n')\n",
+            encoding="utf-8",
+        )
         smoke = self.repo / "tests/smoke_test.py"
         smoke.parent.mkdir(parents=True)
         smoke.write_text(
@@ -124,6 +133,7 @@ class PublicationCheckCliTest(unittest.TestCase):
         self.assertIn("invalid receipt", missing.stderr)
 
         self.record()
+        self.assertEqual(["call"], (self.repo / ".git/parity-calls").read_text().splitlines())
         self.assertEqual(0, self.pre_push(raw_sha_update).returncode)
 
         (self.repo / "next.txt").write_text("next\n", encoding="utf-8")
