@@ -1,6 +1,7 @@
 # Per-Use Cost Lens (LA-PUC-1 / LA-PUC-2 / LA-PUC-3)
 
-Load when running lean-audit against a skill surface. These three codes are
+Load when load-cost analysis is requested or a concrete decision needs its
+measurements. A skill surface alone does not activate this procedure. These three codes are
 inference — the engine cannot decide them — and MUST be disclosed as such (see
 [`../../../../docs/audit-reference/audit-craft.md`](../../../../docs/audit-reference/audit-craft.md)
 §2). Cite codes from [`../smell-catalog.md`](../smell-catalog.md); do not
@@ -17,14 +18,15 @@ Claude Code: `uv run "${CLAUDE_PLUGIN_ROOT}/skills/lean-audit/references/scripts
 the absolute skill directory resolved in the host skill. Every
 `skill_load_cost.py <subcommand>` shorthand below means
 that invocation. If no conforming interpreter is available (shim exit 3 / `uv`
-reports no compatible interpreter), STOP per the host skill's interpreter-floor
-rule — do not substitute a judgment-only pass.
+reports no compatible interpreter), withhold measurements and disclose the
+limit. Continue useful manual review without claiming a measured closure,
+computed delta, or passed mechanical gate.
 
 ## When this lens runs
 
-Gate: the scope must contain at least one entry artifact — a `SKILL.md`, an
-`agents/*.md` subagent, or a `commands/**/*.md` file. If no entry
-artifact is in scope, this lens is silent — emit nothing.
+The request or concrete decision must need load-cost evidence, and scope must
+contain an entry artifact — a `SKILL.md`, an `agents/*.md` subagent, or a
+`commands/**/*.md` file. Otherwise skip this lens without scenario construction.
 
 ## Resolve the closure
 

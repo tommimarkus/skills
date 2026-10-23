@@ -336,7 +336,10 @@ Be explicit about these limits. Ask for commit history, CI run logs, SIEM export
 
 ## 9. Per-repo / per-pipeline audit rubric
 
-For each project audited, produce:
+Use these criteria in the review. Default to concise evidence-backed findings,
+the supported verdict, and material scope/evidence limits. For a requested
+detailed report, evaluation, or formal output consumer, produce all applicable
+fields below, stating unknown evidence rather than inventing it:
 
 1. **Scope statement.** Which repos, workflows, environments, and release artifacts are in scope. Anything explicitly excluded.
 2. **Declared target levels.** ASVS 5.0.0 level, SCVS level, SLSA Build level, DSOMM maturity target, SAMM practice targets, NIS2 applicability (essential/important/neither), CRA applicability. If nothing is declared, **that is itself a finding**.

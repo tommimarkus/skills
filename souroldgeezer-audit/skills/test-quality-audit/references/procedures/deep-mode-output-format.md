@@ -2,8 +2,14 @@
 
 **When this runs:** every Deep audit loads this file before workflow steps 5
 and 6. It defines the per-file rollup, suite assessment, required Suite health
-block, and prioritized remediation worklist. Quick-mode audits emit per-test
-findings only and do not load this procedure.
+block, and prioritized remediation worklist. Quick-mode audits do not load
+this procedure.
+
+Use concise findings and a compact suite assessment by default. The tables and
+per-test schemas below are the detailed report shape for a requested full
+report, evaluation, or formal consumer. Combining presentation does not omit
+material evidence limits, change verdict derivation, or replace unknown facts
+with positive claims.
 
 ## Evidence ladder
 
@@ -39,20 +45,16 @@ per-test scope from configuration, fixtures, factories, and helpers. For each
 material resource, record its current lifetime, mutability, reset mechanism,
 teardown path, and isolation obligation before judging setup cost or sharing.
 
-Run one project-configured full suite automatically when it is local,
-read-only, non-browser, non-external, and expected to finish within about ten
-minutes. Ask before longer, unknown, browser, external-service, rerun, or
-mutation work. Call this a **safe one-shot suite execution** only after those
-checks; otherwise rely on readable current artifacts and disclose the
-limitation.
+Prefer readable current artifacts. Use a project-configured run only when its
+evidence matters to the requested conclusion. Call it a **safe one-shot suite
+execution** when it is local, read-only, non-browser, non-external, and expected
+to finish within about ten minutes; this is an upper safety bound, not a duty
+to run a full suite when a smaller confirmation suffices.
 
-Before any additional execution, check that the user's existing authorization
-explicitly covers the action and scope. This includes determinism reruns and
-mutation runs, even when the tool is installed or the run is expected to take
-less than 30 seconds. If matching authorization is absent, ask before starting;
-if the user declines or cannot be asked, do not run and report the evidence
-limit. Keep an authorized run within its stated scope. This is the shared
-consent check for every extra-execution procedure below.
+Apply [testing-core's local-confirmation rule](../../../../docs/quality-reference/testing-core.md#local-confirmation-and-task-authority)
+to execution and reruns. Explicit no-rerun/existing-results-only limits remain
+binding; unknown, costly, external, browser, or mutation work needs authority
+covering that action and scope. Do not ask again for an already authorized action.
 
 When a JUnit XML report is already available, the bundled one-shot parser can
 extract bounded distribution evidence without retaining failure bodies or
@@ -71,7 +73,7 @@ CI adapter, and it writes no files.
 
 ## Per-file rollup
 
-After all per-test findings, emit:
+For detailed output, emit this rollup after per-test findings:
 
 ```markdown
 ## Per-file rollup
@@ -113,8 +115,8 @@ the dominant sub-lane verdict. Grade is `strong`, `adequate`, `weak`, or
 | unit / pre-commit | <available value> | <N> | <pass/fail/unknown> | <median/tail or unknown> | <project-declared value> | <flake/retry/skip/quarantine facts> | <owner> |
 ```
 
-Always report collection count, pass/fail/error/skip outcomes, elapsed time,
-duration distribution, lane selection, and available ownership/cadence
+In detailed output, report collection count, pass/fail/error/skip outcomes,
+elapsed time, duration distribution, lane selection, and available ownership/cadence
 evidence. For JUnit snapshots, report valid-versus-unknown timing coverage:
 missing, malformed, negative, and non-finite durations are unknown, while a
 measured zero remains zero. Percentiles and slow cases describe only observed
@@ -134,8 +136,10 @@ observed distribution, slow-tail concentration, and comparable regressions.
 Declare a breach only against a project-declared budget; without one, count,
 elapsed time, and outliers are informational observations rather than breaches.
 
-Keep **current facts** separate from **historical trends**. Then emit all five
-dimension dispositions with cited `SH-*` evidence. Each disposition is exactly
+Keep **current facts** separate from **historical trends**. Assess all five
+dimensions; present their material outcomes compactly by default. Detailed
+output emits all five dimension dispositions with cited `SH-*` evidence.
+Each disposition is exactly
 `supported-positive`, `substantiated-finding`, or `unknown-evidence-gap`:
 
 - **Feedback:** lane purpose, cadence, selection safety, full-suite safety net,
@@ -162,9 +166,10 @@ deletion from coverage similarity alone. A retirement candidate needs
 distinct-contract review plus mutation, failure-attribution, or
 controlled-removal evidence; absent that evidence, use `verify-then-retire`.
 
-A `structure-coupled` record is a `tdd-policy` footer field naming an existing
-test that a behavior-preserving refactor had to edit. Read it only from
-accessible history (commit messages, PR/MR text) when the project keeps it
+A `structure-coupled: <named tests>` record is a compact named exception in an
+ordinary task note, commit message, or PR/MR text, naming an existing test that
+a behavior-preserving refactor had to edit. It is not a mandatory TDD footer.
+Read it only from accessible task records or history when the project keeps it
 there; when it is absent, report nothing and ask for no instrumentation. The
 record is evidence that the named test is tied to structure below the seam, so
 make the test a `verify-then-retire` candidate whose first step is a rewrite at
@@ -174,13 +179,14 @@ change broke the test, yet it never retires a test by itself.
 
 ### Setup/teardown lifecycle
 
-Every Deep report emits this bounded section:
+Every Deep assessment addresses lifecycle cost and safety; use this bounded
+section in detailed output:
 
 - **Cost attribution: measured | inferred | unknown**
 - **Lifecycle safety: supported-positive | substantiated-finding | unknown-evidence-gap**
 
-Show up to five material resources/hooks. If none are material, say so and
-still emit both dispositions.
+Show up to five material resources/hooks. If none are material, a compact
+assessment may say so; detailed output still emits both dispositions.
 
 | Resource/hook | Current scope | Mutability/isolation need | Cost evidence | Cleanup evidence | Portfolio action |
 |---|---|---|---|---|---|

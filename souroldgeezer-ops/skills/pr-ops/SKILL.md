@@ -79,7 +79,9 @@ user wording.
 - Ask only for global blockers; escalate item-local ambiguity through the
   provider when possible and continue the queue.
 - Implement only clear in-scope feedback or check-failure remediation.
-- Auto-fix only deterministic formatter, generated-file, or lint failures.
+- Repair diagnosed in-scope defects under existing task authority. Without
+  that diagnosis and repair authority, auto-fix only deterministic formatter,
+  generated-file, or lint failures.
 - Re-read live state before PR/MR creation, push, branch update, review request,
   thread resolution, merge, close, branch deletion, or final lifecycle writes.
 

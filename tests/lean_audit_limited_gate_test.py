@@ -65,6 +65,7 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
             "lean-audit-limited-gate-block": "fail",
             "lean-audit-limited-gate-clean": "pass-limited",
             "lean-audit-limited-gate-not-evaluated": "not-evaluated",
+            "lean-audit-behavior-manual-interpreter-fallback": "not-evaluated",
         }.items():
             with self.subTest(case_id=case_id):
                 self.assertEqual(cases[case_id]["expected_gate"], status)
@@ -117,6 +118,9 @@ class LeanAuditLimitedGateTest(unittest.TestCase):
             "lean-audit-behavior-mixed-scope-limited",
             "lean-audit-behavior-carve-out-disclosure",
             "lean-audit-behavior-clone-adjudication",
+            "lean-audit-behavior-auditor-nominated-verbosity",
+            "lean-audit-behavior-economics-not-automatic",
+            "lean-audit-behavior-novel-evidenced-concern",
         ):
             with self.subTest(case_id=case_id):
                 self.assertEqual(cases[case_id]["source_kind"], "synthetic")

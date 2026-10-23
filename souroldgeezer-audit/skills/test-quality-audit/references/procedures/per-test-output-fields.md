@@ -1,12 +1,23 @@
 # Per-Test Output Fields
 
-**When this runs:** read when producing quick-mode findings or the per-test
-section of deep-mode output. `SKILL.md` owns mode and rubric selection; this
-file owns the required finding fields, severity rules, and examples.
+**When this runs:** read for detailed per-test analysis, an evaluation, or an
+output consumer that needs these classifications. `SKILL.md` owns mode and
+rubric selection; this file retains the detailed fields, severity rules, and
+examples.
+
+Default to a concise finding naming the test/location, evidenced weakness,
+consequence, criterion, severity, and useful next action. Add provenance, risk,
+rubric/sub-lane, or other classifications when they explain the result. Do not
+print a checklist of healthy tests or empty fields. A short overall assessment
+may identify priorities without implying suite-wide coverage.
+
+The schemas below remain complete for a requested detailed report, golden
+evaluation, or formal consumer. Preserve its field names, values, and gate
+tokens; concise ordinary output does not weaken those contracts.
 
 ## Unit Rubric Fields
 
-For every unit or component test case, emit:
+For every unit or component test case in detailed output, emit:
 
 1. **Intent statement** — one sentence answering what requirement the test
    encodes. If none can be stated, say `no stateable intent`.
@@ -38,7 +49,7 @@ For every unit or component test case, emit:
 
 ## Integration Rubric Fields
 
-For every integration test case, emit:
+For every integration test case in detailed output, emit:
 
 1. **Scope statement** — one sentence answering what seam the test exercises
    and why a unit test could not prove the same thing. If none can be stated,
@@ -70,7 +81,7 @@ For every integration test case, emit:
 
 ## E2E Rubric Fields
 
-For every E2E test case, emit:
+For every E2E test case in detailed output, emit:
 
 1. **User-outcome statement** — one sentence answering what the user
    accomplishes or experiences. If none can be stated, say
@@ -138,8 +149,9 @@ After all Quick per-test findings, emit `Quick gate: <status>`. Use
 `fail` for any substantiated in-scope block, `not-evaluated` if required
 evidence or machinery cannot rule out blockers, otherwise `pass-limited`.
 Warnings and info do not fail it; SUT risk remains orthogonal. A repaired
-block requires a clean rerun. Do not add Gap findings, a rollup, or a worklist
-to Quick output.
+block requires a clean rerun. Do not imply suite enumeration or add suite-wide
+Gap findings to Quick output. A concise overall assessment and prioritized
+next actions are allowed; they do not constitute a Deep rollup.
 
 ## Severity Rules
 

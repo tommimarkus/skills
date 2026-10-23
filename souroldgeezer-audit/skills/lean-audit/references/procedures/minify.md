@@ -22,9 +22,11 @@ agent or network calls — every gate below uses only the bundled scripts.
 
 ## Stage 1 — Locate (reuse existing detection; no new engine)
 
-Run the SKILL.md Workflow steps 1–5 first if not already run this session —
-their ranked, materiality-tiered worklist is this stage's input. Map findings
-to reduction classes:
+Reuse the evidenced waste findings from SKILL.md Workflow steps 1–3, or gather
+the missing evidence for the requested proposal. Optional economics steps 4–5
+retain their own activation conditions; a minification request does not
+automatically require a load scenario or run-viability forecast. Map the
+ranked findings to reduction classes:
 
 - `LA-DUP-1` / `LA-DUP-2` → **dedupe-to-canonical**: replace the restated
   passage with a markdown-link citation to its canonical home (the registry's

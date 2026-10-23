@@ -65,7 +65,9 @@ For each PR/MR or prepared branch:
 7. Infer verification from repo guidance, touched-surface docs, scripts,
    package metadata, CI workflows, check failures, and touched files.
 8. Run item-level verification.
-9. Auto-fix only deterministic formatter, generated-file, or lint failures.
+9. Repair diagnosed in-scope verification failures under step 6. Without that
+   diagnosis and repair authority, auto-fix only deterministic formatter,
+   generated-file, or lint failures; do not broaden the task.
 10. Refresh live provider state, reviews, comments, checks, base/head refs,
     lifecycle markers, linked work, and git state before PR/MR creation, push, or
     branch update.
@@ -108,7 +110,8 @@ continue the queue when possible. Stop the whole run only for global blockers.
 
 Escalate on wrong repository/account, missing permission, unexpected provider
 route, unclear branch ownership, unresolved requested changes, active human
-review disagreement, security/auth/secrets/history cleanup, dependency changes
+review disagreement, sensitive external/credential/settings/permission/history
+actions without clear matching authority, dependency changes
 outside scope, repo-wide policy changes outside scope, destructive operations
 without authority, stale or concurrently changed state, public communication
 that rejects/blames/commits/asks reporters for work/exposes sensitive detail,
@@ -117,6 +120,10 @@ non-mechanical failures whose cause or authorized repair is unclear, push reject
 work areas, external fork boundaries, unknown check provider logs, missing
 required checks, code-owner review conflict, release/version ambiguity, unusual
 cost, or unusual runtime.
+
+Apply the authorized local-source repair distinction in
+[provider-lifecycle-core.md](../../../docs/provider-reference/provider-lifecycle-core.md#escalation-gates);
+security-related source work alone is not an escalation gate.
 
 ## Output
 

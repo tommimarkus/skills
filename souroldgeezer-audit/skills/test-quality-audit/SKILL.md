@@ -75,9 +75,10 @@ determinism, mutation); Quick mode never loads it. Every stack ships one.
 target shows a concern the E2E lane does not cover — an in-process mocking,
 test-double, fake-timer, or parameterised-input smell reached through a
 component or API-level test mixed into the E2E suite — load that stack's
-`unit-integration.md` before judging it and disclose the extra load in the
-footer. If a Quick target raises a SUT-enumeration, determinism, or mutation
-question, say so and ask for Deep rather than answering from the Quick load set.
+`unit-integration.md` before judging it. For a bounded determinism question,
+load the applicable procedure and perform only safe in-scope confirmation;
+retain Quick's limited assurance. Ask before expanding into suite enumeration,
+mutation, or another materially broader audit when task authority is unclear.
 
 In every Deep audit, load
 [`references/procedures/deep-mode-output-format.md`](references/procedures/deep-mode-output-format.md)
@@ -118,7 +119,8 @@ evidence is requested or reached.
 
 ## Modes
 
-Quick audits one file, one test, or a PR diff with per-test findings only.
+Quick audits one file, one test, or a PR diff with concise per-test findings and
+an optional short overall assessment.
 Deep audits a suite/module, enumerates tests, assesses suite health, then adds
 rollups and a worklist.
 Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
@@ -138,11 +140,12 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
     establish the portfolio target, configured runner, lane selection and
     cadence, declared budgets, owners, collection count, current
     pass/fail/error/skip outcomes, elapsed time, duration distribution,
-    reliability evidence, overlap review, and retirement discipline. Run one
-    configured full suite automatically only when it is local, read-only,
-    non-browser, non-external, and expected to finish within about ten minutes;
-    ask before longer, unknown, browser, external-service, rerun, or mutation
-    work. Use readable artifacts when execution is not authorized or safe.
+    reliability evidence, overlap review, and retirement discipline. Prefer
+    readable results; use a configured local run when needed for the requested
+    conclusion. Cheap known-safe local confirmations, including bounded reruns,
+    may use existing task authority. Respect explicit no-rerun/existing-results-only
+    limits; ask before unknown, costly, browser, external-service, or mutation
+    work not already authorized. Apply testing-core's local-confirmation rule.
 3c. Deep only — mandatory setup/teardown lifecycle pass: inventory runner,
     suite, module/class, worker, and per-test lifecycle hooks from configuration,
     fixtures, factories, and helpers. For each material resource, map its
@@ -166,10 +169,13 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
    `not-evaluated` when required evidence or machinery cannot rule out blockers;
    else `pass-limited`. Warn/info do not fail, risk is orthogonal, and a
    remediated block needs a clean rerun. Quick remains per-test and never emits
-   `Gap-*` findings or a remediation worklist. Deep adds rollup, suite
-   assessment, required Suite health and Setup/teardown lifecycle blocks, gap
-   report, determinism, mutation section, remediation worklist, and the suite
-   recovery program when its load condition holds.
+   suite-wide `Gap-*` findings from a bounded inspection; it may summarize
+   priorities and next actions without a Deep worklist. Deep adds a suite
+   assessment, suite-health and setup/teardown lifecycle conclusions, gap
+   evidence, determinism/mutation limits, a worklist, and the suite
+   recovery program when its load condition holds. Default to concise findings
+   and material limits; detailed requests, evals, and formal consumers retain
+   their declared classifications and output fields.
 
 ## Rules and Stop Conditions
 

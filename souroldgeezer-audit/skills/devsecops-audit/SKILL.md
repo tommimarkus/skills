@@ -68,31 +68,41 @@ Load [`references/procedures/golden-corpus-evals.md`](references/procedures/gold
 
 ## Outputs
 
-- Quick: findings only; no rollup or MCP probes. After Quick findings, emit
+- Quick: concise findings and an optional short overall assessment; no Deep
+  rollup or MCP probes. After Quick findings, emit
   `Quick gate: <status>` with `fail > not-evaluated > pass-limited` precedence:
   fail for a substantiated in-scope `block`; not-evaluated when required evidence
   or machinery cannot rule out blockers; otherwise pass-limited. Warn and info
   never fail the gate, risk tier remains orthogonal, and a clean rerun is
   required after remediation.
-- Deep: opens with the Risk plan, then rubric §9 sections 1-12: scope, target levels, stage matrix,
+- Deep: report the Risk plan, conclusion, material findings, and evidence limits
+  compactly. A requested detailed report, evaluation, or formal consumer retains
+  rubric §9 sections 1-12: scope, target levels, stage matrix,
   CICD-SEC scan, smells, positives, provenance, evidence-per-release,
   framework coupling, live-state block, verdict, honest limits.
 
-Findings use `[CODE] type: path:line` with severity (`block`, `warn`, `info`),
+Default findings name the evidenced location, criterion, problem, consequence,
+severity, and action without empty classifications. Novel concerns may cite an
+applicable principle rather than invent a code. In detailed output,
+findings use `[CODE] type: path:line` with severity (`block`, `warn`, `info`),
 stage, evidence, action, citation, **SUT risk tier** ([`materiality.md`](../../docs/audit-reference/materiality.md); cite signal —
 auth/secrets/IaC-priv → high; a CI job is privileged only with declared write
 scopes, passed secrets, deployment, or cloud identity, not its implicit token), and **Consequence** ([`audit-craft.md`](../../docs/audit-reference/audit-craft.md) §3). Deep worklist
-priority is `severity × risk tier` per the §3 table. If none, say so with limits. Every
-answer reports extensions, cost stance/source, Codex Security, rubric path, evidence
-limits, independence, and assurance level. Deep also reports MCP GitHub, verdict
+priority is `severity × risk tier` per the §3 table. If none, say so with limits.
+Use audit-craft §5's compact close by default; disclose cost stance/source when
+it changes findings and any missing tool that materially limits the result.
+Detailed reports retain extensions, cost stance/source, Codex Security, rubric
+path, evidence limits, independence, and assurance level; detailed Deep output
+also reports MCP GitHub. Deep retains the verdict
 (`enforcing`, `partial`, `decorative`), and rubric §8 limits.
 
 ## Stop Conditions
 
-Stop when scope is missing, sibling ownership dominates, a required conclusion
-depends on unavailable live evidence, cost-gated findings lack stance, MCP/tool
-failure would be retried, output would copy rubric/vendor prose, or confidence
-is too low.
+Withhold an affected conclusion when required live evidence or confidence is
+missing; state the limit and continue independent findings. Ask when scope,
+ownership, or effective cost policy lacks a safe default. Do not retry the
+one-shot MCP probe, copy rubric/vendor prose, or imply enforcement from static
+configuration. A missing optional tool does not stop useful static review.
 
 Rerun obligations after craft or skill-surface changes:
 [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §8.

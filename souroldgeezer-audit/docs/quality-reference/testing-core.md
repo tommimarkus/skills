@@ -14,6 +14,20 @@ adaptations stay in the lane rubric.
   failing these pillars removes coverage without visible cost. Each lane rubric
   keeps only its lane-specific consequence sentence (integration §2.8, e2e §2.8).
 
+## Local confirmation and task authority
+
+Apply existing task authority to cheap, known-safe local confirmations,
+including a bounded rerun needed to resolve a finding. Check the command,
+target, known runtime, isolation, and side effects; installed tooling or a
+short estimate alone does not establish safety. Explicit **no reruns**, **use
+existing results only**, read-only-without-execution, and authorized-count or
+scope limits are binding. Do not ask again for an already authorized action.
+Ask before unknown, materially costly, browser, external-service, mutation,
+or otherwise state-changing work that existing authority does not cover.
+When execution is excluded or unsafe, continue from available evidence and
+state the limit. Confirmation does not authorize edits, expand audit coverage,
+or turn a bounded inspection into a suite-level verdict.
+
 ## Shared sources
 
 These source entries appear in more than one lane rubric. The integration and

@@ -81,3 +81,9 @@ schemas, or code are copied into this skill.
   suppresses static source nominations for that marked reference file only;
   tests retain unmarked positives plus plain-text, near-match, and fenced
   negatives.
+
+- Judgment-led review: auditor nominations, manual continuation without a
+  compatible interpreter, and decision-triggered economics are local workflow
+  choices. Synthetic cases distinguish useful manual evidence from detector
+  output and computed gates; they do not establish measured speed or accuracy
+  gains.

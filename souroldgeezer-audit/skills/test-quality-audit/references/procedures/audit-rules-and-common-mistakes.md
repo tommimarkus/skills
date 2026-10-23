@@ -18,8 +18,9 @@ auditor mistakes that prevent noisy or misrouted reviews.
 - **Be honest about static limits.** Git history, coverage, mutation, flake
   history, spec links, and contract pacts can change verdicts; name the limit
   instead of fabricating certainty.
-- **Run mutation testing in deep mode when installed and applicable.** Use the
-  extension's detection command first. If unavailable, unsupported, or failed,
+- **Run mutation testing only when authorized, in deep mode, and applicable.**
+  Tool installation alone does not grant authority. Use the extension's
+  detection command first. If unavailable, unsupported, or failed,
   report state B/C and continue with static findings.
 - **Mutation augments static audit.** A surviving mutant in a file rated strong
   by static audit is a reconciliation finding, not an automatic verdict

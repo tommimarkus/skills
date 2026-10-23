@@ -44,14 +44,23 @@ the marker preceded closure.
 
 ## Escalation gates
 
+An authorized, diagnosed, in-scope local source repair may proceed even when it
+concerns security, authentication, signing code, secret-handling logic, or
+workflow permissions. Classify the action, not keywords in the affected file.
+This does not grant authority to read or disclose credentials, rotate tokens,
+change live repository/project settings or permissions, execute privileged
+workflows, rewrite sensitive history, or publish changes. Those actions require
+existing authority covering their action and target; escalate the affected
+action when it is missing or unclear, while continuing separable safe work.
+
 Escalate the affected item (issue or PR/MR) on:
 
 - wrong account, wrong host or repository, missing permission, or unexpected
   provider tool routing;
 - a concurrent lifecycle marker from another current actor;
-- CI or pipeline permissions, workflow or job token handling, secret or CI/CD
-  variable handling, repository or project settings, branch or protection
-  rules, or sensitive history cleanup;
+- external CI/pipeline permission or variable changes, credential operations,
+  live repository/project settings or protection changes, privileged workflow
+  execution, or sensitive history cleanup without clear matching authority;
 - public comment or note text that rejects a request, assigns blame, makes a
   commitment, asks the reporter to do work, or exposes sensitive detail.
 

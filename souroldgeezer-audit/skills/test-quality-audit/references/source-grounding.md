@@ -120,3 +120,10 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   a suite's tests can hold more than half its time; the ratchet is proposed as
   the project's declared `feedback-budget` so tdd-policy's existing budget step
   applies unchanged; tdd-policy executes in-cycle while this audit proposes.
+
+- Compact per-test reporting retains the detailed classifications for explicit
+  consumers. Local-confirmation cases distinguish known-safe task execution
+  from binding no-rerun limits and separately authorized mutation. The
+  structure-coupled consumer accepts ordinary named exception records while
+  retaining verify-then-retire evidence. These scenarios are original and do
+  not claim measured productivity improvements.

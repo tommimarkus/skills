@@ -56,30 +56,23 @@ class OpsAuthorityContractTest(unittest.TestCase):
                 self.assertTrue(case["forbidden_behaviors"])
                 self.assertTrue(case["grader"])
 
-        new_cases = {
-            case["id"]: case
-            for case in records
-            if case["id"].startswith((
-                "pr-ops-behavior-diagnosed-repair-authority",
-                "pr-ops-behavior-repair-without-authority",
-                "pr-ops-behavior-operation-capability-fallback",
-                "issue-ops-behavior-partial-mcp-capability",
-                "issue-ops-behavior-missing-cli-auth",
-                "issue-ops-behavior-marker-before-auto-close",
-                "github-issue-lifecycle-behavior-partial-mcp",
-                "github-issue-lifecycle-behavior-auto-close-reconciliation",
-            ))
-        }
         expected_ids = {
             "pr-ops-behavior-diagnosed-repair-authority",
             "pr-ops-behavior-repair-without-authority",
             "pr-ops-behavior-operation-capability-fallback",
+            "pr-ops-behavior-authorized-security-source-repair",
+            "pr-ops-behavior-sensitive-external-authority",
             "issue-ops-behavior-partial-mcp-capability",
             "issue-ops-behavior-missing-cli-auth",
             "issue-ops-behavior-marker-before-auto-close",
+            "issue-ops-behavior-diagnosed-repair-authority",
+            "issue-ops-behavior-repair-without-authority",
+            "issue-ops-behavior-authorized-security-source-repair",
+            "issue-ops-behavior-sensitive-external-authority",
             "github-issue-lifecycle-behavior-partial-mcp",
             "github-issue-lifecycle-behavior-auto-close-reconciliation",
         }
+        new_cases = {case["id"]: case for case in records if case["id"] in expected_ids}
         self.assertTrue(expected_ids.issubset(new_cases))
         required_coverage = {
             "provider_partial_capability",
@@ -88,6 +81,8 @@ class OpsAuthorityContractTest(unittest.TestCase):
             "repair_without_authority",
             "closure_order",
             "auto_close_reconciliation",
+            "authorized_security_source",
+            "sensitive_external_boundary",
         }
         coverage = set()
         for identifier, case in new_cases.items():

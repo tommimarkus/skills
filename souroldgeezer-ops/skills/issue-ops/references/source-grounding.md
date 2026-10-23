@@ -40,3 +40,8 @@ external provider documentation.
   those closing patterns. Direct-main guidance therefore uses non-closing
   references until post-integration verification and the final lifecycle
   marker are complete, then requires a live-state reread before explicit close.
+
+- Diagnosed verification repair and security-source cases test local action
+  authority separately from credentials, live settings, privileged execution,
+  and publication. They are synthetic boundaries derived from this core and
+  the shared provider lifecycle contract, not copied tracker material.

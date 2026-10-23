@@ -346,8 +346,10 @@ Escalate the affected MR on:
   conflict, stale branch, dependency blocks, or non-trivial history cleanup;
 - existing MR branch with unclear ownership or a concurrent lifecycle marker
   from another current actor;
-- GitLab token scopes, protected branches, project settings, webhooks, CI/CD
-  variables, repository settings, or sensitive history cleanup;
+- live GitLab token scopes, protected branches, project settings, webhooks,
+  CI/CD variables, repository settings, or sensitive history cleanup without
+  clear matching authority; authorized local source repairs use the
+  [shared action boundary](../../../docs/provider-reference/provider-lifecycle-core.md#escalation-gates);
 - external fork or cross-project boundary, unavailable job logs, unknown
   external provider failures, or public note text that rejects a request,
   assigns blame, makes a commitment, asks the reporter to do work, or exposes

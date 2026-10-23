@@ -18,6 +18,9 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
 ## §2 Principles
 
 - Criteria-citation: every finding cites a code/section; no bare opinion.
+  Catalogs guide judgment rather than limit what can be found. Report a novel
+  concern against an applicable principle with concrete evidence; do not invent
+  a catalog code or attribute a manual finding to a detector.
 - Professional skepticism: assume the subject may be wrong; corroborate;
   seek contradiction (hunt for controls that cannot fail).
 - Evidence sufficiency/appropriateness: re-performance/observed behavior >
@@ -44,15 +47,20 @@ inspect-only — Quick/triage). Absolute assurance is impossible; disclose limit
 - False-positive discipline: one finding per item; substantiate or downgrade.
 - Read-only audit stance: an audit skill reads and assesses; it does not
   auto-fix the artifact unless explicitly directed. Separate audit from repair.
-- Stop on ambiguity: when evidence is insufficient to form an opinion, disclose
-  the gap and stop; never fabricate certainty. Prefer asking over guessing.
+- Bound uncertainty: disclose a missing fact and withhold the affected conclusion;
+  continue independent findings. Ask when the missing fact changes the requested
+  decision and no safe default exists; never fabricate certainty.
 
 ## §3 Finding contract (the 5 C's)
 
-Every finding carries: criteria (cited code) · condition (evidenced location) ·
-cause · consequence (Effect — what ships undetected if this is the only guard) ·
-recommendation/action · severity (block | warn | info). Severity rates the
-CONTROL weakness. Risk tier (high | medium | low | unknown, see materiality.md)
+Default to concise findings: evidenced location, the problem and its consequence,
+recommended action, and severity (block | warn | info), with the applicable
+criterion. Explain cause when known and material; do not invent it to fill a
+field. These are semantic obligations, not a mandatory six-row template. A
+requested detailed report or formal consumer retains all its declared fields,
+including criteria, condition, cause (unknown if unsupported), consequence
+(Effect — what ships undetected if this is the only guard), and action.
+Severity rates the CONTROL weakness. Risk tier (high | medium | low | unknown, see materiality.md)
 is an ORTHOGONAL axis rating the SUBJECT. Combine only at the remediation
 worklist via this priority mapping:
 
@@ -64,8 +72,9 @@ worklist via this priority mapping:
 
 ## §4 Mode contract
 
-Quick/triage = limited assurance: per-finding output only, no enumeration or
-rollup. Deep/in-depth = reasonable assurance: enumerate the subject surface,
+Quick/triage = limited assurance: findings with an optional short overall
+assessment; no implied whole-population enumeration or Deep rollup.
+Deep/in-depth = reasonable assurance: enumerate the subject surface,
 roll up, sample+project at scale (§6), emit a graded verdict. Every output
 states its assurance level on one line.
 
@@ -88,10 +97,14 @@ change the gate status.
 
 ## §5 Disclosure-footer contract
 
-Every audit output ends with a footer reporting: extensions loaded · tool/MCP
-availability · reference path(s) · evidence limits · independence · assurance
-level. Domain skills append a domain-extras slot (cost stance, project
-assimilation, etc.). Never remove footer fields.
+Default to a compact close that states the reviewed scope, assurance, material
+evidence limits, and any self-review or tool limitation affecting the result.
+Do not append lists of unused tools, unloaded extensions, or empty fields.
+When a detailed report, evaluation, or machine consumer requires the disclosure
+footer, preserve its fields: extensions loaded · tool/MCP availability ·
+reference path(s) · evidence limits · independence · assurance level, plus the
+domain's declared extras. A compact presentation never changes a gate token,
+verdict, evidence requirement, or explicit output schema.
 
 ## §6 Sampling and projection
 

@@ -126,3 +126,8 @@ tables, diagrams, screenshots, or documentation.
   Handling: repo-authored threat-model planning procedure that drives the Deep
   mode Risk plan output; crown-jewels, trust-boundary, and attacker-goal
   taxonomy is original to this repo; no external procedure prose copied.
+
+- Report presentation now defaults to concise findings while explicit detailed
+  consumers retain rubric fields and exact verdicts. Original cases protect
+  material security consequences and unknown enforcement evidence; no vendor
+  requirements or external incident examples were added.

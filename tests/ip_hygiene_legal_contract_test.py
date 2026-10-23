@@ -63,13 +63,15 @@ class IpHygieneLegalContractTest(unittest.TestCase):
             ),
         )
 
-    def test_finding_contract_requires_decision_complete_evidence(self) -> None:
+    def test_finding_contract_preserves_detailed_consumer_evidence(self) -> None:
         skill = read(SKILL)
         assert_phrases(
             self,
             skill,
             (
-                "Emit one structured `finding:` record per issue",
+                "For a requested detailed report, evaluation, or formal consumer",
+                "emit one structured `finding:` record per issue",
+                "Use a concise finding by default",
                 "criterion and authority class",
                 "condition and exact location",
                 "source identity and provenance",

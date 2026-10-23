@@ -6,10 +6,10 @@ description: >-
 
 # Lean Audit
 
-Audit prose and skill surfaces for duplication and waste (Lean *muda*). A bundled
-deterministic engine computes the findings; this workflow runs it, ranks by
-materiality, and adds the judgment-only waste checks the engine cannot decide.
-Cite the owning catalog/procedure code (`LA-*`). Conform to
+Audit prose and skill surfaces for duplication and waste (Lean *muda*). Use
+evidence-backed judgment and bundled detectors to corroborate findings. A
+scanner nomination is not a prerequisite for a useful manual finding. Cite the
+owning code (`LA-*`) when it fits, otherwise the applicable principle. Conform to
 [`../../docs/audit-reference/audit-craft.md`](../../docs/audit-reference/audit-craft.md) §2/§3/§4/§5.
 
 ## Contract
@@ -29,12 +29,13 @@ design skill, which reviews structure, not mechanical dead code.
 
 Compose four additional lenses with the waste path:
 
-- **Per-use cost (`LA-PUC-*`, surface-gated):** run when scope contains a
-  `SKILL.md`, `agents/*.md`, or `commands/**/*.md`; otherwise remain silent.
-- **Run viability (`LA-RUN-*` / `LA-ORCH-*`, surface-gated):** run on an entry
-  surface that declares staged, iterative, delegated, retrying, or token-budget
-  work, or on an explicit finishability/orchestrator-cost request. It is an
-  offline pre-run forecast; traces only calibrate it when supplied.
+- **Per-use cost (`LA-PUC-*`, conditional):** run when requested or when a
+  concrete load-cost decision needs measurement; entry artifacts alone do not
+  activate it.
+- **Run viability (`LA-RUN-*` / `LA-ORCH-*`, conditional):** run when requested
+  or when evidence of a material completion/budget risk needs a forecast.
+  Stages or delegation alone do not activate it. Forecasts are offline; traces
+  only calibrate them when supplied.
 - **Platform redundancy (`LA-NAT-*`, opt-in):** run only on an explicit native-
   capability request and verify candidates against current host documentation.
 - **Minify (`LA-MIN-*`, opt-in, propose-only):** run only on an explicit
@@ -49,13 +50,13 @@ fact-vs-inference, and severity, see
 
 ## One adaptive path (no mode dispatch)
 
-This skill has no Quick/Deep modes — its detection is deterministic, so it runs
-one path and DERIVES the assurance level from coverage: any scope short of a
+This skill has no Quick/Deep modes. Judgment and detection share one path;
+derive the assurance level from coverage: any scope short of a
 full-repo enumeration (a file, named files, a diff, a directory, or a mix)
 derives `limited`; only a full-repo enumeration derives `reasonable`. State the
 assurance on one line (audit-craft §4, by named principle — as `ip-hygiene` does).
 
-The surface-gated cost lenses and explicit opt-in lenses do not introduce a
+The conditional cost lenses and explicit opt-in lenses do not introduce a
 second mode; coverage still derives assurance.
 
 ## Load Map
@@ -68,20 +69,20 @@ second mode; coverage still derives assurance.
   durability) only at repo scale when per-finding evidence may not reach the rollup intact; §4 records that clone
   detection is not divisible by file. If evidence starts outgrowing context mid-run, load it then rather than continuing.
 - Load [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) for the judgment-only `LA-STALE-2`,
-  `LA-BLOAT-2`, and `LA-VERBOSE-2` checks (the engine does not emit these; `LA-VERBOSE-2` confirms or clears engine `LA-VERBOSE-1` nominations).
+  `LA-BLOAT-2`, and `LA-VERBOSE-2` checks, including auditor-nominated concerns.
 - Run the bundled engine [`references/scripts/lean_engine.py`](references/scripts/lean_engine.py) (the deterministic source of `LA-DUP-*` / `LA-STALE-1` / `LA-DEAD-1` / `LA-BLOAT-1` / `LA-VERBOSE-1`) per Workflow step 2.
 - Run the bundled code lens [`references/scripts/code_lens.py`](references/scripts/code_lens.py) (the deterministic source of `LA-CODE-DUP-*`) when the scope contains source files — see Workflow step 2b.
 - For the opt-in prevention hooks, see [`references/hook-recipe.md`](references/hook-recipe.md) (enablement) and the guard entrypoints [`references/scripts/lean_guard.py`](references/scripts/lean_guard.py) and [`references/scripts/load_cost_guard.py`](references/scripts/load_cost_guard.py) (not part of an audit run).
 - All six entry scripts are stable shims; implementation lives in [`references/scripts/leanaudit/`](references/scripts/leanaudit/) (verify with `uv run python -m unittest tests.lean_audit_shims_test`).
-- **Per-use cost lens (surface-gated):** load [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md)
-  only when an entry artifact (the families listed in `## Contract`) is in scope.
+- **Per-use cost lens (conditional):** load [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md)
+  only for the request or concrete measurement need in `## Contract`.
   Run the bundled harness
   [`references/scripts/skill_load_cost.py`](references/scripts/skill_load_cost.py) (`resolve_closure` / `measure` /
   `baseline`) to size closures and project deltas; declared multi-entry routes,
   predicates, anchors, and selection metadata are detailed in the procedure.
   The procedure owns the `LA-PUC-*` band; do not restate it.
-- **Run-viability lens (surface-gated):** load [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
-  only for the workflow signals in `## Contract`. Run
+- **Run-viability lens (conditional):** load [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
+  only for the request or evidenced risk in `## Contract`. Run
   [`references/scripts/workflow_cost.py`](references/scripts/workflow_cost.py)
   offline to discover orchestrators, inventory hook registrations without
   executing them, and inspect declared convergence/checkpoint risks; add a
@@ -120,8 +121,8 @@ second mode; coverage still derives assurance.
    Normal scans report `coverage` (resolved root and scope, scanned comparison
    files, and in-scope files). An empty in-scope Markdown set is an input/coverage
    error, never a clean audit. Exit 1 means block findings, 2 input/tool error (disclose and continue
-   judgment checks), and 3 an unmet interpreter floor (stop). Keep only
-   in-scope paths; never invent or silently suppress engine findings.
+   judgment checks), and 3 an unmet interpreter floor (manual continuation).
+   Keep only in-scope paths; never invent or silently suppress engine findings.
 2b. If source files are in scope, run the same host-specific forms with
    `code_lens.py`; keep clone pairs where either path is in scope. Exit handling
    matches step 2. When it nominates candidates, adjudicate them with
@@ -130,30 +131,31 @@ second mode; coverage still derives assurance.
 3. Add the judgment-only checks from [`references/procedures/fuzzy-waste.md`](references/procedures/fuzzy-waste.md) —
    `LA-STALE-2` (prose describing a removed/renamed structure), `LA-BLOAT-2`
    (heavy reference material inlined in always-loaded context), and `LA-VERBOSE-2`
-   (confirm or clear each engine `LA-VERBOSE-1` verbosity nomination — never
-   free-scan for wordiness). Mark these inference (audit-craft §2), not confirmed
-   fact.
-4. **Per-use cost lens (surface-gated).** Detect whether the scope contains at
-   least one entry artifact (the families listed in `## Contract`). If yes, run the
-   procedure at [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md) end-to-end (resolve
-   closures → model per-mode load sets → find LA-PUC-1/2/3 → classify
-   fidelity-safety → infer dial → emit findings + fidelity baseline). If no entry
-   artifact is in scope, record "no per-use surfaces in scope — per-use lens
-   silent" and skip this step; the waste-lens findings from steps 2–3 are
-   unchanged.
-5. **Run-viability lens (surface-gated).** If entry surfaces declare phases,
-   delegation, loops, retries, token budgets, or orchestrator/coordinator work,
-   run [`references/procedures/run-viability.md`](references/procedures/run-viability.md)
-   end-to-end. Static discovery runs without network access; an exact verdict
-   requires declared context capacity and stage ranges. Supplied traces are
-   metadata-only calibration evidence, never a prerequisite. Otherwise record
-   "no long-running workflow signals — run-viability lens silent".
+   (confirm or clear engine nominations and independently evidenced verbosity).
+   Mark these inference (audit-craft §2), not confirmed fact. Novel concerns may
+   cite an applicable principle without inventing a detector code.
+4. **Per-use cost lens (conditional).** For a requested load-cost assessment or
+   concrete measurement need, use
+   [`references/procedures/per-use-cost.md`](references/procedures/per-use-cost.md).
+   Otherwise skip it without building scenarios or a fidelity baseline.
+5. **Run-viability lens (conditional).** For a requested forecast or evidenced
+   material completion risk, use
+   [`references/procedures/run-viability.md`](references/procedures/run-viability.md).
+   Otherwise skip it. Static discovery runs without network access; an exact
+   verdict requires declared context capacity and stage ranges. Supplied traces are
+   metadata-only calibration evidence, never a prerequisite. Record why an
+   unrequested economics lens was needed; do not invent a verdict when skipped.
 6. Assign each waste-lens finding a risk tier per `materiality.md` (a smell on a
    high-fan-in surface such as CLAUDE.md outranks the same smell on a leaf file).
    Combine severity × risk into the P0–P3 worklist (audit-craft §3 grid). Per-use
    findings carry their own dial-adjusted priority (see procedure); merge them into
    the worklist under the `LA-PUC-*` band with their separate priority rationale.
-7. Report against what was actually examined. Derive assurance from the in-scope coverage as set out in "One adaptive path". A file/diff scope emits per-finding output; a repo scope adds a sectioned rollup by `LA-*` band and a remediation worklist. For each duplication, cite the matched code and the canonical target. Per-use findings include their emitted fidelity baseline as a named `baseline:` block.
+7. Report concise findings against what was actually examined, with a short
+   overall assessment when useful. Derive assurance from the in-scope coverage
+   as set out in "One adaptive path". A repo scope adds a prioritized worklist;
+   use detailed band rollups when requested or required by a consumer. For each
+   duplication, cite the applicable criterion and canonical target. Formal
+   per-use findings retain the named `baseline:` block.
 
    **Limited-scope gate.** Emit `limited-scope gate: <status>` only for a file,
    named-file, or diff coverage — never for a directory or whole-repo rollup: any scope that contains a
@@ -195,17 +197,12 @@ and source clones become `LA-MIN-3` referrals.
   example; if the duplication claim is not supported by evidence, note it as a non-finding with the reason.
 - Disclose every "covered elsewhere" claim against its canonical target; never
   assert a citation without confirming the target exists.
-- **Interpreter floor is a stop cause, not a degrade.** The deterministic engine
-  requires Python ≥3.11 (`tomllib`), reached via `uv` (primary — it can provision
-  a conforming interpreter) or an already-≥3.11 `python3`. If no conforming
-  interpreter is available — the shim exits 3 with a `requires Python >=3.11`
-  message, or `uv` reports no compatible interpreter — STOP and report that
-  lean-audit cannot run for lack of the required interpreter. A judgment-only pass
-  is not a valid substitute for the missing deterministic layer; do not silently
-  degrade to one.
-- If the engine is otherwise unavailable or errors on input (exit 2), disclose the
-  reduced coverage and continue with the judgment-only checks; do not fabricate the
-  deterministic findings.
+- The deterministic engine still requires Python ≥3.11 (`tomllib`), via `uv`
+  or a conforming `python3`. If unavailable (including shim exit 3), or the
+  engine errors on input (exit 2), disclose the missing mechanical coverage and
+  continue with evidenced manual findings. Do not fabricate detector results,
+  counts, or a clean mechanical pass. A bounded gate remains `not-evaluated`
+  without required machinery unless a confirmed in-scope block makes it `fail`.
 - Run viability: never name a run `feasible` without a declared context window,
   verification reserve, orchestrator base tokens, prompt/output ranges for every
   stage, and a verification stage. Treat missing bounds as `indeterminate`;
@@ -230,13 +227,15 @@ and source clones become `LA-MIN-3` referrals.
 
 ## Output footer (audit-craft §5)
 
-End every output with: extensions loaded (none in v1) · registry path or
+Use audit-craft §5's compact close by default, naming scope, assurance, material
+limits and any manual fallback. For a requested detailed report or formal
+consumer, retain: extensions loaded (none in v1) · registry path or
 `heuristic-only` · engine availability · references · evidence limits ·
-independence (`independent | self-review | unknown`) · derived assurance.
-Append each activated conditional procedure's disclosure fields.
+independence (`independent | self-review | unknown`) · derived assurance,
+plus activated conditional procedures' disclosure fields.
 
-When the code-duplication lens ran, append: code lens ran (source surfaces
-detected) · languages/extensions scanned · min-tokens threshold · declared
+In that detailed output, when the code-duplication lens ran, append: code lens
+ran (source surfaces detected) · languages/extensions scanned · min-tokens threshold · declared
 `dup-intentional` suppressions honoured (whole-file exempted files / region-scoped
 spans) · fail-open skips (unreadable/binary/unknown-extension).
 

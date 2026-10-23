@@ -41,16 +41,17 @@ Method:
 
 ## LA-VERBOSE-2 — confirmed wasteful verbosity
 
-Trigger: an engine `LA-VERBOSE-1` nomination (or a passage the user explicitly
-names, disclosed as `nomination: user-directed`). Never free-scan for wordiness —
-confirm only what the deterministic nominator raised (or the user pointed at).
-That input boundary is the deterministic-first line and is what keeps this code
-high-precision.
+Trigger: an engine `LA-VERBOSE-1` nomination, a user-named passage, or a passage
+the auditor independently identifies with concrete evidence. Disclose its
+origin as `nomination: engine | user-directed | auditor`. Scanner coverage is
+not a ceiling on editorial judgment; unsupported stylistic preference is not
+a finding.
 
 Method:
-1. Read the nominated section and its cited metrics (tokens, filler density,
-   scaffold count, repeat ratio). Draft the faithful tightening in your head, not
-   in the tree — this code is detection, not repair.
+1. Read the passage and show the dispensable repetition or material that the
+   requested task does not need. Use available metrics when informative; do not
+   invent scanner metrics for a manual nomination. Draft a faithful tightening
+   in your head, not in the tree — this code is detection, not repair.
 2. Confirm the reduction is material: the faithful rewrite is meaningfully shorter
    (propose ≈ 30% fewer tokens as the floor). A trivial trim is not waste worth
    flagging.
@@ -59,8 +60,9 @@ Method:
    number, negation, and enumerated item must survive the rewrite. Pedagogical
    emphasis, calibrated hedging, normative precision, and deliberately explicit
    phrasing for weaker model tiers are calibration, not *muda*.
-4. Emit `LA-VERBOSE-2` citing the section, its `LA-VERBOSE-1` metrics, the
-   projected token delta, and the load-bearing assessment. If you cannot confirm a
+4. Emit `LA-VERBOSE-2` citing the passage, nomination origin, concrete reduction
+   evidence, and the load-bearing assessment. Label any projected token delta
+   as estimated. If you cannot confirm a
    faithful reduction exists, record it a cleared non-finding with the reason —
    do not emit.
 

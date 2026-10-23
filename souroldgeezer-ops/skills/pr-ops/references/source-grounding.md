@@ -39,3 +39,8 @@ provider documentation.
   <https://docs.gitlab.com/cli/ci/get/>.
   Handling: official source anchors are linked; GitLab mechanics are
   paraphrased in repo-authored workflow language.
+
+- Authorized security-source repair and external-sensitive-action scenarios
+  separate a local code patch from credential rotation, provider setting
+  changes, and privileged execution. The examples are invented to check the
+  existing diagnosis, task-scope, and action-authority distinction.

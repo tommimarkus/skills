@@ -47,6 +47,9 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             "test-quality-behavior-unapproved-mutation",
             "test-quality-behavior-preauthorized-extra-execution",
             "test-quality-behavior-success-no-installed-skill-write",
+            "test-quality-behavior-safe-local-confirmation",
+            "test-quality-behavior-compact-default-output",
+            "test-quality-behavior-detailed-consumer-output",
         }
         self.assertTrue(expected.issubset(behaviors))
 
@@ -109,7 +112,9 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         assert_phrases(self, output, (
             "safe one-shot suite execution",
             "about ten minutes",
-            "longer, unknown, browser, external-service, rerun, or mutation",
+            "an upper safety bound, not a duty to run a full suite",
+            "Explicit no-rerun/existing-results-only limits remain binding",
+            "Do not ask again for an already authorized action",
             "repository discovery",
             "datastore",
             "trend collector",
@@ -489,7 +494,9 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertIn("`structure-coupled`", output)
         self.assertIn("stronger than similarity", output)
         self.assertIn("never retires a test by itself", output)
-        self.assertIn("accessible history", output)
+        self.assertIn("accessible task records or history", output)
+        self.assertIn("ordinary task note, commit message, or PR/MR text", output)
+        self.assertIn("not a mandatory TDD footer", output)
         self.assertIn("ask for no instrumentation", output)
         recovery = " ".join(read(RECOVERY).split())
         self.assertIn("`structure-coupled`", recovery)

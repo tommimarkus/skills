@@ -41,7 +41,8 @@ class TestQualityQuickGateTest(unittest.TestCase):
             "fail if any substantiated in-scope `block`",
             "remediated block needs a clean rerun",
             "risk is orthogonal",
-            "never emits `Gap-*` findings or a remediation worklist",
+            "never emits suite-wide `Gap-*` findings from a bounded inspection",
+            "it may summarize priorities and next actions without a Deep worklist",
         ), heading="## Workflow")
         gate = compact(section(skill, "## Workflow"))
         gate = gate[gate.index("Quick gate: <status>"):]

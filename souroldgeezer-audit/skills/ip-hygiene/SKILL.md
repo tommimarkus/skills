@@ -257,8 +257,14 @@ continuing.
 
 ## Finding And Remediation Contract
 
-Audits are read-only by default. Emit one structured `finding:` record per
-issue. Each record must contain:
+Audits are read-only by default. Use a concise finding by default: criterion
+and authority class, exact location and evidence, fact/inference, severity,
+practical consequence/action, and any counsel trigger. Include the intended
+act, audience, jurisdiction, or provenance details when they affect the
+decision; unknown load-bearing facts remain explicit limits.
+
+For a requested detailed report, evaluation, or formal consumer, emit one
+structured `finding:` record per issue. Each record must contain:
 
 - criterion and authority class;
 - condition and exact location;
@@ -312,8 +318,12 @@ block.
 
 ## Disclosure And Verification
 
-Every output ends with the audit-craft section 5 footer: extensions loaded;
-tool/MCP availability; reference paths and authority classes; evidence limits
+Default to audit-craft section 5's compact close: reviewed boundary, assurance,
+material evidence limits, and the qualification that this is hygiene assessment,
+not legal clearance. Keep gate/decision/verdict tokens and counsel outcomes
+unchanged. For a requested detailed report, evaluation, or formal consumer,
+retain the footer: extensions loaded; tool/MCP availability; reference paths
+and authority classes; evidence limits
 (for triage, touched paths plus drive-by neighbors examined and untouched files
 not swept); independence (`independent | self-review | unknown`); and assurance
 level (`prospective bounded decision | limited triage | reasonable-hygiene

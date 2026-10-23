@@ -54,11 +54,17 @@ For each item:
    status updates.
 4. Classify actionability, scope, blockers, and integration strategy.
 5. Select or create an isolated work area according to repo guidance.
-6. Implement only clear, in-scope work.
+6. Implement only clear, in-scope work. A diagnosed repository-owned product or
+   test defect may be repaired when the evidence identifies the cause, existing
+   task authority covers the repair, and it stays within the requested scope.
+   If diagnosis, authority, or scope is unclear, give a concrete repair plan
+   and escalate the affected work.
 7. Infer verification from repo guidance, touched-surface docs, scripts, package
    metadata, CI workflows, and touched files.
 8. Run item-level verification.
-9. Auto-fix only deterministic formatter, generated-file, or lint failures.
+9. Repair diagnosed in-scope verification failures under step 6. Without that
+   diagnosis and repair authority, auto-fix only deterministic formatter,
+   generated-file, or lint failures; do not broaden the task.
 10. Refresh live provider state, comments or notes, lifecycle markers, linked
     work, and git state before integration handoff or direct integration;
     escalate if safety changed.
@@ -99,7 +105,8 @@ For item-local ambiguity, update the lifecycle status when possible, mark the
 item escalated, record the evidence, and continue the queue. Item-local
 ambiguity includes unclear acceptance criteria, conflicting maintainer comments,
 duplicate precedence, unsafe existing work, uncertain product contract,
-non-mechanical verification failure, or any escalation gate.
+verification failures whose cause or authorized repair is unclear, or any
+escalation gate.
 
 ## Escalation Gates
 
@@ -113,9 +120,9 @@ Escalate on:
   tooling route;
 - ambiguous scope, contradictory requirements, unclear product contract, or
   duplicate precedence requiring maintainer judgment;
-- security, auth, secrets, credentials, tokens, signing, workflow permissions,
-  personal access tokens, secret scanning, repository settings, or sensitive
-  history cleanup;
+- sensitive external, credential, settings, permission, or history actions
+  without clear matching authority; apply the local-source distinction in
+  [provider-lifecycle-core.md](../../../docs/provider-reference/provider-lifecycle-core.md#escalation-gates);
 - dependency add, remove, upgrade, downgrade, replacement, or lockfile changes,
   unless the item explicitly targets that dependency change;
 - repo-wide guidance or agent behavior policy changes, unless explicitly
@@ -126,7 +133,7 @@ Escalate on:
 - public communication that rejects a request, assigns blame, makes a
   commitment, asks the reporter to do work, or exposes sensitive detail;
 - untrusted issue content execution before inspection proves it safe;
-- verification unavailable, non-mechanical failure, local/remote disagreement,
+- verification unavailable, failures whose cause or authorized repair is unclear, local/remote disagreement,
   repeated no-progress auto-fix, conflicts, push rejection, protected-branch
   mismatch, dirty owned work areas, or non-trivial branch history cleanup;
 - unclear generated artifact provenance, unusual cost, unusual runtime, unusual

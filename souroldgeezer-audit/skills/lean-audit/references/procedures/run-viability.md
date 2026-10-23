@@ -1,8 +1,9 @@
 # Run Viability and Orchestrator Survivability
 
-Use this procedure for `LA-RUN-*` and `LA-ORCH-*` when a skill/plugin workflow
-has staged, iterative, delegated, retrying, or long-running execution, or the
-request asks whether a run can finish within a token/context budget. This lens
+Use this procedure for `LA-RUN-*` and `LA-ORCH-*` when the request asks whether
+a run can finish within a token/context budget, or concrete evidence of a
+material completion risk makes a forecast necessary. Workflow vocabulary such
+as stages or delegation alone does not activate it. This lens
 is read-only, offline by default, and separate from the static closure cost in
 `per-use-cost.md`: closure cost measures what loads; run viability models what
 accumulates, repeats, fans out, and must remain available until verification.

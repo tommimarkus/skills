@@ -41,6 +41,14 @@ class DevSecOpsAuditContentTest(unittest.TestCase):
                 "inspect target-repository AGENTS.md and CLAUDE.md regardless of current runtime",
                 "skip AGENTS.md because the host is Codex",
             ),
+            "devsecops-audit-behavior-compact-default-output": (
+                "report the evidenced permission weakness",
+                "claim live enforcement from configuration",
+            ),
+            "devsecops-audit-behavior-detailed-consumer-output": (
+                "preserve the requested consumer contract",
+                "drop required fields for compactness",
+            ),
         }
         for case_id, (required, forbidden) in expectations.items():
             with self.subTest(case_id=case_id):

@@ -74,3 +74,8 @@ derived from the corpus's own evidence anchors rather than a second list. That g
 keeps today's injected context non-contaminating; it does not sandbox the
 evaluator, and a future edit to those guidance files could still contaminate
 a run if it slips past the gate.
+
+- The compact-report cases are original examples of presentation choices, not
+  additional legal criteria. Full actual-record schemas remain available to
+  blind evaluators; authority classes, load-bearing gaps, counsel outcomes, and
+  the prohibition on legal-clearance claims remain unchanged.
