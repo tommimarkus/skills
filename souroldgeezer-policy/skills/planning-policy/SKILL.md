@@ -6,79 +6,65 @@ description: "Use when loaded guidance initializes planning-policy and work is i
 # Planning Policy
 
 Own plan-first enforcement only when repo/user guidance initializes this policy,
-or on an explicit “plan this first” request. The standing line is authority;
-installation alone is not. Apply its stated scope, including named fixes
-and refactors; get approval before implementation.
-The parent prepares, integrates, verifies, and recovers; workers execute their
-assigned outcomes and scoped acceptance.
+or on an explicit “plan this first” request. Installation alone is not authority.
+Apply its stated scope, including named fixes and refactors; get approval before
+implementation. The parent prepares, integrates, verifies, and recovers;
+workers execute cohesive assigned outcomes and scoped acceptance.
 
-Inputs: request, guidance, intended work, and orienting files. Evidence: source,
-approved approach or blocker, and bounded footer. An unresolved domain-design
-choice invokes its owning design skill before approval.
+Inputs: request, guidance, intended work, and orienting files.
+Evidence: inspected source, approved decisions, actual checks/results, and limitations.
+An unresolved domain-design choice invokes its owning design skill before approval.
 
 ## Load map
 
-- **Lookup / inspect:** this entry surface only. Report whether the line applies;
-  do not invent an enforcement result.
-- **Enforce or adopt guidance:** read
-  [core workflow §enforcement](references/core-workflow.md#enforcement) and
-  [§approval-and-output](references/core-workflow.md#approval-and-output).
-- **Executable plan, delegation, or returned handoff:** also read
-  [plan contract](references/plan-contract.md), start new plan JSON from
-  [plan-v5.json](references/templates/plan-v5.json), and run the advertised
-  [`validate_plan_contract.py`](references/scripts/validate_plan_contract.py)
-  command before approval. For approval/recovery, [approval handoff](references/approval-handoff.md)
-  selects authorized [persistence](references/scripts/persist_plan.py) (`--help`)
-  or inline JSON. Resolve before approval and dispatch; carry the envelope in the
-  host plan. The [binding scaffold](references/templates/capability-binding-v1.json)
-  joins plan digest, leaves, requirements, executor, and evidence. For an approved
-  plan with two or more
-  delegated steps, the parent alone uses `init-v5`, `dispatch`, `transition`, `record-return`, `amend`, `show`,
-  `validate --closeout`, `close`, `reopen`, `list`, `gc`, and `purge` commands from
-  [`planning_ledger.py`](references/scripts/planning_ledger.py), a stable shim
-  over [`planningledger/`](references/scripts/planningledger/). Assigned workers use the generated packet and read-only return preflight
-  in [worker handoff](references/worker-handoff.md). Normal v5
-  execution follows live `next` results through the lifecycle; after a long
-  pause or context compaction, use `show --run-id <uuid4> --next-only` once to
-  recover the next action. Plans declare `precision` (`standard` default,
-  `strict` opt-in) and run `validate --pin-roots` before approval; `init-v5
-  --host` derives setup from the [tier map](references/host-tiers.json) and
-  `dispatch` returns a generated worker prompt, per the plan and ledger contracts. Builders preflight with
-  `check-changeset`; the
-  independent verifier follows [verify handoff](references/verify-handoff.md).
-  The ledger alone owns retry remediation and tier
-  selection; approval and dispatch validation remain separate. Slicing an oversized
-  plan into a successive series loads [plan series](references/plan-series.md).
-- **Compatibility or audit route only:** read
-  [ledger compatibility](references/ledger-compatibility.md) only for a
-  legacy run or packet. Read the [ledger contract](references/ledger-contract.md) only for
-  errors, diagnosis, retention operations, or ledger
-  authoring/audit. Read [selective audit](references/selective-audit.md) only
-  when targeted inspection leaves its bounded audit question unresolved.
-- **Usage tracing (explicit opt-in only):** only after the user explicitly asks
-  to trace, measure, or calibrate, read [usage tracing](references/usage-tracing.md).
-  Ordinary runs never inspect telemetry,
-  create trace state, install hooks, or make measurement network/provider calls.
-- **Host dispatch:** read exactly one additive adapter:
-  [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md).
-  If the host/mapping is unavailable, return its documented blocker; never
-  silently downgrade. Re-load the other adapter only after the host changes.
-- **Trigger/behavior/eval edits only:** load `references/evals/` and
+- **Lookup / inspect:** this entry only; report applicability, not invented enforcement.
+- **Enforce or adopt:** select via [workflow selection](references/core-workflow.md#workflow-selection);
+  standard reads the full [core workflow](references/core-workflow.md).
+  `workflow: standard` is the default: concise readable approval, native delegation,
+  bounded assignments/returns, parent integration and verification, and independent
+  review on risk. Use its [assignment contract](references/core-workflow.md#standard-assignment-and-return)
+  and [review triggers](references/core-workflow.md#independent-review).
+- **Standard host:** read exactly the selected section:
+  [Claude Code standard](extensions/claude-code.md#standard-workflow) or
+  [Codex standard](extensions/codex.md#standard-workflow). Do not load managed
+  contracts or tier wrappers for an ordinary assignment.
+- **Strict or existing managed execution:** also read
+  [strict workflow](references/strict-workflow.md), [plan contract](references/plan-contract.md),
+  and the full selected [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md)
+  adapter. Start new executable JSON from [plan-v5.json](references/templates/plan-v5.json).
+  New strict plans select strict path precision and per-leaf verification;
+  explicit settings and existing approved runs retain their recorded behavior.
+  Validate through [validate_plan_contract.py](references/scripts/validate_plan_contract.py)
+  before approval. [Approval handoff](references/approval-handoff.md) owns
+  authorized [persistence](references/scripts/persist_plan.py) or inline JSON;
+  resolve before approval and dispatch. The [binding scaffold](references/templates/capability-binding-v1.json)
+  binds plan, requirements, and executor; [host tiers](references/host-tiers.json)
+  selects managed models and effort. Only managed workers use
+  [worker handoff](references/worker-handoff.md) and `check-changeset`;
+  managed verifiers use [verify handoff](references/verify-handoff.md).
+- **Managed lifecycle:** the parent uses [planning_ledger.py](references/scripts/planning_ledger.py),
+  the stable shim over [planningledger/](references/scripts/planningledger/),
+  for two or more delegated steps: `init-v5`, `dispatch`, `record-return`, `amend`,
+  `land`, and closeout follow live `next` results. Recover after compaction with
+  `show --next-only`. Only errors, diagnosis, retention operations, or ledger
+  authoring/audit load [ledger contract](references/ledger-contract.md).
+  Legacy runs/packets load [compatibility](references/ledger-compatibility.md).
+  Successive managed plans load [plan series](references/plan-series.md).
+- **Bounded unresolved audit question:** load [selective audit](references/selective-audit.md)
+  only when targeted inspection cannot settle a question that changes approach or acceptance.
+- **Tracing:** only on explicit trace/measure/calibrate requests load
+  [usage tracing](references/usage-tracing.md). Otherwise never inspect telemetry,
+  create trace state, install hooks, or make measurement/provider calls.
+- **Trigger/behavior/eval edits:** load `references/evals/` and
   `references/source-grounding.md`.
 
-## Enforcement
+## Continue or stop
 
-Select `enforce-initialized` for initialized guidance or an explicit request;
-otherwise use `lookup`. `inspect` reports compliance and `adopt-guidance`
-writes the core template. Enforcement details, host lane behavior, and the
-executable-leaf contract live in the on-demand [core workflow](references/core-workflow.md).
-Refine plan prose for a fresh parent using its
-[orchestrator readability target](references/core-workflow.md#orchestrator-readability).
-
-Worker stops: missing assigned load-bearing information is `blocked:missing_input`
-(never discovery or invention). Parent recovery follows approval handoff; stop
-for unclear scope/success, sibling ownership, unavailable plan mode, or
-unapproved in-scope implementation. This skill does not write specs, commits, or implementation.
-
-Ask vs continue: continue when goal, constraints, success, inputs, and scope are
-clear; otherwise ask the user before grooming.
+Ask vs continue: continue when the approved goal, constraints, success, and
+scope are clear; otherwise ask the user for missing material decisions. Discover
+routine repository facts within the assignment before asking. Stop when
+implementation is unapproved, ambiguity is unsafe, authority is missing, or a
+required capability is unavailable. Degraded host planning uses explicit
+approval without claiming a mode change. Never route a malformed v5 plan,
+binding, or packet into standard work as a fallback. This skill owns planning
+and handoffs, not domain specs, commits, or implementation.

@@ -1,6 +1,30 @@
 # Claude Code Execution Adapter
 
-Render the shared plan's compact **Execution economics** line without inventing
+## Standard workflow
+
+Use `EnterPlanMode` when needed and `ExitPlanMode` for the readable plan.
+A rejected or withheld approval is not permission: retain the proposal and
+resolve the host's approval state before dispatch. After approval, use the
+native `Agent` with a self-contained general-purpose assignment, not a managed
+`plan-step-*` wrapper. Use supported host defaults unless the task requires a
+particular capability. Concurrent writers get separate persistent worktrees.
+A required independent reviewer gets a fresh read-only assignment without
+builder reasoning. Use host notifications instead of busy-polling.
+
+Follow the shared [assignment and return](../references/core-workflow.md#standard-assignment-and-return),
+[review](../references/core-workflow.md#independent-review), and
+[approval/recovery](../references/core-workflow.md#approval-and-output) rules.
+Standard has no v5 packet, tier-map requirement, ledger, or exact JSON return.
+Explicit managed requests, approved v5 plans, and existing packets instead use
+the managed sections below. Malformed managed input blocks; never downgrade it.
+
+## Managed execution only
+
+The remaining sections apply only to strict or existing managed v5 execution.
+They add host mechanics to the [strict workflow](../references/strict-workflow.md).
+
+Only when requested, render the shared plan's compact **Execution economics**
+line without inventing
 token ranges: expected/high attempts, largest repeated-context driver, declared
 range or `indeterminate`, final-verification reserve, and `tracing: off`.
 Normal dispatch never enables or inspects usage tracing.

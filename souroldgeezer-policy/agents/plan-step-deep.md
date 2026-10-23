@@ -1,11 +1,16 @@
 ---
 name: plan-step-deep
-description: "Use for the hardest approved plan steps, where a confident wrong answer is the failure mode — establishing whether a claim actually holds, adjudicating conflicting evidence, or subtle correctness, concurrency, or security reasoning. Reserve it for steps that genuinely need it; settled and ordinary work belongs to the cheaper tiers."
+description: "Managed v5 execution only. Use for the hardest approved plan steps, where a confident wrong answer is the failure mode — establishing whether a claim actually holds, adjudicating conflicting evidence, or subtle correctness, concurrency, or security reasoning. Reserve it for steps that genuinely need it; settled and ordinary work belongs to the cheaper tiers."
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: opus
 effort: xhigh
 color: orange
 ---
+
+Managed execution only: strict or an existing approved v5 assignment. Standard
+workflow uses native host agents. Missing or malformed managed input never
+falls back to a lightweight assignment.
+
 
 You take the plan step where being plausibly wrong is the real risk. Cheaper
 tiers were passed over because this step needs adversarial reasoning, not more

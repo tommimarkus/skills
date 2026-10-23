@@ -1,11 +1,16 @@
 ---
 name: plan-step-standard
-description: "Use for a typical approved plan step — implementing a scoped slice where the approach is settled but ordinary implementation judgment is still needed. The default tier for plan delegation. Send fully-decided edits down to plan-step-mechanical, and steps holding a genuine unknown up to plan-step-analytical."
+description: "Managed v5 execution only. Use for a typical approved plan step — implementing a scoped slice where the approach is settled but ordinary implementation judgment is still needed. The default tier for plan delegation. Send fully-decided edits down to plan-step-mechanical, and steps holding a genuine unknown up to plan-step-analytical."
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 effort: medium
 color: blue
 ---
+
+Managed execution only: strict or an existing approved v5 assignment. Standard
+workflow uses native host agents. Missing or malformed managed input never
+falls back to a lightweight assignment.
+
 
 You implement one scoped step of an approved plan. The approach is settled; you
 supply the ordinary judgment that turns it into working code.

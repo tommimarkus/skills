@@ -4,7 +4,8 @@ Load only when a targeted inspection or focused test cannot resolve one bounded
 question that can materially change approach or acceptance. Ordinary domain
 design stays with its owning design skill.
 
-At most one leaf may set `selective_audit`. It requires an owning audit
+Standard uses the bounded question and source pointers without plan JSON.
+For managed v5, at most one leaf may set `selective_audit`. It requires an owning audit
 (`devsecops-audit`, `test-quality-audit`, `ip-hygiene`, or `lean-audit`),
 `initial_inspection: true`, `domain_match: true`,
 `materially_changes_approach_or_acceptance: true`,

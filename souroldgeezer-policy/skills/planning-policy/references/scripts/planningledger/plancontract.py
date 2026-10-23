@@ -1687,10 +1687,8 @@ def _standard_ready_ratio(
         and nonempty(exception.get("rationale"))
         and nonempty(exception.get("user_approved_by"))
     )
-    if ratio < 0.60 and not exception_valid:
-        errors.append(
-            "standard_ready_ratio is below 0.60 without a user-approved analytical-heavy exception"
-        )
+    # Tier mix describes execution cost, not whether a decision-complete plan is ready.
+    # Retain the result fields and old exception metadata for existing consumers.
     return ratio, ready_weight, total_weight, exception_valid
 
 

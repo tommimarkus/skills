@@ -26,7 +26,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         description = next(line for line in entry.splitlines() if line.startswith("description:"))
         self.assertIn(description, agent)
         self.assertIn("Apply its stated scope", entry)
-        self.assertIn("Explicit scope overrides the bare default", workflow)
+        self.assertIn("Explicit scope overrides the bare default", " ".join(workflow.split()))
         for host in (".claude-plugin", ".codex-plugin"):
             manifest = json.loads(self.text(f"souroldgeezer-policy/{host}/plugin.json"))
             self.assertIn("work covered by initialized guidance", manifest["description"])
@@ -85,12 +85,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "references/plan-contract.md": (
                 "contract_version", "IDs/dependencies", "task", "boundary", "read_set",
                 "write_set", "settled_decisions", "acceptance_command", "stop_conditions",
-                "must be at least `0.60`", "analytical_heavy_exception",
+                "not admission gates", "analytical_heavy_exception",
                 "planning-execution-cost-v1", "planning-cost-advisory-v1",
                 "Versions 1–4 were retired", "approval_ready", "dispatch_ready",
                 "planning-capability-binding-v1", "max_attempts", "1–5",
             ),
-            "references/core-workflow.md": (
+            "references/strict-workflow.md": (
                 "Execution economics", "tracing: off", "scoped acceptance",
                 "`completed` → `integrated` → `cleaned`", "only the parent creates",
                 "bounded checkpoints", "never raw logs", "select an owning audit",
@@ -154,7 +154,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 "planning-execution-cost-v1", "planning-cost-advisory-v1",
                 "bounded-step-return-v1", "contract_version: 5", "never `version`",
             ),
-            "references/core-workflow.md": (
+            "references/strict-workflow.md": (
                 "tracing: off", "bounded checkpoints", "only the parent creates",
                 "`completed` → `integrated` → `cleaned`", "cherry-pick",
             ),
@@ -253,8 +253,8 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         ):
             self.assertIn(principle, standard)
         for destination, condition in (
-            ("core-workflow.md", "When authoring an executable plan"),
-            ("plan-contract.md", "When authoring an executable plan"),
+            ("core-workflow.md", "When authoring a strict managed executable plan"),
+            ("plan-contract.md", "When authoring a strict managed executable plan"),
             ("ledger-contract.md", "For execution diagnosis"),
         ):
             with self.subTest(destination=destination):
@@ -299,13 +299,13 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         entry = self.text("souroldgeezer-policy/skills/planning-policy/SKILL.md")
         core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
         self.assertIn("unresolved domain-design", entry)
-        self.assertIn("Before approval, invoke the owning design skill", core)
+        self.assertIn("Before approval, invoke the owning", core)
 
     def test_inline_departure_needs_a_stated_case_not_a_cost_citation(self) -> None:
         # No PLANCOST code compares dispatch overhead with the work, so an
         # inline case citing one is uncitable; batching/merging owns overhead.
         core = " ".join(self.text(
-            "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md"
+            "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md"
         ).split())
         self.assertIn("Delegate unless the plan states one case in one line", core)
         for case in (
@@ -370,7 +370,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
     def test_verify_loop_is_routed_and_documented(self) -> None:
         base = "souroldgeezer-policy/skills/planning-policy/"
         entry = self.text(base + "SKILL.md")
-        workflow = self.text(base + "references/core-workflow.md")
+        workflow = self.text(base + "references/strict-workflow.md")
         handoff = self.text(base + "references/worker-handoff.md")
         ledger = self.text(base + "references/ledger-contract.md")
         claude = self.text(base + "extensions/claude-code.md")

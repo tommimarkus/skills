@@ -1,6 +1,7 @@
 # Shared Plan Contract
 
-Runtime-neutral fields; adapters add host syntax.
+Runtime-neutral fields for strict and existing managed v5 execution; adapters
+add host syntax. Standard native delegation does not use this JSON contract.
 
 ## Plan JSON
 
@@ -129,12 +130,12 @@ retries, unbounded verification, comparable observed drift, tier
 over-assignment, an unbatched chained mechanical/standard pair, same-owner or a distinct-owner
 pure chain (one dependency, one dependent) (`PLANCOST-UNBATCHED-CHAIN`), microleaf risk (`PLANCOST-MICROLEAF-RISK`: a
 split lacks a permitted evidence-backed decomposition rationale), and plan scale (`PLANCOST-PLAN-SCALE`: more than
-12 leaves or 20 declared work-unit weight — slice into successive plans,
+12 leaves or 20 declared work-unit weight — consider successive plans,
 advisory only); `tier_mix` reports per-tier counts, mechanical share, and
 over-assigned count; `critical_path` and `max_parallel_width` count dispatch-group
 depth and the widest level. Every finding
-is advisory. Merge microleaf candidates before
-series slicing. After an oversized return, derive the re-cut from the original
+is advisory. Consider merging unjustified splits before series slicing; neither
+a finding nor its suggested disposition is mandatory. After an oversized return, derive the re-cut from the original
 cohesive outcomes, not a list of remainder items. Successive-plan composition and
 handoff live in [plan series](plan-series.md).
 
@@ -152,17 +153,14 @@ counts. `changeset_budget(leaf)` in the validator is the only derivation; the
 ledger imports it. The cost advisory adds `verify_dispatches`: the dispatch-group
 count, or 0 for `closeout-only`.
 
-## Readiness gate
+## Readiness diagnostics
 
-Weights are `small=1`, `medium=2`, `large=3`. A work unit is medium-ready only
-when every leaf in it is `mechanical` or `standard`. The plan's
-`standard_ready_ratio` is the sum of ready unit weights divided by the sum of
-all declared unit weights; it must be at least `0.60`.
-
-An analytical-heavy exception is valid only as
-`analytical_heavy_exception` with a non-empty `rationale` and a non-empty
-`user_approved_by`; it records an explicit user approval and waives that ratio,
-not the leaf contract.
+Weights remain `small=1`, `medium=2`, `large=3`. `standard_ready_ratio`,
+`ready_weight`, `total_weight`, and `analytical_heavy_exception` remain output
+fields for compatibility, not admission gates. An analytical-only plan needs no
+user-approved tier-mix exception. Retained `analytical_heavy_exception` metadata
+remains readable. Decision completeness, bounded risk, ordering, and exact
+capability binding still govern approval and dispatch readiness.
 
 ## Selective audit routing
 

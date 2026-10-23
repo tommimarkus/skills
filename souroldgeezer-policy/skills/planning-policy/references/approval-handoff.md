@@ -1,5 +1,7 @@
 # Approval handoff
 
+Use only to transport a strict or already-approved managed v5 plan.
+
 1. Validate v5. Check host instructions: writable storage is not write authority.
    When preparatory writes are permitted, prefer the primary
    checkout's already-ignored `.planning-policy/plans`, or an explicitly supplied

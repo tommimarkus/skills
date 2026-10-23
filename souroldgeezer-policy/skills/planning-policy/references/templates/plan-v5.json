@@ -1,5 +1,7 @@
 {
   "contract_version": 5,
+  "precision": "strict",
+  "verification": "per-leaf",
   "objective": "",
   "scope_summary": "",
   "approved_decisions": [],
@@ -37,21 +39,5 @@
         "additional": []
       }
     }
-  ],
-  "execution_cost": {
-    "schema": "planning-execution-cost-v1",
-    "mode": "advisory",
-    "expected_attempts": 1,
-    "leaf_attempt_overrides": {},
-    "declared_model_tokens": {
-      "parent_baseline": null,
-      "worker_attempts": {},
-      "parent_turns": null,
-      "retained_return_context": null,
-      "final_verification": null
-    },
-    "final_verification_commands": [],
-    "assumptions": [],
-    "unknowns": []
-  }
+  ]
 }

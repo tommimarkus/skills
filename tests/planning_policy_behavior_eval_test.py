@@ -42,7 +42,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
         required = {
             "planning-policy-behavior-approval-inline-reset",
             "planning-policy-behavior-approval-parent-recovery",
-            "planning-policy-behavior-readiness-weighted-floor",
+            "planning-policy-behavior-readiness-diagnostic",
             "planning-policy-behavior-readiness-no-leaf-gaming",
             "planning-policy-behavior-audit-ordinary-design",
             "planning-policy-behavior-audit-vague-risk",
@@ -88,6 +88,14 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "planning-policy-behavior-derived-setup-host-init",
             "planning-policy-behavior-generated-prompt-unchanged",
         }
+        required.update({"planning-policy-behavior-" + suffix for suffix in (
+            "standard-default", "standard-dependent", "standard-discovery",
+            "standard-adjacent", "standard-scope-change", "standard-retry",
+            "standard-recovery", "standard-no-storage", "standard-managed-no-fallback",
+            "standard-old-settings", "standard-invalid-profile", "standard-explicit-overrides",
+            "standard-review-contract", "standard-review-security",
+            "standard-review-destructive", "standard-review-removal", "standard-review-unbounded-impact",
+        )})
         self.assertTrue(required.issubset(self.behavior))
 
     def test_plan_mode_scaffold_and_closeout_cases_carry_their_checks(self):

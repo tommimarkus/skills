@@ -14,30 +14,23 @@ Install the plugin that owns the task, then describe the work in ordinary langua
 
 The repo currently ships five plugins:
 
-`planning-policy` follows the scope of the consuming repository's initialization line,
-including nontrivial fixes and refactors when that line covers them. It can
-retain an approved executable plan through a caller-authorized
-durable root using its documented explicit-root writer. Hosts without that
-authority keep the complete inline approval envelope. It prepares economical
-delegation by gathering shared facts once, handing off cohesive bounded outcomes,
-and retaining parent integration and verification.
-Plan prose targets a fresh parent at Codex `sol/high`, Claude `opus/high`, or
-comparable capability on another host; see
-[orchestrator readability](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability).
-New plans also validate task boundaries across the dependency graph. Generated
-worker packets include shared decisions and a return schema, with local return
-validation before parent ingestion; composite `dispatch` and `land` commands
-start and close out a leaf or batch; retained pre-v5 runs follow [ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md). See the
-[worker handoff procedure](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md).
-New runs also check each delegated leaf before it lands: a deterministic
-changeset budget the builder preflights, then a fresh read-only verifier that
-returns pass, reject, or inconclusive. A reject retries through the existing
-policy. Plans can opt out with `verification: closeout-only`, and the footer
-reports a `Verify:` line. See the
-[verifier procedure](souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md).
-Plans default to `standard` precision, which lets write sets name areas and
-records out-of-area changes for the verifier, with `strict` available as an
-opt-in for exact paths.
+`planning-policy` follows the consuming repository's initialized scope, including
+nontrivial fixes and refactors when covered. Its default `workflow: standard`
+uses a concise readable plan, approval once, and native delegation of cohesive
+outcomes. Workers can discover routine facts and report necessary adjacent
+edits; the parent retains review, integration, and final verification. Independent
+read-only review is required on risk, including public contracts, security,
+destructive operations, required behavior/rule/assertion removal, and effects
+the parent cannot bound. See the [shared workflow](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md).
+
+Explicit `workflow: strict` retains validated v5 plans, exact capability
+bindings, managed workers, ledger recovery, changeset budgets, pin scans, and
+per-leaf verification. Path `precision` is a separate v5 setting; existing
+approved plans and runs retain their recorded settings. Tier mix and execution
+cost findings are advisory in both workflows; detailed forecasts and tracing
+are opt-in. See the [strict workflow](souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md),
+[worker handoff](souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md),
+and [legacy compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
 
 `software-design` includes a narrow File Edit lane for bounded non-code text or
 data changes that need no code/module, API/schema, IaC, security, test, or

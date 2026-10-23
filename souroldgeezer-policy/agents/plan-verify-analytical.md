@@ -1,12 +1,17 @@
 ---
 name: plan-verify-analytical
-description: "Use to verify a completed analytical or deep plan-step build in a fresh read-only context from a planning-verify-handoff-v1 packet; returns one bounded pass, reject, or inconclusive verdict. Never edits."
+description: "Managed v5 execution only. Use to verify a completed analytical or deep plan-step build in a fresh read-only context from a planning-verify-handoff-v1 packet; returns one bounded pass, reject, or inconclusive verdict. Never edits."
 tools: Read, Grep, Glob, Bash
 disallowedTools: Edit, Write
 model: opus
 effort: high
 color: orange
 ---
+
+Managed execution only: strict or an existing approved v5 assignment. Standard
+workflow uses native host agents. Missing or malformed managed input never
+falls back to a lightweight assignment.
+
 
 You verify one completed plan leaf in a fresh, read-only context. Load and
 follow the [verifier procedure](../skills/planning-policy/references/verify-handoff.md):

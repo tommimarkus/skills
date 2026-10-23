@@ -1,9 +1,31 @@
 # Codex execution adapter
 
+## Standard workflow
+
+Use native Plan mode when active/exposed; otherwise present the readable
+plan and wait for explicit approval without claiming a mode change. After
+approval, use `spawn_agent` with a self-contained assignment and
+`fork_turns: "none"`. Use supported host defaults unless the task requires a
+particular capability. Concurrent writers get separate persistent worktrees.
+A required independent reviewer is a fresh read-only assignment; do not give it
+builder reasoning. Use host notifications instead of busy-polling.
+
+Follow the shared [assignment and return](../references/core-workflow.md#standard-assignment-and-return),
+[review](../references/core-workflow.md#independent-review), and
+[approval/recovery](../references/core-workflow.md#approval-and-output) rules.
+Standard has no v5 packet, tier-map requirement, ledger, or exact JSON return.
+Explicit managed requests, approved v5 plans, and existing packets instead use
+the managed sections below. Malformed managed input blocks; never downgrade it.
+
+## Managed execution only
+
+The remaining sections apply only to strict or existing managed v5 execution.
+They add host mechanics to the [strict workflow](../references/strict-workflow.md).
+
 This additive adapter does not replace the portable handoff contract.
 
-Include the shared **Execution economics** line verbatim; do not invent missing
-ranges. Normal dispatch never enables or inspects tracing.
+Include the shared **Execution economics** line only when requested; do not
+invent missing ranges. Normal dispatch never enables or inspects tracing.
 
 Before approval, put the resolved `planning-approval-handoff-v1` envelope inside
 `<proposed_plan>`; resolve again before dispatch and follow

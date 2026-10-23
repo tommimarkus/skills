@@ -3,97 +3,34 @@
     "id": "planning-policy-lookup",
     "provenance": "Entry exposure: the host loads the whole SKILL.md (docs/skill-architecture.md), so lookup and direct runtime selection charge the full file.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"}
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      }
     ]
   },
   {
     "id": "planning-policy-claude-agent-lookup",
     "provenance": "Entry exposure: Claude agent selection charges the whole SKILL.md plus the agent summary metadata.",
     "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"}
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      }
     ],
     "selection_metadata": [
-      {"entry": "planning-policy", "kind": "agent-summary", "text": "planning-policy: plan-first enforcement and lookup"}
+      {
+        "entry": "planning-policy",
+        "kind": "agent-summary",
+        "text": "planning-policy: plan-first enforcement and lookup"
+      }
     ]
   },
   {
     "id": "planning-policy-active-claude",
-    "provenance": "Authoring exposure: whole SKILL.md plus enforcement, executable plan scaffold, and exactly the Claude adapter.",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json", "predicate": "conditional:new-plan-authoring"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md", "predicate": "conditional:claude"}
-    ]
-  },
-  {
-    "id": "planning-policy-active-codex",
-    "provenance": "Authoring exposure: whole SKILL.md plus enforcement, executable plan scaffold, and exactly the Codex adapter.",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json", "predicate": "conditional:new-plan-authoring"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "conditional:codex"}
-    ]
-  },
-  {
-    "id": "planning-policy-approved-v5-live-next",
-    "provenance": "Execution exposure: the whole SKILL.md plus normal approved v5 execution follows bounded live next results and loads worktree closeout only when a successful leaf reaches integration.",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#approval-and-output", "predicate": "conditional:approved-multi-agent"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md#parent-ledger-helper", "predicate": "conditional:approved-multi-agent"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/git-workflow-policy/references/planning-worktree-closeout.md", "predicate": "conditional:successful-leaf-closeout"}
-    ]
-  },
-  {
-    "id": "planning-policy-ledger-diagnostic-fallback",
-    "provenance": "Execution exposure: the whole SKILL.md plus, for errors, legacy resumption, diagnosis, retention operations, and ledger authoring or audit load the discoverable ledger reference as an exceptional fallback.",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md#authoring-and-audit-reference", "predicate": "conditional:ledger-diagnosis-or-authoring"}
-    ]
-  },
-  {
-    "id": "planning-policy-series-successor",
-    "provenance": "Authoring exposure: whole SKILL.md plus enforcement, executable plan scaffold, and plan series for a successor-plan authoring/grooming session; no host adapter (the series contract is runtime-neutral).",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md", "predicate": "conditional:enforcement"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md", "predicate": "conditional:executable-plan"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json", "predicate": "conditional:new-plan-authoring"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/references/plan-series.md", "predicate": "conditional:series-plan"}
-    ]
-  },
-  {
-    "id": "planning-policy-worker",
-    "provenance": "Execution exposure: a dispatched standard builder loads its tier agent definition and the worker handoff reference, not SKILL.md.",
-    "load_routes": [
-      {"entry": "plan-step-standard", "target": "souroldgeezer-policy/agents/plan-step-standard.md", "predicate": "always"},
-      {"entry": "plan-step-standard", "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md", "predicate": "conditional:worker-dispatch"}
-    ]
-  },
-  {
-    "id": "planning-policy-verifier",
-    "provenance": "Execution exposure: a dispatched standard verifier loads its tier agent definition and the verify handoff reference, not SKILL.md.",
-    "load_routes": [
-      {"entry": "plan-verify-standard", "target": "souroldgeezer-policy/agents/plan-verify-standard.md", "predicate": "always"},
-      {"entry": "plan-verify-standard", "target": "souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md", "predicate": "conditional:verify-dispatch"}
-    ]
-  },
-  {
-    "id": "planning-policy-unknown-host",
-    "provenance": "Authoring exposure: unknown host selection is conservative and still loads the declared adapter.",
-    "load_routes": [
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md", "predicate": "always"},
-      {"entry": "planning-policy", "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md", "predicate": "unknown"}
-    ]
-  },
-  {
-    "id": "planning-policy-approval-handoff",
-    "provenance": "Authoring exposure: approval or fresh-context recovery adds only the on-demand portable transport procedure.",
+    "provenance": "Explicit strict or existing managed authoring: selection/readability, full managed workflow and declared contracts; one host adapter when selected.",
     "load_routes": [
       {
         "entry": "planning-policy",
@@ -102,8 +39,231 @@
       },
       {
         "entry": "planning-policy",
-        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md",
-        "predicate": "conditional:enforcement"
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#workflow-selection",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md",
+        "predicate": "conditional:executable-plan"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json",
+        "predicate": "conditional:new-plan-authoring"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md",
+        "predicate": "conditional:claude"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-active-codex",
+    "provenance": "Explicit strict or existing managed authoring: selection/readability, full managed workflow and declared contracts; one host adapter when selected.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#workflow-selection",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md",
+        "predicate": "conditional:executable-plan"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json",
+        "predicate": "conditional:new-plan-authoring"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md",
+        "predicate": "conditional:codex"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-approved-v5-live-next",
+    "provenance": "Execution exposure: the whole SKILL.md plus normal approved v5 execution follows bounded live next results and loads worktree closeout only when a successful leaf reaches integration.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md#approval-and-output",
+        "predicate": "conditional:approved-multi-agent"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md#parent-ledger-helper",
+        "predicate": "conditional:approved-multi-agent"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/git-workflow-policy/references/planning-worktree-closeout.md",
+        "predicate": "conditional:successful-leaf-closeout"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-ledger-diagnostic-fallback",
+    "provenance": "Execution exposure: the whole SKILL.md plus, for errors, legacy resumption, diagnosis, retention operations, and ledger authoring or audit load the discoverable ledger reference as an exceptional fallback.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/ledger-contract.md#authoring-and-audit-reference",
+        "predicate": "conditional:ledger-diagnosis-or-authoring"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-series-successor",
+    "provenance": "Explicit strict or existing managed authoring: selection/readability, full managed workflow and declared contracts; one host adapter when selected.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#workflow-selection",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-contract.md",
+        "predicate": "conditional:executable-plan"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json",
+        "predicate": "conditional:new-plan-authoring"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/plan-series.md",
+        "predicate": "conditional:series-plan"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-worker",
+    "provenance": "Execution exposure: a dispatched standard builder loads its tier agent definition and the worker handoff reference, not SKILL.md.",
+    "load_routes": [
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/agents/plan-step-standard.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md",
+        "predicate": "conditional:worker-dispatch"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-verifier",
+    "provenance": "Execution exposure: a dispatched standard verifier loads its tier agent definition and the verify handoff reference, not SKILL.md.",
+    "load_routes": [
+      {
+        "entry": "plan-verify-standard",
+        "target": "souroldgeezer-policy/agents/plan-verify-standard.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-verify-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/verify-handoff.md",
+        "predicate": "conditional:verify-dispatch"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-unknown-host",
+    "provenance": "Authoring exposure: unknown host selection is conservative and still loads the declared adapter.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md",
+        "predicate": "unknown"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-approval-handoff",
+    "provenance": "Explicit strict or existing managed authoring: selection/readability, full managed workflow and declared contracts; one host adapter when selected.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#workflow-selection",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#orchestrator-readability",
+        "predicate": "conditional:managed"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/strict-workflow.md",
+        "predicate": "conditional:managed"
       },
       {
         "entry": "planning-policy",
@@ -124,6 +284,70 @@
         "entry": "planning-policy",
         "target": "souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md",
         "predicate": "conditional:approval-or-recovery"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-claude",
+    "provenance": "Default standard authoring/approval: whole entry and shared core plus only the selected native-host section, no managed contracts.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md",
+        "predicate": "conditional:standard"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md#standard-workflow",
+        "predicate": "conditional:standard"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-codex",
+    "provenance": "Default standard authoring/approval: whole entry and shared core plus only the selected native-host section, no managed contracts.",
+    "load_routes": [
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md",
+        "predicate": "conditional:standard"
+      },
+      {
+        "entry": "planning-policy",
+        "target": "souroldgeezer-policy/skills/planning-policy/extensions/codex.md#standard-workflow",
+        "predicate": "conditional:standard"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-worker",
+    "provenance": "Native worker receives its self-contained assignment and only the portable standard assignment/return procedure, not managed wrappers.",
+    "load_routes": [
+      {
+        "entry": "native-worker",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
+        "predicate": "conditional:standard-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-reviewer",
+    "provenance": "Fresh native reviewer receives task/diff/evidence and the portable risk review rules; no managed verifier packet.",
+    "load_routes": [
+      {
+        "entry": "native-reviewer",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#independent-review",
+        "predicate": "conditional:risk-trigger"
       }
     ]
   }

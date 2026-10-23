@@ -1,185 +1,136 @@
 # Planning Policy Core Workflow
 
-The standing line sets scope. For covered work, brainstorm in the
-planning lane and get approval before implementation. Explicit scope
-overrides defaults.
+The standing line sets scope. Apply its stated scope and exceptions. Explicit
+scope overrides the bare default of new feature/build/creative work; fixes,
+refactors, hotfixes, spikes, and trivial edits are exceptions only when that
+line permits them. Installation alone grants no enforcement authority.
+
+## Workflow selection
+
+`workflow: standard` is the default; `workflow: strict` explicitly selects the
+[managed workflow](strict-workflow.md). This is separate from `precision`, which
+controls paths in v5 plans. A risk trigger adds independent review, not strict
+machinery. Explicit user and repository settings override these defaults. Unknown or
+conflicting workflow values require clarification rather than a guessed profile.
+Existing approved v5 plans, packets, and ledger runs stay managed and retain
+their recorded settings, even when the current default is standard. Never
+reinterpret malformed managed input as a lightweight assignment.
 
 ## Enforcement
 
-1. Select the lane: the **Claude Code lane** calls `EnterPlanMode` unless already
-   there; the **Codex lane** uses native Plan mode when exposed, otherwise stays
-   read-only for explicit approval. Never claim a mode change.
-2. Orient only enough to ask good questions. Ask focused questions about goal,
-   constraints, and success; stop when an approach is clear.
-3. State a one- or two-sentence approach with a real tradeoff/pick and execution
-   shape: decomposable steps delegate by default; the parent retains decomposition,
-   integration, and final verification. Before approval, invoke the owning design skill for a material unresolved domain-design choice.
-4. Groom outcomes before leaves. Enumerate shared call sites, guidance,
-   reads/writes, scoped acceptance, and bounded worker judgment once; settle
-   material choices with their owner. Required unknowns remain missing input.
-   Default to one leaf per outcome; merge file-per-leaf, code-vs-test,
-   preparatory-helper, tier-gaming, and plan-size-gaming splits. Record each
-   unit's `cohesive_outcome` and permitted `decomposition` evidence; neither
-   batching nor multiple checks justifies splitting. Derive size from bounded
-   reads, acceptance and judgment; large requires an irreducible reason.
-   A fresh worker must finish from its handoff, including shared decisions.
-   Refine the whole plan for its parent using the
-   [orchestrator readability target](#orchestrator-readability).
-   Size each leaf to its changeset budget (see the
-   [plan contract](plan-contract.md#verification-and-changeset-budget)): split
-   or re-cut a leaf that would exceed it, or give the reason a raise requires.
-   Choose `precision` once: `standard` (default) declares write areas, treats
-   `read_set` as optional orientation, and records a change outside the write
-   set for the verifier to judge; `strict` requires exact paths, a non-empty
-   `read_set`, and a clean pin scan, and stops on an out-of-set change. Run
-   `validate --pin-roots` before approval in both modes and act on each
-   `PLANSCOPE-UNOWNED-PIN` (see the [plan contract](plan-contract.md)).
-   The scan sees only literal path mentions, so also give each leaf the tests
-   that build its paths from segments, the load-cost caps and snapshots its
-   edits move, fixtures whose outcome a changed default flips, and the index
-   that must advertise any file it adds.
-   Review acceptance for actual task coverage; structural validation cannot.
-   Leaf acceptance covers its write set; whole-suite verification stays with
-   the parent. Start from [plan-v5.json](templates/plan-v5.json), then follow
-   [plan contract](plan-contract.md) for fields, capabilities and the Claude
-   `${CLAUDE_SKILL_DIR}` / Codex `<skill-dir>` validator commands. Re-cut failed
-   contracts; every leaf includes `missing_load_bearing_information`.
-5. Add the bounded advisory `planning-execution-cost-v1` profile from the plan
-   contract. Leave unavailable token ranges unknown; never infer them from a
-   size, tier, model name, or stable-proxy count. Contract validation calculates
-   the advisory in the same invocation. Act on its codes before approval:
-   re-groom to batch the flagged chain for `PLANCOST-UNBATCHED-CHAIN` (this
-   includes a pure chain whose leaves have distinct owners: batch it), re-tier
-   for `PLANCOST-TIER-OVER-ASSIGNED`, and merge unjustified split candidates for
-   `PLANCOST-MICROLEAF-RISK` unless the permitted evidence-backed decomposition
-   rationale applies. Then assess `PLANCOST-PLAN-SCALE`; only a still-oversized
-   plan is sliced into successive plans. After an approved leaf returns
-   `oversized`, preserve that run and its evidence, and obtain approval for a
-   replacement plan before dispatch; derive its leaves from the original
-   cohesive outcomes, not from the unstarted remainder alone.
-   A plan sliced into successive plans composes and hands off per
-   [plan series](plan-series.md).
+1. Use the active host's planning/approval lane. Orient enough to settle the
+   goal, constraints, success, and approach. Ask only for material missing
+   decisions; inspect discoverable repository facts first. Do not invent an
+   alternative when direction is settled. Before approval, invoke the owning
+   design skill for an unresolved domain-design choice.
+2. Present a concise readable plan: outcome, material decisions, boundaries,
+   cohesive delegated outcomes, dependencies, and acceptance checks. Delegate
+   decomposable work by default; the parent prepares shared facts once and
+   retains integration and final verification. Keep code and its tests together.
+   Select an owning audit only for a bounded unresolved inspection question
+   that can change approach or acceptance; otherwise use the owning design skill.
+3. Obtain approval once before implementation. Then give native host workers
+   self-contained assignments under the contract below. Keep independent writers
+   in separate persistent worktrees; sequence overlapping writes. Start dependents
+   from the parent state containing their integrated prerequisites.
+4. Review each returned diff against its outcome, decisions, named targets,
+   scope, and actual acceptance coverage. Apply the independent-review triggers
+   below before integration. Parent review and appropriate tests apply always.
+5. Integrate under the repository's Git policy and run the required final
+   verification once at closeout. Do not repeat the full suite per integration;
+   rerun affected scoped acceptance when integration changes the tested tree.
+   Preserve non-force cleanup proofs and report checks, limitations, and blockers.
 
-When guidance initializes `scope-policy`, the plan records its level and
-escalation mode in `settled_decisions`; each leaf's `boundary`/`write_set`
-materializes them, adding no plan field. `scope-policy` owns the semantics.
+Standard requires no executable JSON, digest envelope, capability-binding file,
+ledger, readiness score, line/file budget, mandatory pin scan, economics forecast,
+or policy footer. Detailed cost forecasting and tracing remain explicit opt-ins.
+Targeted impact checks remain necessary, including affected call sites, fixtures,
+path-pinning tests, load budgets, generated indexes, and publication surfaces.
 
-Delegate unless the plan states one case in one line: indivisible/trivial,
-needs user mid-flight, context cannot travel, or each result redefines the
-next. Dispatch overhead is a batching/merge issue and overlap a
-sequencing/isolation issue; neither is an inline case. Select an owning
-audit only for one bounded initial-inspection question whose evidence cannot be
-resolved by targeted inspection/tests and can change approach or acceptance;
-otherwise use the owning design skill.
+## Standard assignment and return
 
-Select each leaf's portable tier and weighted readiness under the plan contract;
-the adapter maps tiers or returns its blocker. No per-leaf runtime tuning.
+Give a native worker its outcome and label, boundary/write areas, material
+approved decisions and constraints, useful source pointers, prerequisite state,
+worktree, acceptance checks, and escalation conditions. Name any required tool,
+skill, service, permission, or runtime; check availability before dispatch and
+refresh that check when host, executor, or requirements change. Never silently
+weaken an explicit capability requirement. Use the host's supported defaults
+unless the assignment requires a particular capability. Do not use the managed
+`plan-step-*` wrappers for lightweight work.
 
-Each completed leaf is also checked once by an independent read-only verifier
-([verify handoff](verify-handoff.md)) unless the plan sets
-`verification: closeout-only`; a run without delegation sets it at planning
-time and discloses it in the footer. The verifier is independent of the builder
-and never replaces the parent's integration or closeout verification. A verdict
-stands across the integration rebase; the scoped-acceptance rule below is
-unchanged.
+Workers may inspect adjacent code, locate call sites, and establish routine
+facts inside the approved outcome. Necessary adjacent edits and stronger checks
+are allowed, reported, and parent-reviewed. Follow explicit repository scope or
+path restrictions, including exact boundaries requested by `precision: strict`
+without activating a ledger. Do not fix unrelated problems, weaken acceptance, invent
+requirements, or cross an authority boundary. Missing material decisions,
+unsafe ambiguity, unavailable required capability, or work that no longer fits
+its bounded assignment returns a blocker with completed work and remainder.
 
-`next` and `show --next-only` list other startable steps in a `concurrent`
-field. Detail: [ledger contract](ledger-contract.md).
+Return a concise result, at most 8 KiB: outcome label, status, changed paths,
+commit, checks with exit codes/results, blockers, limitations, and unfinished
+work. Logs and large evidence live out of band behind pointers. Report changed
+work with its commit; do not leave uncommitted edits. A blocked check is not a
+pass. No managed schema, run/attempt identities, or JSON envelope is required.
 
-Final verification runs once, at closeout, never per integration cycle;
-per-integration checks are the helper's ancestry and fast-forward proofs, not
-test re-runs. Acceptance evidence survives a tree-identical rebase: the
-helper's `rebased_tree_changed: false` means a leaf's recorded acceptance
-stands, and `true` means re-run only that leaf's scoped acceptance, never the
-full suite. When tdd-policy is in force, the parent runs its suite step once,
-at integration, before final verification.
+The parent owns at most one corrective redispatch for a concrete remediation
+per assigned outcome. If it fails again or makes no new progress, reassess and
+report the blocker rather than repeating or resetting the count. This bounds
+worker redispatches, not ordinary focused test iterations. Keep useful evidence.
+The parent may resolve a routine execution correction within the approved
+outcome; renewed approval is required for material changes to objectives,
+constraints, externally visible behavior, or weakened acceptance.
+
+## Independent review
+
+Require a fresh read-only reviewer for a public-contract change, security-
+sensitive change, destructive operation, removal of required behavior/rules/
+assertions, or an impact the parent cannot bound. Assess these triggers during
+planning and again against the actual diff; record which trigger applies. Honor
+explicit repository or user review requirements even when no trigger applies.
+The reviewer is independent of the builder. Give it the task, relevant approved
+decisions, diff/base and returned commit, and inspectable acceptance evidence,
+not builder reasoning. Check task coverage, decisions, silent removal, scope,
+and whether acceptance exercises the change. Reject with a cited path and
+violated requirement; style preferences do not block. Resolve substantive
+findings and inconclusive required checks before integration. Review does not
+replace parent responsibility or final verification.
 
 ## Orchestrator readability
 
-Refine plan prose for a fresh parent orchestrator at Codex `sol/high`, Claude
-`opus/high`, or comparable capability on another host, including Copilot.
-Authors may use a stronger model or greater effort. These are writing targets;
-runtime model settings and subagent tier selection remain separate.
-
-Before approval, read the plan and its named references as that fresh parent.
-Provide enough detail to dispatch, assess returns, integrate, recover, and verify:
-
-- Settled decisions and concise rationale affecting execution.
-- Prerequisites, dependencies, sequencing, and integration order.
-- Permitted routine judgment and decisions requiring clarification or replanning.
-- Expected verification evidence, foreseeable failure responses, and the
-  reference or checkpoint for resuming interrupted work.
-
-If execution requires reconstructing the planning conversation, inferring a
-missing decision, or reopening a settled choice, refine before approval.
-Structural validation alone does not establish readability.
-
-Keep cohesive steps and concise named references; avoid repeating workflows,
-copying conversations, or splitting routine actions into extra steps. Bounded
-implementation judgment remains with its assigned owner.
+A fresh parent must understand decisions, sequencing, allowed judgment,
+verification evidence, blockers, and next action without reconstructing the
+conversation. Keep cohesive outcomes and named references, not repeated
+workflows. Size assignments by bounded reads, acceptance, and judgment rather
+than predicted diff length. Re-cut when the actual task cannot be managed safely.
 
 ## Approval and output
 
-Before presenting an executable plan, follow [approval handoff](approval-handoff.md).
-Include the resolved envelope in the host approval plan. Approval handoff owns
-authorized preparatory saves and inline fallback. Present the groomed plan and stop: Claude uses
-`ExitPlanMode`; Codex uses native approval or asks explicitly and ends the turn.
-Non-interactive surfaces return a proposal and say approval was not obtained.
-No spec, commit, implementation, or delegation happens before approval.
-After approval, resolve the envelope before capability binding or ledger init.
+Use native approval when available, otherwise present the plan for explicit
+approval and stop. Never claim a mode change or approval the host did not give.
+Non-interactive proposals disclose that approval was not obtained. Read-only
+planning does not authorize preparatory writes. Approval survives routine
+execution corrections; recovery itself never grants new authority.
 
-The active adapter resolves capabilities using the
-[exact binding contract](plan-contract.md#approval-and-dispatch-readiness).
-Missing capabilities stop `blocked:capability_unavailable`; never substitute
-silently. Claude mechanical wrappers lack `Skill` and cannot accept additional
-skill requirements.
+Keep a compact progress record with the approved plan/approval reference,
+material decisions, completed and pending outcomes, actual attempts, evidence
+pointers, blockers, and next action, at most 8 KiB excluding linked artifacts.
+Use authorized persistent task storage when available. Otherwise carry a
+self-contained checkpoint in the host conversation and disclose that durable
+recovery is unavailable. After interruption, recover this record; ask for the
+approved plan if its identity or authority cannot be established. Never invent
+missing approval from a summary. This is a progress note, not another scheduler.
 
-For two or more delegated steps, only the parent creates
-`<git-common-dir>/planning-policy/ledgers/<plan-id>/`. Keep bounded checkpoints,
-evidence paths, and returns, never raw logs. Successful leaves close
-`completed` → `integrated` → `cleaned`; create dependent worktrees from the
-current parent tip once each prerequisite is `integrated`. Follow [worker handoff](worker-handoff.md) for
-generated assignments and return preflight. Use the ledger's Git-policy helper, not a routine
-cherry-pick, then validate `--closeout`.
+Adoption template (host adapters supply their native approval syntax):
 
-For a new version-5 run, the parent uses the ledger's
-`escalating_remediation_v1` retry policy. The ledger alone decides whether an
-eligible return gets one same-tier remediation attempt or a higher mapped tier;
-it preserves the leaf's task, boundary, read/write sets, and attempt identity
-semantics. An agent reports bounded evidence and never self-escalates, alters
-its contract, or treats an oversized/missing-input stop as retryable work.
+> `planning-policy: workflow: standard — before work covered by Scope <globs>,
+> settle and approve the approach; delegate cohesive outcomes by default, retain
+> parent integration and verification, and require independent review on risk.
+> Exceptions <globs>. Explicit settings override defaults. Say "skip planning"
+> for a logged per-task opt-out. Enforcement model.`
 
-The human plan includes one compact **Execution economics** line: expected/high
-attempts; verify dispatches; tier mix; largest repeated-context driver;
-declared-model-token range or `indeterminate`; final-verification reserve or `indeterminate`;
-`tracing: off`.
-Cost findings never change validity, readiness, dispatch, retry, or lifecycle.
-
-Adoption template (Codex uses its native approval/delegation wording):
-
-> `planning-policy: <profile> — before new feature or build work, brainstorm the
-> approach in plan mode and get it approved before implementing. The approved
-> plan says who runs each step; delegate decomposable work unless it states why
-> not, and keep integration and verification in the parent. Scope <globs>. verify:
-> per-leaf | closeout-only. precision: standard | strict. Opt out per task by saying "skip planning"
-> (logged). Enforcement <model>.`
-
-Explicit scope overrides the bare default of new feature/build/creative
-work. Trivial edits, hotfixes, spikes, and domain-owned work are exceptions
-only if the standing line does not cover them.
-`delegation` is `subagents-by-default` or `inline`; `enforcement` is behavioral
-`model`, not a claimed mechanical backstop. Opt out by removing/off, a logged
-per-task phrase, or scope/exception globs.
-
-Footer:
-
-```text
-Planning policy: <enforced-initialized | on-demand | opt-out applied | not initialized>
-Source: <initialization line | explicit request>
-Scope/exceptions: <in force>
-Plan mode: <entered | already active | fallback used (reason) | not available (reason)>
-Execution shape: <subagents: N steps (bands) | inline (case) | delegation unavailable (reason)>
-Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>
-Precision: <standard | strict>
-Opt-outs: <none | phrase logged>
-```
+Use `workflow: strict` for executable v5 contracts and managed execution. An
+explicit `verify` setting continues to override the default review selection;
+`precision` still controls v5 paths, not workflow selection. Removing/off,
+a per-task opt-out, or scope exceptions remain available. Report meaningful
+progress, results, and exceptions; no routine policy footer is required.

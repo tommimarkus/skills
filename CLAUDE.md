@@ -448,11 +448,16 @@ Two agent classes live under `<plugin>/agents/`.
 
 `scripts/check-runtime-metadata-parity.py` derives the canonical router body from the paired skill name and rejects any extra or changed body text, so a wrapper cannot quietly become a second workflow. It also rejects unpaired published agents except the six exact execution-tier names below: four `souroldgeezer-policy/agents/plan-step-*.md` and `plan-verify-standard` / `plan-verify-analytical`. When a skill's invocation contract changes, update the shared `SKILL.md`; touch its wrapper only when the mirrored trigger metadata or Claude-specific frontmatter must change.
 
-**Execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four builder definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier, and stops for a parent re-cut rather than expanding when a step outgrows its size band. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Two read-only verifiers join them: `plan-verify-standard` (sonnet/medium, verifies mechanical and standard builds) and `plan-verify-analytical` (opus/high, verifies analytical and deep builds), tools Read, Grep, Glob, Bash with Edit and Write disallowed. They are contract-bound, not restatements of a native reviewer such as `feature-dev:code-reviewer`: packet-only inputs, fixed checks, a bounded ledger-ingested verdict, and enforced read-only. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
+**Managed execution-tier agents** (`souroldgeezer-policy/agents/plan-step-*.md`), deliberately *not* skill-paired — the one class that breaks 1:1 pairing. Four builder definitions on a mechanical → heavy-reasoning gradient (`plan-step-mechanical` haiku/low · `plan-step-standard` sonnet/medium · `plan-step-analytical` opus/high · `plan-step-deep` opus/xhigh) that a `planning-policy` plan names, so a delegated step selects a **tier** declaratively instead of hand-tuning `model` / `effort` per `Agent` call. Each escalates rather than improvising when a step sits above its tier, and stops for a parent re-cut rather than expanding when a step outgrows its size band. Extend this set by adding a *tier*, not a *role*: role agents that restate a native one (`Explore`, `Plan`, `code-simplifier`, `feature-dev:code-reviewer`) are exactly what lean-audit's `LA-NAT-*` platform-redundancy lens flags. Two read-only verifiers join them: `plan-verify-standard` (sonnet/medium, verifies mechanical and standard builds) and `plan-verify-analytical` (opus/high, verifies analytical and deep builds), tools Read, Grep, Glob, Bash with Edit and Write disallowed. They are contract-bound, not restatements of a native reviewer such as `feature-dev:code-reviewer`: packet-only inputs, fixed checks, a bounded ledger-ingested verdict, and enforced read-only. Plugin subagents **ignore** `permissionMode`, `hooks`, and `mcpServers` — never set them here; `model`, `effort`, `tools`, `disallowedTools`, `skills`, `maxTurns`, `background`, `isolation`, `memory`, and `color` do apply.
 
 ### Planning-policy execution contract (Claude Code)
 
 <!-- lean-audit:sync-intentional: AGENTS.md § Planning-policy execution contract (Codex) is the Codex counterpart; each runtime file stays self-contained, so edit both together. -->
+
+Default `workflow: standard`: readable approval, native delegation, risk-based
+review, parent integration and verification. Explicit `workflow: strict` uses
+the managed v5 contract below. `precision` controls paths, not workflow selection;
+existing approved runs retain their settings. Tier mappings are managed-only.
 
 The contract lives in the skill, not here. Load it through the
 [SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which
@@ -464,10 +469,9 @@ routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/refere
 [plan series](souroldgeezer-policy/skills/planning-policy/references/plan-series.md),
 [usage tracing](souroldgeezer-policy/skills/planning-policy/references/usage-tracing.md), and
 [ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
-New executable plans use `contract_version: 5`, started from
+Strict plans use `contract_version: 5` and
 [plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
-versions 1–4 are retired; retained pre-v5 runs are handled per
-[ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
+versions 1–4 are retired; retained pre-v5 runs follow compatibility above.
 
 Claude host adapter ([claude-code.md](souroldgeezer-policy/skills/planning-policy/extensions/claude-code.md)):
 portable aliases only — `haiku`/`low`, `sonnet`/`medium`, `opus`/`high`,

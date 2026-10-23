@@ -277,6 +277,11 @@ criteria. Do not treat this repository's guidance as the target's policy.
 
 <!-- lean-audit:sync-intentional: CLAUDE.md § Planning-policy execution contract (Claude Code) is the Claude Code counterpart; each runtime file stays self-contained, so edit both together. -->
 
+Default `workflow: standard`: readable approval, native delegation, risk-based
+review, parent integration and verification. Explicit `workflow: strict` uses
+the managed v5 contract below. `precision` controls paths, not workflow selection;
+existing approved runs retain their settings. Tier mappings are managed-only.
+
 The contract lives in the skill, not here. Load it through the
 [SKILL.md load map](souroldgeezer-policy/skills/planning-policy/SKILL.md), which
 routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/references/plan-contract.md),
@@ -287,10 +292,9 @@ routes to the [plan contract](souroldgeezer-policy/skills/planning-policy/refere
 [plan series](souroldgeezer-policy/skills/planning-policy/references/plan-series.md),
 [usage tracing](souroldgeezer-policy/skills/planning-policy/references/usage-tracing.md), and
 [ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
-New executable plans use `contract_version: 5`, started from
+Strict plans use `contract_version: 5` and
 [plan-v5.json](souroldgeezer-policy/skills/planning-policy/references/templates/plan-v5.json);
-versions 1–4 are retired; retained pre-v5 runs are handled per
-[ledger compatibility](souroldgeezer-policy/skills/planning-policy/references/ledger-compatibility.md).
+versions 1–4 are retired; retained pre-v5 runs follow compatibility above.
 
 Codex host adapter ([codex.md](souroldgeezer-policy/skills/planning-policy/extensions/codex.md)):
 the portable tiers map exactly: `mechanical` → `gpt-5.6-luna`/`low`,

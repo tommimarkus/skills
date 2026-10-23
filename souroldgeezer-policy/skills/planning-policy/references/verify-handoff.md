@@ -1,6 +1,6 @@
 # Verifier handoff
 
-Portable procedure for the read-only verifier of one completed leaf. The
+Managed procedure for the read-only verifier of one completed leaf. The
 parent runs `verify-handoff` and `record-verify`; the verifier sees only the
 generated `planning-verify-handoff-v1` packet (at most 16 KiB) and never the
 builder's notes, logs, or reasoning. The packet carries `schema`,

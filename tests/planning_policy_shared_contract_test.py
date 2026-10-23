@@ -178,7 +178,7 @@ class SharedContractTest(unittest.TestCase):
         self.assertEqual(5, template["contract_version"])
         self.assertNotIn("version", template)
         self.assertTrue(
-            {"objective", "scope_summary", "approved_decisions", "work_units", "leaves", "execution_cost"}
+            {"objective", "scope_summary", "approved_decisions", "work_units", "leaves"}
             .issubset(template)
         )
         self.assertEqual({"id", "original_size", "cohesive_outcome", "decomposition"}, set(template["work_units"][0]))
@@ -187,12 +187,9 @@ class SharedContractTest(unittest.TestCase):
         self.assertTrue({*MODULE.REQUIRED, "max_attempts", "capability_requirements"}.issubset(scaffold_leaf))
         self.assertEqual("bounded-step-return-v1", scaffold_leaf["return_contract"])
         self.assertIn("missing_load_bearing_information", scaffold_leaf["stop_conditions"])
-        self.assertTrue(
-            {
-                "schema", "mode", "expected_attempts", "leaf_attempt_overrides", "declared_model_tokens",
-                "final_verification_commands", "assumptions", "unknowns",
-            }.issubset(template["execution_cost"])
-        )
+        self.assertNotIn("execution_cost", template)
+        self.assertEqual("strict", template["precision"])
+        self.assertEqual("per-leaf", template["verification"])
         blank = MODULE.validate(template)
         self.assertFalse(blank["valid"])
         self.assertFalse(blank["dispatch_ready"])
@@ -252,7 +249,7 @@ class SharedContractTest(unittest.TestCase):
         result = MODULE.validate(plan)
         self.assertFalse(result["valid"])
         self.assertTrue(any("irreducible" in error for error in result["errors"]))
-        self.assertTrue(any("standard_ready_ratio" in error for error in result["errors"]))
+        self.assertFalse(any("standard_ready_ratio" in error for error in result["errors"]))
 
     def test_rejects_cycles_and_unjustified_audit(self):
         first, second = (
@@ -272,18 +269,23 @@ class SharedContractTest(unittest.TestCase):
             any("must be true" in error or "bounded" in error for error in result["errors"])
         )
 
-    def test_exception_waives_only_ratio(self):
+    def test_analytical_only_plan_needs_no_exception_but_keeps_dispatch_guards(self):
         plan = v5_plan(
             leaf("one", "u1", "deep"),
             work_units=single_units("large"),
-            analytical_heavy_exception={
-                "rationale": "The chosen approach is research-first",
-                "user_approved_by": "user",
-            },
         )
-        result = MODULE.validate(plan)
-        self.assertTrue(result["valid"], result["errors"])
-        self.assertEqual(result["standard_ready_ratio"], 0.0)
+        for exception in (None, {"rationale": "Retained approval", "user_approved_by": "user"}):
+            with self.subTest(exception=exception):
+                if exception is not None:
+                    plan["analytical_heavy_exception"] = exception
+                result = MODULE.validate(plan)
+                self.assertTrue(result["approval_ready"], result["errors"])
+                self.assertEqual(result["standard_ready_ratio"], 0.0)
+                self.assertFalse(result["dispatch_ready"])
+                binding = capability_binding(plan)
+                self.assertTrue(MODULE.validate(plan, binding)["dispatch_ready"])
+                binding["bindings"][0]["executor"] = ""
+                self.assertFalse(MODULE.validate(plan, binding)["dispatch_ready"])
 
     def test_accepts_bounded_audit_routed_to_owning_audit(self):
         audited_leaf = leaf("inspect-pagination-tests", "u1")

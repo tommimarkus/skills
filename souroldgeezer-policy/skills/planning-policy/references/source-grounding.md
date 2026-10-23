@@ -1,5 +1,25 @@
 # Planning Policy Source Grounding
 
+## 2026-10-23 adaptive standard workflow
+
+The maintainer requested a fluid default while retaining delegation by default
+and selecting independent review by risk. The approved change separates workflow
+from path precision: standard uses a readable plan and native host assignments;
+strict retains the v5 engine. Routine repository discovery and necessary adjacent
+edits remain within approved outcomes, while material changes still need approval.
+The tier-mix floor is removed as an admission condition because it describes
+executor composition, not decision completeness. Its diagnostic fields remain.
+Cost advice no longer mandates batching, re-tiering, or plan slicing.
+
+Earlier grounding below explains the managed controls; it does not make them
+mandatory on the new standard route. Existing approved managed runs keep their
+recorded precision, verification, identity, and retry rules. Malformed managed
+input never falls back to standard. The synthetic workflow-profile cases and
+local validator/load-route regressions cover these contracts. They are original
+repository-authored material, not copied third-party workflow or evidence of
+measured speed, reliability, or provider-token savings. See the authoring/evaluation
+note at `evals/workflow-profiles.md` for obligation disposition and evidence limits.
+
 ## 2026-10-07 ledger-corpus execution friction
 
 A read-only review of the local ledger corpus found 22 runs. At least 6 of the

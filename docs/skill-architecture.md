@@ -126,15 +126,18 @@ as `severity × risk tier`;
 [planning-policy](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
 derives a delegated step's size band from its read-set and acceptance check, then
 hands the band to the subagent as the referent it checks its real scope against.
+Standard planning uses a readable approved plan, native delegation, compact
+progress records, and risk-based independent review without an executable
+contract. Strict managed execution uses the derivation/consumer example above.
 The portable contract owns planning fields and stop conditions; a host overlay
 may add dispatch syntax but cannot rewrite them. Load the canonical authority
 for the task at hand:
 
-- When authoring an executable plan, read the
+- When authoring a strict managed executable plan, read the
   [core workflow](../souroldgeezer-policy/skills/planning-policy/references/core-workflow.md)
   and [plan contract](../souroldgeezer-policy/skills/planning-policy/references/plan-contract.md)
   for derivation, readiness, and capability requirements.
-- When an approved plan must survive a context reset, read the
+- When a strict managed approved plan must survive a context reset, read the
   [approval handoff](../souroldgeezer-policy/skills/planning-policy/references/approval-handoff.md).
   Its explicit-root writer owns authorized persistence; validation and recovery
   remain read-only and retain the complete inline envelope when storage is unavailable.
