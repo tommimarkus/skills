@@ -84,15 +84,3 @@ own **Definition of Done** — do not graduate here.
 
 Report one line: `lesson captured: #<n> (<substrate>)`, `duplicate of #<n>`,
 `no lesson`, or `no lesson (secret-scan tripped: …)` / `no lesson (capture unavailable)`.
----
-name: lesson-capture
-description: Use when the user explicitly asks to capture a reusable skill-authoring lesson as a lesson-candidate GitHub issue. Not automatic; repo-internal and not a published plugin skill.
----
-This is the Codex entrypoint for a shared repo-internal skill.
-Read `internal-skills/lesson-capture/SKILL.md` and follow it as the source of truth. Do not duplicate or override the shared workflow here.
----
-name: lesson-capture
-description: Use when the user explicitly asks to capture a reusable skill-authoring lesson as a lesson-candidate GitHub issue. Not automatic; repo-internal and not a published plugin skill.
----
-This is the Claude Code entrypoint for a shared repo-internal skill.
-Read `internal-skills/lesson-capture/SKILL.md` and follow it as the source of truth. Do not duplicate or override the shared workflow here.
