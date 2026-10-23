@@ -2,9 +2,11 @@
 
 ## Standard workflow
 
-Use native Plan mode when active/exposed; otherwise present the readable
-plan and wait for explicit approval without claiming a mode change. After
-approval, use `spawn_agent` with a self-contained assignment and
+Follow the shared authority check: clear settled implementation proceeds within
+its authorized outcome. When approval is required, use native Plan mode when
+active/exposed; otherwise present the readable plan and wait for explicit
+approval without claiming a mode change. Delegate when its benefit earns the
+cost, using `spawn_agent` with a self-contained assignment and
 `fork_turns: "none"`. Use supported host defaults unless the task requires a
 particular capability. Concurrent writers get separate persistent worktrees.
 A required independent reviewer is a fresh read-only assignment; do not give it
@@ -65,7 +67,8 @@ step. Give concurrent writers separate persistent worktrees. Set
 than inherited conversation context. The parent keeps decomposition,
 integration, and end-to-end verification.
 
-Use this settled mapping:
+For an existing mapped run, explicit model pin, or a new run deliberately using
+`--host codex`, use this settled mapping:
 
 | Portable tier | Codex model and reasoning effort |
 |---|---|
@@ -76,8 +79,13 @@ Use this settled mapping:
 
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
-Initialize with `init-v5 --host codex --evidence ...` to derive assignments and
-the binding from the shared tier map; this table stays pinned to it. Pass the
+For a new run without an explicit model pin, follow
+[new-run executor selection](../references/strict-workflow.md#new-run-executor-selection)
+before initialization. An available evidenced equivalent uses the existing
+explicit assignment/binding interface; it does not change this table or any
+resumed run. Initialize with `init-v5 --host codex --evidence ...` only when
+choosing the mapped lane, which derives assignments and the binding from the
+shared tier map; this table stays pinned to it. Pass the
 generated `prompt` from `dispatch` to the agent unchanged, appending host facts
 only. Launch the steps a `next` block lists in `concurrent` together
 (concurrent `spawn_agent` calls in the same turn).
@@ -95,19 +103,24 @@ and lands the batch once every member is completed or terminal. An
 environment stop follows the
 [ledger contract](../references/ledger-contract.md) environment-stop rule.
 
-Per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
+Mapped per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once per
 `verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
 `medium` for mechanical and standard builds, `gpt-5.6-sol` / `high` for
 analytical and deep builds, as named by `verifier_tier`. Never pass builder
-context.
+context. A newly initialized explicit-assignment run may use an available
+equivalent reviewer selected for the packet's `verifier_tier`, with its
+capability and actual model/effort recorded in the task's verification note.
+Load the same [verifier procedure](../references/verify-handoff.md), preserve
+the packet and read-only independence, and honor any explicit reviewer pin.
 
 Parent review, including each target the `task` names, precedes `record-return`;
 after a verifier pass, use the [ledger contract](../references/ledger-contract.md)
 `record-verify --parent-review` lane.
 
-If the selected mapping is unavailable, do not silently downgrade it. Return
+If a required pin or an existing mapped run's selection is unavailable, do not silently downgrade it. Return
 `blocked:model_unavailable` with the requested tier/model/effort and the host's
-availability evidence; the parent reassigns the step or executes it locally.
+availability evidence. A parent may reassign or execute locally only when that
+alternative fits existing authority; changing an explicit user pin needs permission.
 
 ## Ledger-owned retry remediation
 
@@ -117,8 +130,12 @@ digest, diagnosis and action, reuse or fresh executor mode, next agent/host,
 target portable tier, and optional paired evidence. It does not expose raw
 history or a host transcript.
 
-Retries use the mapping above. Honor the ledger-selected tier and executor;
-the parent and agent never change them. If unavailable, return
+Mapped retries use the mapping above. Honor the ledger-selected tier and executor;
+the parent and agent never change them. In an explicit-assignment run, a parent
+selecting another executor uses the existing `--model-or-alias` and matching
+`--capability-binding-file` route without changing the ledger's retry tier,
+attempt cap, or reuse/fresh decision. Preserve explicit pins. If the required
+executor remains unavailable, return
 `blocked:model_unavailable` with target tier/model/effort and availability
 evidence. An agent needing more reasoning returns `blocked:needs_higher_tier`
 with bounded evidence; it never selects its retry. Repairable stops (`blocked:environment`, or any

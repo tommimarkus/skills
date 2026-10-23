@@ -40,14 +40,18 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertIn("`Agent` tool", adapter)
         self.assertIn("`blocked:model_unavailable`", adapter)
         self.assertIn("`blocked:missing_input`", adapter)
-        self.assertIn("Never substitute a versioned model identifier", adapter)
-        self.assertIn("never silently\ndowngrade", adapter)
+        self.assertIn("For mapped runs and explicit pins", adapter)
+        self.assertIn("never substitute a versioned model identifier", adapter)
+        self.assertIn("never silently downgrade", adapter)
         self.assertEqual(4, len(EXPECTED_TIERS))
         for tier, (model, effort) in EXPECTED_TIERS.items():
             self.assertIn(f"| `{tier}` | `{model}` | `{effort}` |", adapter)
         flat = re.sub(r"\s+", " ", adapter)
         for verifier, entry in HOST_TIERS["verifiers"].items():
             self.assertIn(f"`souroldgeezer-policy:{verifier}` (`{entry['model']}`/`{entry['effort']}`)", flat)
+        self.assertIn("new-run executor selection", flat)
+        self.assertIn("explicit assignment/binding interface", flat)
+        self.assertIn("equivalent reviewer", flat)
 
     def test_adapter_leaves_retry_targeting_to_the_ledger(self):
         adapter = ADAPTER.read_text(encoding="utf-8")

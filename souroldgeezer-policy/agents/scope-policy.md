@@ -1,6 +1,6 @@
 ---
 name: scope-policy
-description: "Use when loaded repo or user guidance initializes scope-policy, or when asked to inspect, adopt, or enforce how wide a change may reach — bounding a change to a declared scope level (targeted, balanced, or open), recording out-of-level findings instead of doing them, and escalating one rung only when a level is insurmountable. Not for how minimal a solution should be, nor for planning, testing, or code design; defer to software-design, planning-policy, tdd-policy, and the owning sibling skill."
+description: "Use when loaded repo or user guidance initializes scope-policy, or when asked to inspect, adopt, or enforce how wide a change may reach — choosing a declared scope level (targeted, balanced, or open), recording unrelated wider findings, and making justified bounded extensions within authority. Not for solution minimalism, planning, testing, or code design; defer to the owning sibling skill."
 tools: Bash, Read, Grep, Glob, Edit, Write, Skill
 model: sonnet
 ---

@@ -79,8 +79,7 @@ Classify the change by its effect at the declared seam before choosing RED:
 - **Trivial code** → wiring, plain delegation, accessors, and declarative
   configuration: code with no logic of its own, covered by the seam tests that
   exercise it, so it gets no RED of its own. Trivial is a classification, not
-  an exception: it is not logged as an opt-out, and the footer's `change` field
-  discloses it. Trivial code inside a behavioral change rides on that change's
+  an exception: it is not logged as an opt-out. Trivial code inside a behavioral change rides on that change's
   seam RED. A change that alters an observable outcome at the seam, such as a
   configuration default that changes a result, is behavioral, not trivial.
 - **Intentional requirement change** → update the obsolete expectation in place
@@ -111,18 +110,20 @@ order:
    lane's current run time against its budget when readable.
 2. **Additional value.** If an existing test already detects the regression,
    extend or rely on it. Every retained addition covers a distinct behavioral
-   obligation or failure mode; judge that from the obligation. When the project
-   configures a mutation-testing tool, also run it after GREEN, scoped to the
-   changed code: a new test is retained only if it kills a mutant no existing
-   test kills, otherwise extend or rely on the existing test. The footer
-   reports the unique kills, or `n/a` without a tool.
+   obligation or failure mode; judge that from the obligation. Unique mutant
+   kills are supporting evidence, not a prerequisite for retaining a useful
+   regression test: configured operators may not represent its failure mode.
+   Run configured mutation tooling at the project's declared cadence, or when
+   scoped mutation evidence is useful and proportionate to this change. Tool
+   availability alone does not require a mutation run after every GREEN.
+   Report relevant observed evidence and its limits; never invent a score.
 3. **Level.** Choose the cheapest level that proves the behavior through the
    seam: in-process unit → in-process integration (real collaborators, no child
    process or network) → child process / CLI → end-to-end. A test above the
    cheapest feasible level names what the cheaper level cannot prove (the
    behavior *is* the exit code, environment handling, or wire format, or the
    declared seam itself sits at that level, as a CLI or wire-protocol seam
-   does); record that reason in the footer.
+   does); record that reason with the relevant checks.
 4. **Retention.** Ask of every test to be kept: *Would a behavior-preserving
    refactor force this test to change?* If yes, the test is tied to internal
    structure: write it at the seam, or keep it only as a scaffold test, one
@@ -151,14 +152,17 @@ order:
    mapping, or a non-UTC zone with daylight saving. Classify the output first:
    For machine-facing output, invariance *is* the behavior; for human-facing
    output, the locale is an explicit test input.
-8. **Budget.** When the lane is at or over its budget, RED is still written;
-   GREEN does not land until "REFACTOR includes the suite" brings the lane back
-   within budget, or a logged exception applies. Without a budget there is no
-   breach — the level ladder still applies and the footer reports the suite
-   delta. At GREEN, read the new test's duration from the focused run's
-   output. If it lands in the lane's slow tail (measured against a readable
-   duration distribution), apply the "Writing the test" moves or record a
-   reason. Without a distribution, record the duration only.
+8. **Budget.** Separate an existing overrun from this change's incremental cost.
+   A historical budget breach alone does not hold GREEN hostage to unrelated
+   suite recovery. Use readable baseline, focused duration, and distribution
+   evidence to correct or justify a material new slowdown within the task;
+   record unrelated debt separately. Respect an explicit project hard ceiling
+   or no-landing rule: if it cannot be met within authority, report the blocker
+   and request the required exception. An ordinary feedback target is not such
+   a prohibition. Without a budget there is no invented breach. Read the new
+   test's duration when the runner provides it; address a substantiated slow
+   tail or explain why its cost is needed. Missing optional timing history is
+   unknown, not a reason to build telemetry or repeatedly run the suite.
 
 ## Writing the test
 
@@ -189,8 +193,8 @@ order:
   or location.
 - **Stack idioms:** when `software-design` is available, apply its test-code
   file for the detected stack, loaded once per task. Otherwise apply these rules
-  with the project's conventions and the runner's documentation, and disclose
-  `stack idioms: n/a`.
+  with the project's conventions and the runner's documentation; disclose a
+  limitation only when it affects the result.
 
 ## Execution scope
 
@@ -200,7 +204,7 @@ order:
   never per RED/GREEN step.
 
 Inputs therefore distinguish the focused test command from the full command
-when the runner supports it; the footer records which scope ran.
+when the runner supports it; the normal check summary records which scope ran.
 
 ## REFACTOR includes the suite
 
@@ -221,9 +225,10 @@ tests this cycle wrote, touched, or made redundant:
   supersession.
 - **Structure-coupled tests.** When a behavior-preserving refactor in this
   cycle needed edits to existing tests, those tests are structure-coupled. List
-  them in the footer's `structure-coupled:` field, and rewrite each at the seam
-  where the cycle's scope allows; otherwise leave it. The footer is the record,
-  with no new telemetry: `test-quality-audit` weighs it as `verify-then-retire`
+  them once as `structure-coupled: <named tests>` in the task result or ordinary
+  commit/PR note, and rewrite each at the seam where the cycle's scope allows;
+  otherwise leave it. This exception note is the record, with no new telemetry:
+  `test-quality-audit` weighs it as `verify-then-retire`
   evidence, and it never retires a test by itself.
 - **Shared setup.** Fold duplicated setup code into the suite's shared helpers.
   When the project configures a duplication detector, run it on the test files
@@ -243,7 +248,7 @@ applies `verify-then-retire`.
 
 Each worker applies "Selecting the RED test" inside its own write set and
 resolves its own scaffold tests before handing back, reporting them and any
-structure-coupled tests for the parent's footer; a scaffold never waits for the
+structure-coupled tests for the parent's result; a scaffold never waits for the
 parent. The parent runs the suite step once across all workers' tests at
 integration, before final verification, because only the parent sees the whole
 suite. The parent names the shared test-support paths in each worker's reads.
@@ -259,15 +264,17 @@ suite. The parent names the shared test-support paths in each worker's reads.
   else the language's own visibility markers (exports, `public`, `__all__`, the
   package boundary); when neither resolves it for the code about to change,
   ask. Consumers: the change classification, the level ladder, the retention
-  check, scaffold resolution, and the footer.
+  check, scaffold resolution, and relevant result evidence.
 - `exceptions` — categories exempt from the failing-test-first gate, always logged.
 - `feedback-budget` — `<lane>: <duration>` pairs (e.g. `unit: 30s`): the
-  project-declared wall-clock ceiling for the lane the RED test runs in.
+  project-declared feedback target for the lane the RED test runs in. Preserve
+  an explicitly stated hard ceiling or no-landing condition as a constraint;
+  a numeric target alone does not add that prohibition.
   Resolution: an explicit value; else `inherited` from a budget the repository
   already declares (guidance, a CI job timeout, a Suite health table); else
   none. Derivation: declared by the project and observed from the configured
   test command's run time when readable — never new telemetry. Consumers: the
-  budget step above, the footer, and `test-quality-audit`, which reads the same
+  budget step above, the check summary, and `test-quality-audit`, which reads the same
   declared budget. No numeric mandate, no test-count quota, no new enforcement
   machinery.
 - `enforcement` — `model` (behavioral default) or `model+gate` (adds the phase-2 PreToolUse backstop).
@@ -277,7 +284,7 @@ suite. The parent names the shared test-support paths in each worker's reads.
 
 - Disable: negate/remove the init line, or `tdd-policy: off`.
 - Per-task: a single phrase ("skip TDD — spike", "over budget — accepted,
-  spike") → applied and logged in the footer, never silent.
+  spike") → applied and recorded once with the result, never silent.
 - Per-scope: `exceptions` / `scope` globs.
 - Downgrade: `test-after` + coverage floor — relaxes the invariant, logged as an
   opt-out, not a variant.
@@ -307,22 +314,14 @@ mechanical enforcement is the optional `enforcement: model+gate` PreToolUse hook
 - Language-specific test-code idioms → `software-design`.
 - Commit/branch preflight → `git-workflow-policy`. PR/MR → `pr-ops`. Issues → `issue-ops`.
 
-## Output footer
+## Output
 
-End every run with:
+Combine the outcome, actual checks, and material limits with the task's normal
+result. Explain a non-obvious seam/classification, a more expensive test level,
+relevant cost or mutation evidence, and meaningful exceptions when they affect
+the decision; omit routine policy inventories and repeated `none`/`n/a` fields.
 
-```
-tdd-policy: <mode> | variant <v> | seam <declared rule|public API> |
-change <behavioral|refactor|trivial|requirement-change|behavior-removal> |
-level <unit|in-process|child-process|e2e>[: reason] | ran <focused|affected|full> |
-suite delta <+n/−m tests; lane <time|unknown> vs budget <value|inherited|none>> |
-cost <duration|unknown>[: reason] | mutation <n unique kills|n/a> |
-stack idioms <software-design:<stack>|n/a> |
-scaffold: <name: rewritten|deleted|none> | structure-coupled: <list|none> |
-retired: <list|none> | exceptions/opt-outs applied: <list|none> |
-enforcement <model|model+gate>, gate <ran|n/a> | reference core-workflow.md | delegated: <list|none>
-```
-
-`retired:` entries name their successor, or carry `behavior removed` (behavior
-removal) or `characterization expired` (characterization expiry) instead.
-Scaffold deletions go in `scaffold:`, not `retired:`.
+Preserve useful exception records once: `structure-coupled: <named tests>` for
+affected existing tests; a retired test and its successor, or `behavior removed`
+or `characterization expired`; and any substantive scaffold resolution or
+accepted limitation. These notes do not create a separate reporting workflow.

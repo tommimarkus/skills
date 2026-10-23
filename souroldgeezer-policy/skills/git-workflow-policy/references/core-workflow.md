@@ -105,8 +105,8 @@ history rewrite, or missing verification tooling.
 
 ## Output
 
-End with a concise report containing: mode; repository and branch inspected;
-initialization source or explicit request; base/default branch evidence;
-workflow policy source; project-local options and exceptions; git state summary;
-version-policy placement when relevant; delegated sibling skills; conflicts or
-escalation gates; verification inferred or run; and next action.
+Report the action/result, actual checks, and material limits once. Include the
+relevant repository/branch/commit identity, unusual policy constraint, or
+remaining cleanup when it helps the user act; omit routine mode/source
+inventories and empty fields. Preserve provenance needed by a real handoff or
+destructive-action proof without requiring a separate policy footer.

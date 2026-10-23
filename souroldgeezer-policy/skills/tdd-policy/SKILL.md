@@ -16,13 +16,9 @@ this skill supplies procedure, config, variants, and opt-out handling on demand.
 Inputs: request, repo guidance, initialized options/exceptions, the code about to
 change, the focused and full test commands, the lane's budget and current run
 time when readable, existing tests.
-Evidence: cite the initialization source or explicit request, the variant, the
-scope and the seam in force, the change classification, the RED level (with its
-reason when above the cheapest), the execution scope run, exceptions/opt-outs
-applied, the failing-test → pass cycle or the blocker, the suite delta, the new
-test's duration, mutation evidence when configured, the stack idioms applied or
-n/a, scaffold resolutions, structure-coupled tests, and retired tests with their
-successors or `behavior removed` / `characterization expired` markers.
+Evidence: actual checks and their results, the relevant seam/classification,
+and material limits or exceptions. Preserve meaningful structure-coupled,
+scaffold, and retirement records; omit routine policy inventories.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
 enforcement, guidance edits, or adoption. When editing triggers, behavior, source
@@ -56,15 +52,15 @@ selects RED and resolves its own scaffold tests inside its own write set, and
 the parent runs the suite step once across all workers' tests at integration,
 before final verification. Keep opt-out low-friction (disable line, one-phrase
 per-task override logged, scope/exception globs, `test-after` downgrade) —
-opt-out is where user choice lives. `test-after` relaxes the invariant and is an
+apply reasoned procedural exceptions under the shared posture. `test-after` relaxes the invariant and is an
 opt-out, never a variant. Delegate test adequacy and similarity/history retirement to
 `test-quality-audit`, code/module design and test-code idioms to
 `software-design`, commit/branch preflight to `git-workflow-policy`, PR/MR to
 `pr-ops`, issues to `issue-ops`.
 
-Ask vs continue: continue when scope, seam, variant, exceptions, and the test
-command are clear. Stop and ask on ambiguous scope or seam, an unlogged exception
-request, or when the test command cannot run and no substitute exists. Malformed
+Ask vs continue: discover routine scope, seam, and test-command facts first;
+record justified procedural exceptions once. Ask the user when a material boundary is
+unresolved or essential verification cannot run and no substitute exists. Malformed
 or ambiguous adopting guidance → stop-and-ask or no-op; never mass-generate.
 
 Enforcement honesty follows the posture core's limits rule (enforced-by-default
@@ -74,12 +70,14 @@ posture, no mechanical guarantee; the only mechanical path is the optional
 Stop before letting new or changed behavior at the seam land with no failing test
 first unless an explicit, logged exception applies; a behavior-preserving
 refactor under existing passing tests is not a breach, and neither is trivial
-code that changes no observable outcome at the seam. Stop before GREEN lands in
-a lane at or over its budget unless REFACTOR brings it back within budget or a
-logged exception applies. Stop before GREEN lands with an unresolved scaffold
+code that changes no observable outcome at the seam. A historical suite-budget
+overrun is disclosed, not a demand for unrelated recovery; address material new
+cost and honor explicit hard ceilings. Unique mutant kills support judgment,
+and configured mutation tooling follows project cadence rather than every GREEN.
+Stop before GREEN lands with an unresolved scaffold
 test. Stop if the required test run cannot happen and no documented substitute
 exists.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
-repo's documented skill-architecture validation. End with the output footer from
+repo's documented skill-architecture validation. Use the compact output from
 [references/core-workflow.md](references/core-workflow.md).

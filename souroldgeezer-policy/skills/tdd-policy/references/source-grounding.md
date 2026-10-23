@@ -138,14 +138,22 @@ Sources are linked and paraphrased; none of their text is bundled.
 - Diff-scoped mutation evidence. Google's
   [mutation testing work](https://research.google/pubs/state-of-mutation-testing-at-google/)
   runs a diff-based approach during code review, which motivates scoping a
-  configured mutation tool to the changed code. A new test that kills no mutant
-  the existing tests miss adds no distinct regression value. No new option is
-  added; it follows the duplication-detector shape.
+  configured mutation tool to the changed code when that evidence is useful.
+  Unique kills support a regression-value decision; the configured mutation
+  operators cannot establish the absence of distinct value when none is found.
+  The 2026-10-24 maintainer decision therefore makes mutation evidence advisory
+  and follows project cadence rather than requiring it every GREEN.
 - `structure-coupled` records. That a behavior-preserving refactor had to edit
-  a test is evidence the test is tied to internal structure. Listing it in the footer is evidence for
+  a test is evidence the test is tied to internal structure. A compact named-test
+  exception note in the ordinary task result or commit/PR record is evidence for
   `test-quality-audit`'s `verify-then-retire`, stronger than similarity or
-  history, but it never retires a test by itself. The footer is the record; no
+  history, but it never retires a test by itself. The exception note is the record; no
   telemetry is added.
+
+The same maintainer decision separates historical feedback-budget overruns from
+cost introduced by the current task. An existing overrun alone does not require
+unrelated suite recovery; explicit hard ceilings remain authoritative. These
+are policy choices backed by synthetic cases, not measured runtime savings.
 
 Rejected, with reasons:
 

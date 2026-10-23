@@ -1,6 +1,6 @@
 ---
 name: scope-policy
-description: "Use when loaded repo or user guidance initializes scope-policy, or when asked to inspect, adopt, or enforce how wide a change may reach — bounding a change to a declared scope level (targeted, balanced, or open), recording out-of-level findings instead of doing them, and escalating one rung only when a level is insurmountable. Not for how minimal a solution should be, nor for planning, testing, or code design; defer to software-design, planning-policy, tdd-policy, and the owning sibling skill."
+description: "Use when loaded repo or user guidance initializes scope-policy, or when asked to inspect, adopt, or enforce how wide a change may reach — choosing a declared scope level (targeted, balanced, or open), recording unrelated wider findings, and making justified bounded extensions within authority. Not for solution minimalism, planning, testing, or code design; defer to the owning sibling skill."
 ---
 
 # Scope Policy
@@ -14,12 +14,13 @@ itself) as enforcement authority, low-friction opt-out — is canonical in
 this skill supplies the invariant, levels, escalation, and adoption on demand.
 Bare initialization uses the default profile in
 [references/core-workflow.md](references/core-workflow.md): level `balanced`,
-escalation `stop`. `adopt-guidance` still writes the level inline so the
+escalation `auto`. Explicit stop constraints and immutable managed boundaries
+retain their recorded behavior. `adopt-guidance` still writes the level inline so the
 standing line carries the invariant without relying on that fallback.
 
-Invariant: a change stays inside a declared scope level; work that cannot be
-done at that level escalates one rung under a declared escalation mode, never
-silently widens.
+Invariant: use the declared scope level; make necessary bounded extensions under
+the declared escalation mode with a reason, preserving explicit exclusions and
+immutable managed boundaries.
 
 Non-goal: this skill says nothing about how minimal a solution is inside its
 footprint. Solution minimalism, YAGNI, and design simplicity stay with
@@ -46,17 +47,19 @@ Rules: do not enforce just because the plugin is installed. Enforce when
 loaded repo guidance initializes `scope-policy`, or the user explicitly asks to
 enforce scope. Apply initialized options; bare initialization uses the default
 profile. Apply the declared level's footprint; record
-out-of-level findings rather than doing them, and route them to `issue-ops`.
+unrelated out-of-level findings rather than doing them; issue creation still
+needs authority. Standard planning permits parent-reviewed automatic escalation;
+strict or existing immutable managed leaves retain replacement-plan approval.
 Delegate existing-code reuse/debt disposition to the design skills'
 `project-assimilation`, duplication/waste assessment to `lean-audit`, solution
 minimalism and code/module design to `software-design`, plan-first approach to
 `planning-policy`, test-first ordering to `tdd-policy`, commit/branch handling
 to `git-workflow-policy`.
 
-Ask vs continue: continue when the level, escalation mode, scope, and
-exceptions are clear. Stop and ask on an ambiguous footprint, an unlogged
-exception request, or a level-3 (`open`) task that cannot be completed even
-after disclosing the derived footprint.
+Ask vs continue: resolve routine footprint facts and continue within authority.
+Record a justified extension under the declared escalation mode. Ask the user when a
+material boundary or explicit stop constraint needs authority, or an `open`
+task exceeds the authorized outcome; keep useful independent work moving.
 
 Enforcement honesty follows the posture core's limits rule (enforced-by-default
 posture, no mechanical guarantee). No deterministic script ships with this
@@ -70,5 +73,5 @@ model-derived footprint — that is task-exceeds-request, not a scope problem;
 escalate it to the user rather than widening further.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
-repo's documented skill-architecture validation. End with the output footer
+repo's documented skill-architecture validation. Use the compact output
 from [references/core-workflow.md](references/core-workflow.md).

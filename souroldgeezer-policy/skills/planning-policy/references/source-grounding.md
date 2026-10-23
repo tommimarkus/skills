@@ -1,5 +1,22 @@
 # Planning Policy Source Grounding
 
+## 2026-10-24 judgment-led defaults
+
+The maintainer approved proportionate planning and delegation: a clear settled
+implementation request provides authority for its outcome, while explicit
+plan-first constraints, missing material decisions, and authority boundaries
+still require approval. Delegation must earn its setup/integration cost rather
+than follow decomposability alone. Standard scope escalation composes with the
+scope policy; immutable managed runs retain their recorded behavior.
+
+For a new unpinned strict run, the existing supplied-assignment and exact
+capability-binding interface can record an available evidenced executor. This
+does not change the tier map, stored mapped runs, explicit pins, plan identity,
+or retry ownership. The ordinary policy report carries useful exceptions once.
+These decisions intentionally supersede the previous default obligations;
+synthetic cases and local executor/binding checks are evidence of the contract,
+not measured claims of speed, output quality, or model equivalence.
+
 ## 2026-10-23 adaptive standard workflow
 
 The maintainer requested a fluid default while retaining delegation by default

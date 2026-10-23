@@ -4,11 +4,11 @@ This skill centralizes change-footprint discipline into a passive policy that
 repositories initialize with a declared scope level and escalation mode. Plugin
 installation alone does not enforce it; the standing repo guidance line — which
 must embed the invariant and a level — is the enforcement authority; a bare
-line falls back to the default profile (`balanced` / `stop`), matching the
-sibling policies rather than stopping. `adopt-guidance` consolidates existing
-scope prose into that standing block. Escalation only fires when the task cannot
-be completed correctly at the declared level, never for elegance, and always
-with evidence. Keep guidance original; the level/escalation naming pattern below
+line falls back to the default profile (`balanced` / `auto`). Explicit stop
+settings remain constraints. `adopt-guidance` consolidates existing
+scope prose into that standing block. A necessary bounded extension is justified
+by the authorized outcome and concrete risk, never preference for elegance or
+unrelated cleanup alone. Keep guidance original; the level/escalation naming pattern below
 is conceptually grounded, not copied.
 
 ## Boundary Decisions
@@ -35,9 +35,12 @@ rung structure, command surface, or prose from that project was reused, and no
 prose, code, schema, or assets from it are bundled here — only the general
 concept of a named, switchable intensity axis informed this skill's design.
 
-An approved executable plan adds an immutable boundary to this per-task scope
+An approved strict or existing immutable managed plan adds a boundary to this per-task scope
 policy. A wider correctness requirement makes the leaf terminal `oversized`;
 the parent retains its run evidence and seeks approval for a replacement plan.
 The `auto` setting cannot rewrite the approved digest or authorize another
-dispatch. The synthetic case exercises that interaction while the ordinary
-unapproved `auto` case continues to cover one-rung escalation.
+dispatch. Standard plans instead permit parent-reviewed `auto` escalation when
+the outcome, material decisions, constraints, and acceptance remain intact.
+The 2026-10-24 maintainer decision deliberately removes the accidental coupling
+between routine standard assignments and immutable managed leaves. Synthetic
+cases exercise both paths; they do not establish measured speed improvements.

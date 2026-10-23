@@ -23,6 +23,12 @@ other stop halts the batch. The parent repairs that member per the
 [ledger contract](ledger-contract.md) batch rule.
 Do not give a worker the whole plan or reconstruct a packet from prose.
 
+A new unpinned run may have selected an available executor through the existing
+supplied assignment/binding interface. The packet's `executor` and exact binding
+remain authoritative. A native executor follows the same assigned tier behavior
+and this procedure; it never self-substitutes a model or treats that selection
+as permission to alter scope, capabilities, return shape, or retry policy.
+
 `dispatch` also stores the packet under the run and returns its absolute
 `packet_path` with a generated, host-neutral `prompt` (within 1,200 characters,
 counting each path and id as one placeholder) built only from packet facts.

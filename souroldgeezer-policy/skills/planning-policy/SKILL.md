@@ -5,10 +5,11 @@ description: "Use when loaded guidance initializes planning-policy and work is i
 
 # Planning Policy
 
-Own plan-first enforcement only when repo/user guidance initializes this policy,
+Own proportionate planning only when repo/user guidance initializes this policy,
 or on an explicit “plan this first” request. Installation alone is not authority.
-Apply its stated scope, including named fixes and refactors; get approval before
-implementation. The parent prepares, integrates, verifies, and recovers;
+Apply its stated scope, including named fixes and refactors. Clear implementation
+authority permits settled work; explicit plan-first constraints and material
+missing decisions require approval. The parent prepares, integrates, verifies, and recovers;
 workers execute cohesive assigned outcomes and scoped acceptance.
 
 Inputs: request, guidance, intended work, and orienting files.
@@ -20,7 +21,7 @@ An unresolved domain-design choice invokes its owning design skill before approv
 - **Lookup / inspect:** this entry only; report applicability, not invented enforcement.
 - **Enforce or adopt:** select via [workflow selection](references/core-workflow.md#workflow-selection);
   standard reads the full [core workflow](references/core-workflow.md).
-  `workflow: standard` is the default: concise readable approval, native delegation,
+  `workflow: standard` is the default: proportionate planning and delegation,
   bounded assignments/returns, parent integration and verification, and independent
   review on risk. Use its [assignment contract](references/core-workflow.md#standard-assignment-and-return)
   and [review triggers](references/core-workflow.md#independent-review).
@@ -63,7 +64,7 @@ An unresolved domain-design choice invokes its owning design skill before approv
 Ask vs continue: continue when the approved goal, constraints, success, and
 scope are clear; otherwise ask the user for missing material decisions. Discover
 routine repository facts within the assignment before asking. Stop when
-implementation is unapproved, ambiguity is unsafe, authority is missing, or a
+implementation lacks authority, ambiguity is unsafe, authority is missing, or a
 required capability is unavailable. Degraded host planning uses explicit
 approval without claiming a mode change. Never route a malformed v5 plan,
 binding, or packet into standard work as a fallback. This skill owns planning

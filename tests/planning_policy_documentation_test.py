@@ -3,7 +3,7 @@
 from pathlib import Path
 import unittest
 
-from tests.surface_test_lib import assert_phrases, load_script_module
+from tests.surface_test_lib import assert_phrases, load_script_module, section
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,28 +125,6 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 with self.subTest(destination=destination, fact=fact):
                     self.assertIn(fact.lower(), text.lower())
 
-    def test_claude_guidance_uses_aliases_without_version_claim(self) -> None:
-        claude = self.text("CLAUDE.md")
-        for phrase in (
-            "haiku`/`low", "sonnet`/`medium", "opus`/`high", "opus`/`xhigh",
-            "not claims about a resolved version", "blocked:model_unavailable",
-            "never silently downgrade", "contract_version: 5",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, claude)
-
-    def test_codex_guidance_has_exact_mapping(self) -> None:
-        agents = self.text("AGENTS.md")
-        for phrase in (
-            "gpt-5.6-luna`/`low", "gpt-5.6-terra`/`medium",
-            "gpt-5.6-sol`/`high", "gpt-5.6-sol`/`xhigh",
-            "blocked:model_unavailable", "never silently downgrade",
-            "contract_version: 5",
-        ):
-            with self.subTest(phrase=phrase):
-                self.assertIn(phrase, agents)
-        self.assertNotIn("Copilot execution mapping", agents)
-
     def test_execution_rules_live_in_their_owning_references(self) -> None:
         root = "souroldgeezer-policy/skills/planning-policy/"
         owners = {
@@ -185,24 +163,20 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                     self.assertIn(fact, text)
 
     def test_repo_guidance_planning_sections_stay_pointers(self) -> None:
-        # Same counter as the cost test: one token per word or punctuation mark.
-        counter = ledger.PROXY_TOKEN_RE
         for path, heading in (
-            ("CLAUDE.md", "### Planning-policy execution contract (Claude Code)"),
-            ("AGENTS.md", "### Planning-policy execution contract (Codex)"),
+            ("CLAUDE.md", "## Planning-policy execution contract (Claude Code)"),
+            ("AGENTS.md", "## Planning-policy execution contract (Codex)"),
         ):
-            text = self.text(path)
-            start = text.index(heading)
-            end = text.index("\n## ", start)
-            section = text[start:end]
             with self.subTest(path=path):
-                self.assertLessEqual(len(counter.findall(section)), 600)
-                for pointer in (
-                    "planning-policy/SKILL.md", "references/plan-contract.md",
-                    "references/ledger-contract.md", "templates/plan-v5.json",
-                    "planning_policy_forward_eval.py", "versions 1–4 are retired",
-                ):
-                    self.assertIn(pointer, section)
+                router = section(self.text(path), heading)
+                self.assertIn("planning-policy/SKILL.md", router)
+                self.assertNotIn("references/plan-contract.md", router)
+                self.assertNotIn("references/ledger-contract.md", router)
+                self.assertNotRegex(router, r"gpt-\d|`(?:haiku|sonnet|opus)`")
+                assert_phrases(self, router, (
+                    "explicit implementation authority", "Explicit plan-first",
+                    "Existing runs and explicit model pins retain their settings",
+                ))
 
     def test_amend_splits_execution_metadata_from_scope(self) -> None:
         root = "souroldgeezer-policy/skills/planning-policy/"
@@ -321,18 +295,12 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
 
     def test_v5_authors_are_directed_to_the_canonical_scaffold(self) -> None:
         root = "souroldgeezer-policy/skills/planning-policy/"
-        for relative in ("AGENTS.md", "CLAUDE.md"):
-            with self.subTest(relative=relative):
-                self.assertIn("references/templates/plan-v5.json", self.text(relative))
+        self.assertIn("references/templates/plan-v5.json", self.text(root + "SKILL.md"))
         contract = self.text(root + "references/plan-contract.md")
         self.assertIn("templates/plan-v5.json", contract)
         self.assertIn("never `version`", contract)
 
     def test_v5_handoffs_carry_cohesive_outcome_and_decomposition_evidence(self) -> None:
-        for relative in ("AGENTS.md", "CLAUDE.md"):
-            with self.subTest(relative=relative):
-                self.assertIn("versions 1–4 are retired", self.text(relative))
-                self.assertNotIn("intermediate_states", self.text(relative))
         for adapter in ("claude-code", "codex"):
             text = self.text(
                 f"souroldgeezer-policy/skills/planning-policy/extensions/{adapter}.md"
@@ -377,7 +345,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         codex = self.text(base + "extensions/codex.md")
         self.assertIn("references/verify-handoff.md", entry)
         self.assertIn("check-changeset", entry)
-        self.assertIn("Verify: <per-leaf (N verified, M rejected)", workflow)
+        self.assertIn("independent read-only verifier", workflow)
         self.assertIn("verify:\n> per-leaf | closeout-only", workflow)
         self.assertIn("verify dispatches", workflow)
         self.assertIn("stopping `oversized:changeset`", handoff)

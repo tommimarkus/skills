@@ -40,6 +40,9 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
             self.assertIn(f"`{entry['model']}` / `{entry['effort']}`", flat)
         self.assertIn("`plan-step-standard` (default)", self.text)
         self.assertIn("https://developers.openai.com/api/docs/guides/latest-model", self.text)
+        self.assertIn("new-run executor selection", self.text)
+        self.assertIn("explicit assignment/binding interface", flat)
+        self.assertIn("equivalent reviewer", flat)
 
     def test_requires_complete_handoff_and_honest_stops(self):
         for marker in (

@@ -240,6 +240,30 @@ class CapabilityLedgerTest(unittest.TestCase):
         self.assertEqual(canonical_sha256(self.plan), step["capability_binding"]["plan_sha256"])
         self.assertEqual("gpt-5.6-terra", step["capability_binding"]["bindings"][0]["executor"])
 
+    def test_explicit_executor_selection_retains_matching_capability_evidence(self) -> None:
+        executor = "available-successor"
+        assigned = json.loads(self.assignments_file.read_text(encoding="utf-8"))
+        assigned[0]["model_or_alias"] = executor
+        self.assignments_file.write_text(json.dumps(assigned), encoding="utf-8")
+        resolved = binding(self.plan, executor=executor)
+        resolved["bindings"][0]["evidence"] = ["host exposes the required tools and successor executor"]
+        self.binding_file.write_text(json.dumps(resolved), encoding="utf-8")
+
+        run_id = self.init5()
+        checkpoint = self.checkpoint(run_id)
+        self.assertNotIn("host", checkpoint)
+        step = checkpoint["steps"]["build"]
+        self.assertEqual(executor, step["assignment"]["model_or_alias"])
+        self.assertEqual(resolved["bindings"], step["capability_binding"]["bindings"])
+        code, result = self.call(
+            *self.common, "transition", "--actor", "parent", "--run-id", run_id,
+            "--step-id", "build", "--to", "ready", "--agent-id", "successor-builder",
+        )
+        self.assertEqual(0, code, result)
+        self.assertEqual(
+            executor, self.checkpoint(run_id)["steps"]["build"]["current_assignment"]["model_or_alias"],
+        )
+
     def test_retry_assignment_change_requires_a_matching_rebinding_before_ready(self) -> None:
         run_id = self.init5()
         code, blocked = self.call(

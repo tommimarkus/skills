@@ -84,6 +84,12 @@ and `outside_write_set_count` for the verifier's scope-creep check. `strict_v1` 
 `references/host-tiers.json` (`planning-host-tiers-v1`) is the single tier map
 for `claude-code` and `codex`: model and effort per tier, a `skill` flag, and
 verifier entries; the adapter tier tables are tested against it.
+For new unpinned runs, the existing supplied assignment/binding interface may
+record an available equivalent executor with current capability evidence; see
+[new-run executor selection](strict-workflow.md#new-run-executor-selection).
+This selects actual executors before initialization and adds no schema or
+automatic model discovery. Existing mapped runs and explicit pins keep their
+recorded behavior.
 `init-v5 --host H --evidence TEXT` (1 to 8 lines, each at most 240 characters)
 derives assignments (harness `H`, model and effort from each leaf's
 `portable_tier`, worktree `.worktrees/<worktree_owner>` under the primary
@@ -100,6 +106,9 @@ entry for the step's current tier; an explicit value must equal it. A tier-escal
 as init does (host, the tier's model as executor, the leaf's
 `capability_requirements`, the stored binding evidence); an explicit file still wins
 and must match exactly.
+In a supplied-assignment run without `host`, executor changes instead use the
+existing `--model-or-alias` and matching `--capability-binding-file` arguments;
+they do not change the approved task, capability requirements, or retry tier.
 
 `dispatch` stores each issued packet at
 `<run>/handoffs/<step>/<attempt_id>.json` and each handoff entry gains an

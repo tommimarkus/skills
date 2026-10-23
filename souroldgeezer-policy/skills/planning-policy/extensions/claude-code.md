@@ -2,10 +2,12 @@
 
 ## Standard workflow
 
-Use `EnterPlanMode` when needed and `ExitPlanMode` for the readable plan.
+Follow the shared authority check: clear settled implementation proceeds within
+its authorized outcome. When approval is required, use `EnterPlanMode` when
+needed and `ExitPlanMode` for the readable plan.
 A rejected or withheld approval is not permission: retain the proposal and
-resolve the host's approval state before dispatch. After approval, use the
-native `Agent` with a self-contained general-purpose assignment, not a managed
+resolve the host's approval state before dependent dispatch. Delegate when its
+benefit earns the cost, using the native `Agent` with a self-contained general-purpose assignment, not a managed
 `plan-step-*` wrapper. Use supported host defaults unless the task requires a
 particular capability. Concurrent writers get separate persistent worktrees.
 A required independent reviewer gets a fresh read-only assignment without
@@ -70,8 +72,10 @@ evidence an additional `skill` requirement: stop with
 frontmatter. Apply the same evidence rule to every other missing capability;
 do not silently substitute, drop, defer, or probe for a replacement capability.
 
-Use the `Agent` tool once per decomposed step. Assign the cheapest tier that
-fits and preserve these portable Claude aliases and effort values exactly:
+Use the `Agent` tool once per decomposed step. For an existing mapped run,
+explicit model pin, or a new run deliberately using `--host claude-code`, assign
+the cheapest tier that fits and preserve these portable Claude aliases and
+effort values exactly:
 
 | Tier | Model alias | Effort |
 |---|---|---|
@@ -84,8 +88,15 @@ Pass `subagent_type` as `souroldgeezer-policy:<tier>` — Claude Code registers
 plugin agents under this scoped identifier, and the bare tier name alone
 returns `Agent type '<tier>' not found`.
 
-Initialize with `init-v5 --host claude-code --evidence ...` to derive
-assignments and the binding from the shared tier map; this table stays pinned to
+For a new run without an explicit model pin, follow
+[new-run executor selection](../references/strict-workflow.md#new-run-executor-selection)
+before initialization. Use the existing explicit assignment/binding interface
+for an available evidenced equivalent. Retain the tier wrapper's behavior
+contract: use a host-supported model override when available, or a native
+general-purpose Agent carrying that contract and the shared worker procedure.
+Do not claim an override the host cannot express. Initialize with
+`init-v5 --host claude-code --evidence ...` only when choosing the mapped lane;
+it derives assignments and the binding from the shared tier map. This table stays pinned to
 it. Pass the generated `prompt` from `dispatch` to the Agent unchanged, appending
 host facts only. Launch the steps a `next` block lists in `concurrent` in the
 same turn (several `Agent` calls in one message).
@@ -103,22 +114,28 @@ redispatches followers as singles, and lands the batch once every member is
 completed or terminal. An environment stop follows the
 [ledger contract](../references/ledger-contract.md) environment-stop rule.
 
-Per-leaf verification dispatches `souroldgeezer-policy:plan-verify-standard`
+Mapped per-leaf verification dispatches `souroldgeezer-policy:plan-verify-standard`
 (`sonnet`/`medium`) for mechanical and standard builds, or
 `souroldgeezer-policy:plan-verify-analytical` (`opus`/`high`) for analytical and
 deep builds, as named by the packet's `verifier_tier`. Make one `Agent` call per
 `verify-handoff` packet group, passing the packet unchanged and never builder
 context or notes. An unavailable agent is `blocked:model_unavailable`; never
-downgrade.
+downgrade a required pin or resumed mapping. A newly initialized
+explicit-assignment run may select an available equivalent reviewer for the
+packet's `verifier_tier`, recording its capability and actual model/effort in the
+task's verification note. Load the same
+[verifier procedure](../references/verify-handoff.md), preserve the packet and
+read-only independence, and honor explicit reviewer pins.
 
 Parent review, including each target the `task` names, precedes `record-return`;
 after a verifier pass, use the [ledger contract](../references/ledger-contract.md)
 `record-verify --parent-review` lane.
 
-Never substitute a versioned model identifier for an alias and never silently
-downgrade a requested tier. If Claude Code cannot provide the requested alias or
+For mapped runs and explicit pins, never substitute a versioned model identifier
+for an alias and never silently downgrade a requested tier. If Claude Code cannot provide the requested alias or
 effort, return `blocked:model_unavailable` with the requested tier, alias, and
-effort; the parent must reassign the step or execute it locally.
+effort. A parent may reassign or execute locally only when that alternative fits
+existing authority; changing an explicit user pin needs permission.
 
 Every Agent assignment includes: run, step, agent, and attempt identity; the
 exact resolved binding, including its `planning-capability-binding-v1` schema,
@@ -143,9 +160,12 @@ when it is, the target portable tier. A retry handoff carries its bounded
 reuse or fresh executor mode, next agent/host, target portable tier, and any
 paired evidence. It never carries raw history or a host transcript.
 
-Map that target portable tier to the table above exactly. Do not let the parent,
+In mapped runs, map that target portable tier to the table above exactly. Do not let the parent,
 an Agent, or this adapter select a different tier. Honor the ledger's reuse or
-fresh executor assignment when invoking the Agent. If the exact alias/effort
+fresh executor assignment when invoking the Agent. In explicit-assignment runs,
+a parent selecting another executor uses the existing `--model-or-alias` and
+matching `--capability-binding-file` route while retaining the ledger-selected
+tier, attempt cap, and reuse/fresh decision. Preserve explicit pins. If the required alias/effort
 mapping is unavailable, return `blocked:model_unavailable` with the target tier,
 alias, effort, and availability evidence; never silently downgrade. An executor
 that cannot proceed because a genuinely higher tier is required returns

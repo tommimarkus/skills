@@ -65,5 +65,5 @@ merge/close actions unless a sibling skill or an approved task closeout in
 verification cannot run and no documented substitute exists.
 
 After guidance edits, rerun structured-file checks, `git diff --check`, and the
-repo's documented skill-architecture or docs validation. End with the output
-footer from `references/core-workflow.md`.
+repo's documented skill-architecture or docs validation. Report the outcome,
+actual checks, and material limits using `references/core-workflow.md`.

@@ -59,5 +59,5 @@ Stop when required verification fails or cannot run without a documented
 substitute, or when conflicting release state cannot be reconciled safely.
 
 After release-prep edits, rerun structured-file checks, `git diff --check`, and
-the repo's documented release, packaging, or skill-architecture validation. End
-with the output footer from `references/core-workflow.md`.
+the repo's documented release, packaging, or skill-architecture validation.
+Report the outcome, actual checks, and material limits using `references/core-workflow.md`.

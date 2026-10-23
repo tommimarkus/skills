@@ -73,13 +73,15 @@ audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
 otherwise use the owning design skill.
 
-Select each leaf's portable tier under the plan contract;
-the adapter maps tiers or returns its blocker. No per-leaf runtime tuning.
+Select each leaf's portable tier under the plan contract. Existing mapped runs
+and explicit pins retain their adapter mapping; new unpinned runs may select
+available executors before initialization under the procedure below. No worker
+self-substitution or silent per-leaf runtime tuning.
 
 Each completed leaf is also checked once by an independent read-only verifier
 ([verify handoff](verify-handoff.md)) unless the plan sets
 `verification: closeout-only`; a run without delegation sets it at planning
-time and discloses it in the footer. The verifier is independent of the builder
+time and discloses it with the result. The verifier is independent of the builder
 and never replaces the parent's integration or closeout verification. A verdict
 stands across the integration rebase; the scoped-acceptance rule below is
 unchanged.
@@ -94,6 +96,31 @@ helper's `rebased_tree_changed: false` means a leaf's recorded acceptance
 stands, and `true` means re-run only that leaf's scoped acceptance, never the
 full suite. When tdd-policy is in force, the parent runs its suite step once,
 at integration, before final verification.
+
+## New-run executor selection
+
+Before initializing a new strict run, resolve executor availability and the
+leaf's actual capability requirements from current host evidence. The bundled
+tier map is a supported reproducible choice, not a claim that its identifiers
+are available on every host. Without an explicit user/model pin, an available
+equivalent at the required capability may be selected with a brief reason;
+do not guess capabilities or silently weaken the tier.
+
+Use the existing `init-v5 --assignments-file FILE --capability-binding-file FILE`
+interface for that selection, not `--host`. Assign each leaf's actual executor,
+effort, and persistent worktree, with a matching `planning-capability-binding-v1`
+and current evidence. Record any selected reviewer and effort in the ordinary
+verification note; it still follows the packet's `verifier_tier` and the shared
+read-only verifier contract. Host adapters retain the same managed builder and
+verifier procedures when using native executors.
+
+Existing `--host` runs, approved assignments, explicit pins, plan digests,
+capability requirements, and ledger-selected retry tiers remain unchanged.
+Never edit a checkpoint or the shared tier map to make a dispatch fit. An
+explicit-assignment retry uses the existing matching replacement-binding path
+when its executor changes; the ledger still owns eligibility and target tier.
+If essential capability is unavailable or a required pin cannot be honored,
+return the applicable blocker and keep useful completed work.
 
 ## Orchestrator readability
 
@@ -172,15 +199,9 @@ only if the standing line does not cover them.
 `model`, not a claimed mechanical backstop. Opt out by removing/off, a logged
 per-task phrase, or scope/exception globs.
 
-Footer:
-
-```text
-Planning policy: <enforced-initialized | on-demand | opt-out applied | not initialized>
-Source: <initialization line | explicit request>
-Scope/exceptions: <in force>
-Plan mode: <entered | already active | fallback used (reason) | not available (reason)>
-Execution shape: <subagents: N steps (bands) | inline (case) | delegation unavailable (reason)>
-Verify: <per-leaf (N verified, M rejected) | closeout-only (opt-out) | unavailable (reason)>
-Precision: <standard | strict>
-Opt-outs: <none | phrase logged>
-```
+Report the outcome, actual verification, and material exceptions once, using
+the normal task result. Preserve managed identity/evidence needed for recovery,
+and disclose an intentional inline shape, verification opt-out, unavailable
+capability, or execution limit when relevant. The ledger and bounded handoff
+schemas remain exact machine contracts; human output needs no routine policy
+footer or repeated empty fields.

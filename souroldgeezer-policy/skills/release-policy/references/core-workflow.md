@@ -127,10 +127,8 @@ failures, unclear rollback, or security-sensitive blockers.
 
 ## Output
 
-End with a concise report containing: mode; repository, branch, and candidate
-commit inspected; initialization source or explicit request; release policy
-source and options; git-workflow preflight state; version source and version
-action; changelog/release-notes state; tags inspected or written; provider
-release state; publication targets and actions; verification summary; delegated
-sibling skills; conflicts or escalation gates; post-release checks; and next
-action.
+Report the release/preparation result, candidate identity, actual verification,
+published target/version when applicable, and material limits or next action.
+Keep the commit-bound verification and authority evidence required for the
+action, but omit routine mode/source inventories and empty fields. Combine
+overlapping Git/policy summaries rather than appending another policy footer.

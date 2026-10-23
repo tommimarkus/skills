@@ -12,6 +12,14 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `prior_verify` (null unless a retry: `verify_id`, `rejected_commit`,
 `findings`), and `return_schema`.
 
+For a new explicit-assignment run, an available equivalent executor may have
+been selected for `verifier_tier` under
+[new-run executor selection](strict-workflow.md#new-run-executor-selection).
+Its actual model/effort and capability evidence belong in the parent's normal
+verification note. It follows this same procedure with the unchanged packet;
+the choice never relaxes read-only independence, checks, or return validation.
+Explicit reviewer pins and existing mapped runs retain their mapping.
+
 ## Inputs and reads
 
 Work from the packet alone. Read the diff `base_commit..returned_commit` and at

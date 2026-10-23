@@ -18,19 +18,26 @@ reinterpret malformed managed input as a lightweight assignment.
 
 ## Enforcement
 
-1. Use the active host's planning/approval lane. Orient enough to settle the
-   goal, constraints, success, and approach. Ask only for material missing
+1. Orient enough to settle the goal, constraints, success, and approach. Use
+   the active host's planning/approval lane when a plan needs approval. Ask only for material missing
    decisions; inspect discoverable repository facts first. Do not invent an
    alternative when direction is settled. Before approval, invoke the owning
    design skill for an unresolved domain-design choice.
-2. Present a concise readable plan: outcome, material decisions, boundaries,
-   cohesive delegated outcomes, dependencies, and acceptance checks. Delegate
-   decomposable work by default; the parent prepares shared facts once and
-   retains integration and final verification. Keep code and its tests together.
+2. Scale the plan to the work: outcome, material decisions, boundaries,
+   dependencies, and acceptance checks. A settled implementation request is
+   authority to proceed within its stated outcome; briefly state the approach
+   and work inline when that is sufficient. Delegate when parallelism,
+   isolation, independent analysis, or reusable expertise earns the setup and
+   integration cost; decomposability alone does not require workers. The parent
+   prepares shared facts once and retains integration and final verification.
+   Keep code and its tests together.
    Select an owning audit only for a bounded unresolved inspection question
    that can change approach or acceptance; otherwise use the owning design skill.
-3. Obtain approval once before implementation. Then give native host workers
-   self-contained assignments under the contract below. Keep independent writers
+3. Obtain approval for an explicit plan-first request or constraint, a material
+   unresolved decision, or an action outside existing authority. Do not insert
+   another approval turn for clear authorized work or routine execution choices.
+   When delegating, give native host workers self-contained assignments under
+   the contract below. Keep independent writers
    in separate persistent worktrees; sequence overlapping writes. Start dependents
    from the parent state containing their integrated prerequisites.
 4. Review each returned diff against its outcome, decisions, named targets,
@@ -108,11 +115,13 @@ than predicted diff length. Re-cut when the actual task cannot be managed safely
 
 ## Approval and output
 
-Use native approval when available, otherwise present the plan for explicit
-approval and stop. Never claim a mode change or approval the host did not give.
-Non-interactive proposals disclose that approval was not obtained. Read-only
-planning does not authorize preparatory writes. Approval survives routine
-execution corrections; recovery itself never grants new authority.
+When approval is required, use native approval when available, otherwise present
+the plan for explicit approval and stop the dependent work. Never claim a mode
+change or approval the host did not give. A non-interactive proposal that needs
+approval discloses it was not obtained. Clear implementation authority does not
+depend on a host exposing Plan mode. Read-only planning does not authorize
+preparatory writes. Approval survives routine execution corrections; recovery
+itself never grants new authority.
 
 Keep a compact progress record with the approved plan/approval reference,
 material decisions, completed and pending outcomes, actual attempts, evidence
@@ -126,8 +135,9 @@ missing approval from a summary. This is a progress note, not another scheduler.
 Adoption template (host adapters supply their native approval syntax):
 
 > `planning-policy: workflow: standard — before work covered by Scope <globs>,
-> settle and approve the approach; delegate cohesive outcomes by default, retain
-> parent integration and verification, and require independent review on risk.
+> settle the approach proportionately; proceed with clear implementation authority,
+> ask for material decisions or explicit plan-first approval, delegate when its
+> benefit earns the cost, retain parent integration and verification, and review on risk.
 > Exceptions <globs>. Explicit settings override defaults. Say "skip planning"
 > for a logged per-task opt-out. Enforcement model.`
 

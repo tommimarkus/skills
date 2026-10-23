@@ -7,7 +7,7 @@ No live speed, reliability, or provider-token claim follows from static load siz
 
 ## Acceptance scenarios
 
-The `standard-*` cases in `behavior-cases.jsonl` exercise default delegation,
+The `standard-*` cases in `behavior-cases.jsonl` exercise proportionate delegation,
 dependent work, local discovery, adjacent edits, material scope changes,
 redispatch bounds, missing storage/approval recovery, managed-input isolation,
 retained run settings, and each of the five independent-review triggers.
@@ -27,15 +27,20 @@ Unchanged managed obligations were moved intact from `core-workflow.md` into
 exact paths and pin scans, per-leaf verification and budgets, independent
 verification ownership, integration and scoped-check economy, readability,
 approval envelopes, capability binding, ledger lifecycle, retry ownership,
-opt-outs, and the detailed managed footer. Their route is explicit strict or
+and opt-outs. Their route is explicit strict or
 existing managed execution; none is silently removed from an approved run.
+The later judgment-led change replaces routine human footers with concise
+results and meaningful exceptions; machine handoff and ledger schemas remain
+exact. It also permits new unpinned runs to select an evidenced available
+executor through the existing supplied assignment/binding interface. Existing
+mapped runs and explicit pins retain their behavior.
 
 The following normative changes are intentional and approved, not a claim that
 shorter text preserves the former requirement:
 
 | Former obligation | Replacement / retained protection |
 |---|---|
-| Every executable/delegated plan starts from v5 JSON. | New standard work uses a readable approved plan; strict and retained managed work keep v5. |
+| Every executable/delegated plan starts from v5 JSON. | New standard work uses proportionate readable planning under existing authority; strict and retained managed work keep v5. |
 | Every two-step delegated run initializes a ledger. | Standard records compact progress and actual attempts; managed lifecycle is unchanged. |
 | Every assigned worker uses a tier wrapper and exact binding. | Standard uses native assignments with checked required capabilities; managed identity/binding checks remain. |
 | Always add the bounded cost profile before approval. | Detailed forecasts are explicit opt-ins in either profile; optional v5 cost parsing remains. |
@@ -46,6 +51,7 @@ shorter text preserves the former requirement:
 | Every human plan includes the economics line and policy footer. | Standard reports meaningful results and exceptions; requested economics and managed diagnostics remain available. |
 | Every approach states a real tradeoff/pick. | Discuss alternatives only for an unsettled material choice; approved direction carries forward. |
 | A missing assigned load-bearing input is never discovery. | Distinguish discoverable routine facts from material decisions/approval that cannot be invented. |
+| Every initialized task needs a separate approach approval and delegates if decomposable. | Clear settled implementation authority permits inline work; explicit plan-first constraints and material missing decisions still need approval, and delegation earns its cost. |
 
 New standard redispatch and checkpoint bounds each have a producer and consumer:
 the parent records actual attempts and progress; resumption and retry decisions

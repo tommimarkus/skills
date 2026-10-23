@@ -95,6 +95,7 @@ class PlanningPolicyBehaviorEvalTest(unittest.TestCase):
             "standard-old-settings", "standard-invalid-profile", "standard-explicit-overrides",
             "standard-review-contract", "standard-review-security",
             "standard-review-destructive", "standard-review-removal", "standard-review-unbounded-impact",
+            "standard-explicit-plan-first", "new-run-available-executor", "existing-mapping-and-pin-preserved",
         )})
         self.assertTrue(required.issubset(self.behavior))
 
