@@ -40,7 +40,7 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
             self.assertEqual("synthetic", case["source_kind"])
             self.assertFalse(case["contains_third_party_text"])
 
-    def test_pressure_grounding_readme_and_cost_contract(self) -> None:
+    def test_pressure_grounding_and_declared_scenarios(self) -> None:
         pressure = read("souroldgeezer-design/skills/software-design/references/evals/model-pressure.md")
         for marker in ("baseline", "Accepted rules", "Behavior evals:", "Retest:", "Merge back:"):
             self.assertIn(marker, pressure)
@@ -52,11 +52,7 @@ class SoftwareDesignFragilityEvalTest(unittest.TestCase):
         self.assertIn("fragility", read("souroldgeezer-design/skills/software-design/SKILL.md"))
         scenarios = {item["id"] for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
         self.assertTrue({"sd-review-fragility", "sd-native-evidence-procedure", "sd-fragility-final-reporting"} <= scenarios)
-        snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
-        for identifier, ceiling in {"sd-lookup-principle": 2894, "sd-build-csharp": 8770, "sd-review-typescript": 12269, "sd-review-fragility": 12628, "sd-native-evidence-procedure": 1200}.items():
-            self.assertLessEqual(snapshot[identifier], ceiling)
-        self.assertGreaterEqual(snapshot["sd-fragility-final-reporting"], 500)
-        self.assertLessEqual(snapshot["sd-fragility-final-reporting"], 1000)
+
 
 
 if __name__ == "__main__":

@@ -2,19 +2,21 @@
 
 ## 1. Context
 
-Contract, security, reliability, and observability are baselines: every endpoint has an OpenAPI 3.1 definition, RFC 9457 problem+json errors, explicit versioning, RFC 9110 conditional requests on mutable resources, and verb-appropriate idempotency.
+Use explicit contracts, security, reliability, and observability appropriate to the API. For a new contract, prefer OpenAPI 3.1, RFC 9457 problem+json errors, explicit versioning, conditional requests where concurrent-write safety needs them, and idempotency appropriate to actual retry behavior. Preserve compatible project contracts; a different format, specification version, or telemetry stack is not itself a defect.
+
+These are strong defaults, not mandatory migrations. Choose a justified alternative against consumer compatibility, trust boundaries, failure consequences, workload, and operational needs; explain a material exception once. Safety, protocol validity, and honest evidence remain requirements. A local convention does not excuse secret exposure, unauthorized access, silent data loss, or a broken published contract.
 
 **Scope.** HTTP APIs, with runtime and data specifics supplied by extensions. Current bundled extensions cover Azure Functions .NET (isolated worker), Node.js hosted/serverless APIs, hosted Next.js API surfaces, Cosmos DB, and Azure Blob Storage. See §8 for out-of-scope items.
 
 ## 2. Principles
 
-- **2.1 Contract-first:** OpenAPI 3.1 is the source of truth; handlers are verified against it; generated SDKs, mocks, and gateway policies all consume the same document.
+- **2.1 Contract-first:** use one reviewable contract authority: a source document or deterministic framework generation. Prefer OpenAPI 3.1 for new contracts; a compatible existing version or equivalent project contract can remain. Check handlers and actual consumers against that authority.
 - **2.2 Semantic HTTP:** verbs carry meaning; status codes are part of the contract; `201 Created` ships `Location`; `202 Accepted` ships `Location` pointing at a status endpoint; 429 is throttle; 5xx is server fault.
-- **2.3 Errors are data:** every error path returns `application/problem+json` (RFC 9457) with a stable `type` URI; error type URIs are documented in the OpenAPI.
-- **2.4 Versioning is explicit:** every endpoint belongs to a version; "implicit v1" is a smell; default is URI-path versioning (`/v1/...`).
+- **2.3 Errors are data:** use stable machine-readable failure classes without secret disclosure. RFC 9457 problem+json with documented `type` URIs is the default for a new error contract; preserve a compatible established envelope when changing it would harm consumers.
+- **2.4 Compatibility is explicit:** choose a version/lifecycle strategy for the consumers. URI-path versioning (`/v1/...`) is a strong public-API default; a jointly deployed internal contract may remain unversioned when compatibility and rollout are controlled.
 - **2.5 Security is baseline:** HTTPS-only, TLS 1.2+; OAuth 2.0 / OIDC through maintained middleware; managed/workload identity for cloud hops; platform secret managers; data-plane RBAC; input validated at the boundary.
 - **2.6 Reliability is baseline:** mutations idempotent by verb or `Idempotency-Key`; outbound calls retry with exponential backoff + jitter + `Retry-After`; 429 with `Retry-After`; bounded retry + dead-letter on async workers; long-running work moves off the synchronous HTTP request.
-- **2.7 Observability is baseline:** W3C `traceparent` on every request; structured logs; correlation ID in every error response; OpenTelemetry / platform telemetry at worker startup; per-request cost signals (Cosmos RU, storage request count) as structured fields.
+- **2.7 Observability serves operations:** provide diagnostics and correlation needed for actual failure and support paths. Prefer structured logs and W3C `traceparent` across distributed boundaries; use OpenTelemetry / platform telemetry and cost signals when the operational requirements warrant them.
 - **2.8 Performance is responsiveness:** follow §3.16; choose hosting for latency, scale, and cost.
 - **2.9 Progressive enhancement:** sync HTTP is baseline; 202+polling, webhooks, orchestration, and queue-backed processors are additive — reach for the simplest pattern that satisfies the requirement.
 - **2.10 Surface architecture:** default to one canonical HTTP contract per
@@ -36,7 +38,7 @@ Each decision states the choice, the default rule, and when to deviate. Defaults
 
 **Default:** URI path — `/v1/...`, `/v2/...`. New v2 coexists with v1 until v1 is sunset per §5.10.
 
-*When to deviate:* internal APIs where a single client controls both sides and header versioning reduces churn; public APIs needing `api-version=` for URL compatibility. Media-type versioning only when content negotiation is the clearest expression of the contract.
+*When to deviate:* preserve a compatible project strategy. A single jointly deployed internal client/server may use an unversioned contract with a controlled rollout; header, query, or media-type versioning can fit other compatibility requirements. Do not introduce consumer-breaking drift merely to standardize URLs.
 
 ### 3.3 Authentication model
 
@@ -63,13 +65,13 @@ Authentication establishes identity; authorization governs operations; a key alo
 
 **Type URI organization.** Use one base URI per API (e.g., `https://api.example.com/errors/`) with kebab-case names: `invalid-parameter`, `rate-limited`, `insufficient-scope`, `archived-blob`. Resolution is optional at launch, but should provide a human-readable type page or documented redirect before public release. Published type URIs are immutable identifiers.
 
-*When to deviate:* never. Backward-compatibility with an existing non-conformant shape is a migration path, not a licence to emit new non-problem+json errors.
+*When to deviate:* preserve a documented, stable project error envelope when compatible consumers depend on it, or use a justified equivalent contract. Keep failure classes machine-readable, statuses accurate, and secrets/internal traces out of responses; changing a format is not automatically a safety improvement.
 
 ### 3.6 Idempotency for mutations
 
-**Default:** PUT and DELETE use `If-Match: <etag>` for concurrent-write safety → 412 Precondition Failed on mismatch. POST accepts an optional `Idempotency-Key` header; the server stores `(key, result)` in a replay cache with TTL and returns the cached result on retry. Non-idempotent POST (no key, no dedup) is only safe when the client will never retry, which in practice means almost never.
+**Default:** when concurrent updates could lose state, use `If-Match: <etag>` or the project's equivalent concurrency control; an ETag mismatch returns 412 Precondition Failed. For POST operations whose retries could duplicate consequential effects, use `Idempotency-Key` replay handling, natural-key deduplication, or another proved retry-safe contract. Tie storage and retention to the actual retry window rather than adding a replay cache to every mutation.
 
-*When to deviate:* a POST endpoint whose effect is inherently idempotent because the payload carries a client-assigned natural key (e.g., an upsert by external ID) can skip the replay cache. Document the natural key and the uniqueness guarantee.
+*When to deviate:* append-only operations, transactional constraints, client-assigned natural keys, or another compatible concurrency/retry contract may make ETags or a replay cache unnecessary. Verify the actual guarantee; do not accept duplicate charges or lost updates merely because the mechanism differs.
 
 ### 3.7 Pagination
 Cursor pagination tolerates concurrent writes; offset cost grows with skips and order can shift.
@@ -98,14 +100,14 @@ Without `Retry-After`, client retries amplify throttling.
 
 **Default:** 429 Too Many Requests on throttle, always with `Retry-After` (seconds). `RateLimit` / `RateLimit-Policy` structured-field informational headers (IETF httpapi draft) on successful responses so clients can self-pace. Rate limiting is enforced at the edge (API gateway, reverse proxy, CDN/WAF, Front Door / API Management on Azure) on public endpoints; origin-only limiting is a fallback, not a primary defence.
 
-*When to deviate:* internal service-to-service endpoints with a small, trusted set of callers can skip `RateLimit-*` informational headers, but 429 + `Retry-After` remains mandatory.
+*When to deviate:* choose controls appropriate to exposure and workload. A small trusted internal API may not need an edge gateway or informational rate-limit headers. Supply usable retry guidance when throttling occurs; preserve any published rate-limit contract.
 
 ### 3.11 Input validation
 OpenAPI rejects invalid shapes at the boundary; handlers need not duplicate schema checks.
 
 **Default:** schema validation (OpenAPI 3.1) on request bodies, query parameters, and headers; semantic validation (ranges, cross-field rules, allowlist values) at boundary; failures return 400 with problem+json `type` of `invalid-parameter` (syntactic) or 422 with `invalid-entity` (semantic-but-syntactically-valid). Oversized payloads return 413 Payload Too Large.
 
-*When to deviate:* never. Internal endpoints get the same discipline.
+*When to deviate:* equivalent maintained framework validation may own the schema and semantic checks without OpenAPI being the enforcement mechanism. Validate untrusted input and preserve the project's compatible failure contract; internal deployment alone is not input validation.
 
 ### 3.12 Payload size limits
 Runtime memory, timeout, and request-size ceilings constrain payloads.
@@ -125,7 +127,7 @@ Credentials cannot accompany wildcard origin.
 
 **Default:** structured logger scopes / request context on every handler with named fields; W3C `traceparent` propagation end-to-end (inbound → scope/context → outbound HTTP → data-store SDK); correlation identifier (trace-id) in every error response body; OpenTelemetry / Application Insights / platform telemetry registered at startup. Per-request cost signals (Cosmos `RequestCharge`, storage request count, dependency latency/count) emitted as structured log fields.
 
-*When to deviate:* never. Every endpoint gets the same discipline.
+*When to deviate:* use the existing effective telemetry stack or simpler diagnostics for a bounded service when they satisfy support and operational needs. Do not require an OpenTelemetry provider, response correlation field, or per-request cost instrumentation solely to match this reference. Preserve correlation across boundaries where losing it would defeat the actual diagnostic requirement.
 
 ### 3.15 Hosting and runtime selection
 Hosting determines startup, scale-out, timeout, memory, operations, and failure domains.
@@ -452,7 +454,7 @@ A production-grade receiver:
 - **SAD-G-429-no-retry-after** — 429 response without `Retry-After`. Clients retry on their own timeline; amplification loop. Fix per §3.10.
 - **SAD-G-500-where-4xx** — 500 emitted for a 400 / 404 / 409 / 422 condition (typically an unhandled validation exception). Fix: validate at boundary and emit specific 4xx.
 - **SAD-G-silent-retry** — try-catch-retry loop that swallows the failure cause; prod issues present as latency bumps with no errors. Fix: observe retries (`retry-attempt` log field), bound them, surface exhaustion as 5xx with detail.
-- **SAD-G-no-correlation-id** — error response with no trace-id / correlation field; support tickets become scavenger hunts. Fix per §3.14.
+- **SAD-G-no-correlation-id** — missing correlation needed by the project's distributed failure/support path; identify the concrete diagnostic consequence rather than requiring a field in every error envelope. Fix per §3.14.
 - **SAD-G-timer-doing-http-work** — timer trigger that calls outbound HTTP APIs in a loop (effectively an HTTP client); no scale, no observability, no DLQ. Fix: queue-backed processor.
 - **SAD-G-anonymous-private** — anonymous or key-only access on an endpoint that handles non-public data, except the documented, tightly-scoped single-caller internal service-key case in §3.3. Fix per §3.3 / §3.4 and the loaded runtime extension.
 - **SAD-G-secrets-in-query-strings** — secrets, tokens, or PII placed in query strings; they end up in access logs, referer headers, and browser history. Fix: request body or `Authorization` header.
@@ -460,7 +462,7 @@ A production-grade receiver:
 - **SAD-G-http-request-long-running** — work inside a synchronous HTTP request that regularly exceeds the runtime timeout. Fix per §3.9.
 - **SAD-G-orchestration-overkill** — workflow orchestration for a single-step async job. Fix: queue-backed handler per §5.8.
 - **SAD-G-static-runtime-claim** — a review claiming p95 latency, cold-start time, or error rate from static analysis. Fix: restate as "static signals aligned; runtime metrics require load test / RUM."
-- **SAD-G-version-drift** — coexisting versioning strategies (URI-path for most, query string for some) or an "implicit v1" that's really v1.5. Fix per §3.2.
+- **SAD-G-version-drift** — incompatible version/lifecycle promises or consumer-breaking contract drift without a justified boundary. A compatible unversioned internal API is not a finding merely for lacking `/v1/`. Fix per §3.2.
 - **SAD-A-capability-overlap** — multiple contracts claim the same capability
   for the same consumer/trust/lifecycle boundary without an intentional
   separation. Fix per §3.18 and the surface-architecture procedure.
@@ -482,7 +484,7 @@ A production-grade receiver:
 
 ## 7. Review checklist
 
-Each item is tagged with a **verification layer**:
+Select items relevant to the requested decision and actual project contract; this is not a mandatory whole-portfolio gate. Defaults admit the justified alternatives in §1–§3. A missing convention alone is not a supported defect. Each item is tagged with a **verification layer**:
 
 - `[static]` — source-readable (grep, read code, read OpenAPI / IaC).
 - `[iac]` — requires inspecting IaC (Bicep / Terraform / ARM) for hosting plan, managed identity, RBAC assignments, network posture.
@@ -494,11 +496,11 @@ Each item is tagged with a **verification layer**:
 Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail from a review. The rest are "source-aligned; final verification requires <layer>."
 
 ### Contract discipline
-- OpenAPI 3.1 document exists and is current `[static][contract]`.
+- The declared contract source is current and reviewable; OpenAPI 3.1 is preferred for new contracts `[static][contract]`.
 - Every operation has a stable `operationId` `[static][contract]`.
-- Every error response is `application/problem+json` `[static][contract]`.
+- Error responses follow the stable project contract; problem+json is the default for new contracts `[static][contract]`.
 - Error `type` URIs are documented, stable across versions `[contract]`.
-- Versioning strategy is explicit; no implicit v1 `[static][contract]`.
+- Compatibility, versioning, and rollout strategy fit the actual consumers `[static][contract]`.
 - Idempotency semantics documented for every mutating operation `[contract]`.
 - Pagination shape is cursor-based (or justified offset) `[static][contract]`.
 - API surface decisions use contract inventory, consumer journey, version, and
@@ -511,7 +513,7 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Authorization scope- or role-based, deny-by-default `[static][contract]`.
 - Secrets via platform secret references; no literals or committed `.env` secrets `[static][iac]`.
 - Data-plane: when Azure data extensions load, Cosmos `disableLocalAuth=true`, Storage `allowSharedKeyAccess=false` `[iac]`.
-- Input validated at boundary (OpenAPI schema + semantic) `[static][contract]`.
+- Input is validated at the boundary by the declared schema/framework and semantic rules `[static][contract]`.
 - CORS allowlist, not wildcard on authenticated endpoints `[static][iac]`.
 - Rate limiting at the edge (Front Door / API Management) on public endpoints `[iac][security-tool]`.
 - No anonymous access on non-public endpoints. Key-only access is permitted
@@ -528,7 +530,11 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - No long-running work inside a synchronous HTTP request past the runtime timeout `[static]`.
 - ETag / If-Match on concurrently-writable resources `[static][contract]`.
 
-### Observability (hard requirements)
+### Observability (appropriate to operational requirements)
+
+These requirements apply to the actual operational contract; select proportionate
+diagnostics and compatible alternatives per §3.14 rather than imposing every
+mechanism below.
 - Structured logger scopes / request context on every handler, with named fields `[static]`.
 - `traceparent` propagated inbound → scope/context → outbound HTTP client `[static]`.
 - Correlation ID (trace-id) in every error response `[static][contract]`.
@@ -536,7 +542,10 @@ Only `[static]` / `[iac]` / `[contract]` findings are definitively pass/fail fro
 - Per-request cost signals surfaced in logs (Cosmos `RequestCharge`, storage request count) `[static]`.
 - p95 latency + error rate + cold-start tracked in RUM / Azure Monitor `[runtime]`.
 
-### Performance (hard requirements, at p95)
+### Performance (requirements and workload determine the checks)
+
+Apply declared workload and performance requirements; do not invent a p95 target
+or require load evidence for unrelated source-only work.
 - Reusable outbound HTTP client/factory/dispatcher with configured pooling (`IHttpClientFactory`, Undici / `fetch` dispatcher, or equivalent) `[static]`.
 - §3.16 lifetime contract and the shared procedure are applied to HTTP-to-storage work `[static]`.
 - Hosting/runtime choice fits latency, scale, timeout, payload, and operational requirements `[iac]`.

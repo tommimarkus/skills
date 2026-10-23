@@ -78,16 +78,11 @@ Rules are tagged `[HostedNext]`, `[RouteHandler]`, `[PagesApi]`,
 
 ## Mode lanes
 
-This core file is the always-loaded nextjs stack surface. Load exactly one
-mode lane when the task requires it:
-
-- **Build:** read [`nextjs/build.md`](nextjs/build.md) for detailed primitives and `*.PAT-*` implementation patterns.
-- **Review:** read [`nextjs/review.md`](nextjs/review.md) for `*.HC-*`, `*.LC-*`, and `*.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`nextjs/build.md`](nextjs/build.md)
+for implementation or [`nextjs/review.md`](nextjs/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 
@@ -105,7 +100,8 @@ Detailed signatures and implementation guidance live in [`nextjs/build.md`](next
 
 - Keep API contracts at Route Handlers or Pages API boundaries; do not treat UI rendering behavior as an API contract.
 - Bound request bodies and duration, make mutation retries idempotent, and move long-running work to durable queues.
-- Emit RFC 9457 problem details on error paths and preserve Node.js runtime safeguards from the composed base.
+- Preserve the stable project error contract, preferring RFC 9457 for a new
+  contract, and retain relevant Node.js runtime safeguards.
 - Keep deployment secrets and Server Action encryption keys out of source and consistent across instances.
 
 ## Project assimilation (Next.js-specific)

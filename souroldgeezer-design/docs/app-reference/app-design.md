@@ -237,12 +237,14 @@ the shape of the underlying data model.
 
 ### 3.16 Flow and layout traceability
 
-Default: derive screens and regions from the complete user flow, then preserve
-traceability from each stable flow-step ID through its route/screen, state,
-layout region, DOM order, reading order, and focus order. Map current and target
-journeys separately. A material unsettled layout direction stays unapproved
-until the user selects or combines rough alternatives; narrow fixes and settled
-directions may skip alternatives with the reason disclosed.
+Default: derive affected screens and regions from the user flow, preserving
+relevant route, state, layout, DOM, reading, and focus-order relationships. Keep
+current and target journeys distinct. Use stable IDs, maps, and matrices when
+they help the change or a requested handoff; do not require unchanged inventories.
+For authorized implementation, choose a sensible reversible layout and proceed.
+Offer alternatives and a selection checkpoint when requested, or ask for a
+material product decision that cannot safely be inferred. Preserve approved
+direction without reopening it.
 
 Wide and narrow layouts may reflow, reveal, reposition, or change presentation,
 but the transformation must retain essential content, recovery paths, and

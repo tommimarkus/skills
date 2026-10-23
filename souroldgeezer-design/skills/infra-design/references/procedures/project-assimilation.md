@@ -4,14 +4,17 @@ Load when existing IaC, environment files, remote state, deployment workflows,
 plan/what-if evidence, import/move records, generated artifacts, topology
 documentation, architecture pairing, drift evidence, or diffs are in scope.
 
-Direction is one-way: assimilate the project to the infra-design reference, not
-the reference to the project. Reuse compliant infrastructure structure, flag
-non-compliant structure as legacy debt, and never extend broken topology, IaC,
-environment, state, identity, rollout, or drift practices into added code.
+Start from the user's outcome and the project's actual contracts. Bundled
+conventions are strong defaults, not authority to redesign a compatible project.
+Reuse justified local structure; a reference difference alone is not debt.
+Identify concrete incompatibility, unsafe behavior, or a substantiated
+maintenance consequence before recommending migration. Factual Extract records
+behavior and uncertainty without unsolicited compliance judgments.
 
 ## Discovery
 
-Inspect source-readable locations before deciding:
+Inspect the relevant source-readable locations before deciding; do not require
+a complete project inventory for a bounded change:
 
 1. IaC roots and modules: Terraform roots/modules, Bicep entrypoints/modules,
    ARM templates, parameter/variable files, provider or module version pins,
@@ -49,25 +52,26 @@ Loaded extensions own deeper platform/IaC-specific discovery and carve-outs.
 
 ## Conflict Handling
 
-Classify conflicts as `reused`, `legacy debt`, `blocking debt`, or
-`migration performed`.
-
-- Added infrastructure changes must comply with the core reference and loaded
-  extensions.
-- Existing IaC can be reused only when it keeps source, state, rollout, and
-  ownership reviewable.
-- If requested work would depend on or extend blocking debt, stop and ask for
-  migration scope or propose the smallest safe IaC/topology migration move.
-- If a legacy pattern is not migrated, name the file, violated rule or finding
-  code, and reason it remains out of scope.
+- Preserve compatible local contracts and explain a material departure from a
+  reference default once when it changes the recommendation.
+- Judge candidate debt by evidence and consequence. Existing debt is fixed only
+  within the authorized scope; do not expand a routine task to satisfy a rubric.
+- Stop only the affected implementation action when a concrete unsafe or
+  incompatible change cannot be avoided within authority. Ask for the material
+  decision or propose the smallest safe move; continue independent work.
+- Read-only Review reports load-bearing or blocking debt and continues its
+  remaining analysis. Missing runtime or human evidence limits the conclusion
+  needing it, not unrelated source-grounded findings.
 
 ## Footer Block
 
-Use this shape when assimilation applies:
+Use this optional shape for a requested formal report or a real handoff
+consumer. Ordinary answers summarize only material reuse, migration, and limits;
+they do not need an assimilation inventory or routine debt footer.
 
 ```text
 Project assimilation:
-  Reused: <compliant local IaC/env/state/rollout assets and evidence>
+  Reused: <compatible local IaC/env/state/rollout assets and evidence>
   Legacy debt: <file:line - rule or finding code - reason not migrated>
   Migrations performed: <file:line - rule or finding code fixed>
 ```

@@ -1,6 +1,6 @@
 # Extension: Azure Functions (.NET, isolated worker)
 
-Stack-specific additions to the `api-design` skill for Azure Functions .NET. The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Functions-specific detection, hosting, assimilation, and shared safety rules on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Functions .NET. The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Functions-specific detection, hosting, assimilation, and shared safety rules on top while preserving the core safety and evidence requirements.
 
 > **Isolated worker only.** In-process support ends **2026-11-10** (MSFT Learn: `azure/azure-functions/migrate-dotnet-to-isolated-model`; `azure/azure-functions/functions-dotnet-class-library`). Do not author in-process code. Extract records it as fact; Review or debt Extract evaluates it; Build does not extend it.
 
@@ -28,16 +28,11 @@ Rules tagged `[Isolated]`, `[BuiltIn]`, `[AspNetCore]`, or `[Both]` depending on
 
 ## Mode lanes
 
-This core file is the always-loaded azure-functions-dotnet stack surface. Load exactly one
-mode lane when the task requires it:
-
-- **Build:** read [`azure-functions-dotnet/build.md`](azure-functions-dotnet/build.md) for detailed primitives and `*.PAT-*` implementation patterns.
-- **Review:** read [`azure-functions-dotnet/review.md`](azure-functions-dotnet/review.md) for `*.HC-*`, `*.LC-*`, and `*.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`azure-functions-dotnet/build.md`](azure-functions-dotnet/build.md)
+for implementation or [`azure-functions-dotnet/review.md`](azure-functions-dotnet/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 
@@ -59,7 +54,8 @@ Detailed signatures and implementation guidance live in [`azure-functions-dotnet
 - Author only the isolated-worker model; treat legacy in-process projects as migration debt.
 - Use managed identity or workload identity for platform services and keep secrets out of source and committed settings.
 - Reuse thread-safe SDK clients, pools, and handlers; bound every public HTTP body, timeout, retry, and long-running operation.
-- Emit RFC 9457 problem details on error paths and keep required work durable before returning a response.
+- Preserve the project error contract, preferring RFC 9457 for new contracts,
+  and keep required work durable before returning a response.
 
 ## Project assimilation (Azure Functions .NET-specific)
 

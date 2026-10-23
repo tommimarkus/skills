@@ -25,24 +25,12 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "material layout redesign",
             "dashboard/workspace composition",
             "unresolved layout direction",
-            "explicitly concerns layout or flow mechanics",
             "routine component/state work",
             "narrow approved-layout changes",
             "Approved direction skips alternatives",
         ):
             self.assertIn(route, skill)
 
-        for output in (
-            "target flow map",
-            "rough alternatives",
-            "selected layout contract",
-            "responsive transformation",
-            "entry/exit points",
-            "dead ends",
-            "recovery and resumption",
-            "flow-step IDs or layout regions",
-        ):
-            self.assertIn(output, skill)
 
     def test_alternatives_rubric_and_settled_routing_are_consistent(self) -> None:
         cases = {r["id"]: r for r in read_jsonl(f"{APP_SKILL}/references/evals/behavior-cases.jsonl")}
@@ -63,14 +51,17 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             self.assertIn("selection checkpoint", response["grader"])
         substantial = cases["app-design-behavior-settled-layout-flow-routing"]
         self.assertIn("dashboard", substantial["prompt"])
-        self.assertIn("load the layout-and-flow procedure", str(substantial["required_checks"]))
+        self.assertIn("read relevant layout-and-flow sections", str(substantial["required_checks"]))
         narrow = cases["app-design-behavior-narrow-approved-layout"]
         self.assertIn("skip the whole procedure", str(narrow["required_checks"]))
-        for path in ("AGENTS.md", "CLAUDE.md"):
-            with self.subTest(path=path):
-                guidance = compact(read(path))
-                self.assertIn("Approved direction skips alternatives", guidance)
-                self.assertIn("narrow approved-layout changes", guidance)
+        for case_id in (
+            "app-design-behavior-autonomous-reversible-layout",
+            "app-design-behavior-material-product-choice",
+        ):
+            with self.subTest(case_id=case_id):
+                self.assertIn(case_id, cases)
+                self.assertTrue(cases[case_id]["required_checks"])
+                self.assertTrue(cases[case_id]["forbidden_behaviors"])
 
     def test_core_defines_flow_layout_primitives_and_findings(self) -> None:
         core = compact(read("souroldgeezer-design/docs/app-reference/app-design.md"))
@@ -140,9 +131,9 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
         grounding = compact(read(f"{APP_SKILL}/references/source-grounding.md"))
 
         for signal in (
-            "current user flows",
+            "Current user flows",
             "recovery and resumption",
-            "layout family",
+            "Layout behavior",
             "adaptive order",
         ):
             self.assertIn(signal, assimilation)

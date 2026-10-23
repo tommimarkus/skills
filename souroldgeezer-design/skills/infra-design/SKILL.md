@@ -40,16 +40,10 @@ backend, provider, module, plan/apply, or state; and
 Azure+Terraform compose. Load [extensions/README.md](extensions/README.md) only
 when editing extensions.
 
-<!-- lean-audit:sync-intentional -->
-The three stack extensions above load for Build, Extract, and Review — every
-extension whose detection signals match the in-scope stack. In Lookup, do not
-load full stack extensions on detection alone: answer from the core reference
-matched section, and pull a single stack extension only when the question is
-specifically about that stack's mechanics (Azure+Bicep and Azure+Terraform
-composition still applies when escalated) — never the whole detected-stack set.
-If a Lookup genuinely needs more than one stack's mechanics, escalate to Review
-or Build (which load every matching extension) or ask — do not under-answer
-from a single extension.
+Detection identifies available guidance. In every mode, read only relevant core
+and extension sections; expand for dependencies, uncertainty, or material risk.
+Lookup may combine multiple needed stack excerpts without changing mode or
+asking merely because more than one stack is involved. Azure+Bicep and Azure+Terraform may compose when the question needs both.
 
 Before editing triggers/workflow/extensions/grounding/evals, load `references/evals` and `references/source-grounding.md`; keep evals synthetic/paraphrased.
 
@@ -64,30 +58,31 @@ Before editing triggers/workflow/extensions/grounding/evals, load `references/ev
 3. Check for a paired `docs/architecture/<feature>.dediren/` package when
    topology, environment, identity, or rollout changes may affect architecture
    views.
-4. Detect/announce extensions, separate fact from inference, name verification
-   layers, choose the smallest topology/IaC/env/state/rollout move, then emit
-   contract/footer.
+4. Select relevant guidance, separate fact from inference, name verification
+   layers, choose the smallest topology/IaC/env/state/rollout move, then report
+   the result and material limits.
 
 ## Mode Outputs
 
 - Build: scope/forces, topology, IaC structure, environment strategy,
   state/identity, ops, validation, delegations.
-- Extract: signals, topology, IaC ownership, env/state, ops, drift/debt, next
-  move.
-- Review: findings only; `block` unsafe deployment coupling, state loss,
-  production apply without review, env/state ambiguity, identity confusion, or
-  unvalidated ops path.
+- Extract: relevant topology, IaC ownership, env/state, operations, and drift
+  facts. Add debt or compliance judgments only when requested.
+- Review: actionable findings about deployment coupling, state loss, authority,
+  environment, identity, or operations. Gate the affected unsafe deployment or
+  unsupported readiness claim; continue independent source-only review.
 - Lookup: direct rule, exception, citation, delegation, one-line footer.
 
-Every answer reports mode, extensions, reference path, layers (`static`, `iac`,
-`plan`, `runtime`, `cloud-control-plane`, `human`), assimilation, delegations,
-and limits. Findings use
-`[ID-<family>-<n>] <file>:<line>` with bucket, layer, severity, evidence,
-action, and citation. If none, say so with limits.
+Lead with the result, relevant findings or changes, validation, and material
+limits. Keep Lookup direct. Give a detailed mode/extension/layer/assimilation
+inventory only when requested or needed by an actual consumer. Formal findings
+retain their defined codes, file evidence, severity, consequence, and action;
+omit unused fields and routine negative disclosures.
 
 ## Stop Conditions
 
-Stop when source/scope/env is missing, sibling ownership dominates, non-static
-evidence is needed but absent, load-bearing drift has no smaller move, extension
-validation is unavailable, or output extends local/committed state, ambient env
-selection, portal-only drift, or prose architecture modeling.
+Stop the affected action when authority or essential evidence is missing, or
+when it would introduce a concrete unsafe or incompatible change. Disclose the
+limited conclusion and continue useful independent work. Missing runtime,
+visual, a11y, performance, or cloud evidence limits only the claim requiring it;
+a reference difference or unavailable optional tool is not itself a task stop.

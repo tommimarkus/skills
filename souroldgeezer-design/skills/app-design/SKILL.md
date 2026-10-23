@@ -36,7 +36,8 @@ code/PRs/proposals/plans; Lookup app tradeoffs.
 
 ## Load Map
 
-Load what applies: core reference principles/defaults/checklist;
+Read relevant core principles/defaults/checklist sections and these procedures
+when they inform the decision:
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
 when existing routes, screens, layouts, components, design tokens, state/data
 patterns, forms, browser storage, rendering boundaries, navigation shell,
@@ -44,10 +45,11 @@ runtime evidence, or diffs are in scope;
 [references/procedures/layout-and-flow.md](references/procedures/layout-and-flow.md)
 for Build, Extract, or Review involving a multi-screen flow, material layout
 redesign, dashboard/workspace composition, or unresolved layout direction,
-including substantial work with an approved direction. Approved direction skips
-alternatives, not flow analysis. In Lookup, load it only when the question
-explicitly concerns layout or flow mechanics. Skip the whole procedure only
-for routine component/state work or narrow approved-layout changes;
+including substantial work with an approved direction. Keep flow analysis
+proportionate; routine component/state work and narrow approved-layout changes
+can skip the procedure. Approved direction skips alternatives. For authorized
+implementation, choose a sensible reversible layout unless the user requests
+selection or a material product decision cannot safely be inferred;
 the [operation-feedback default](../../docs/app-reference/app-design.md#39-loading-error-empty-offline-and-unauthorized-states)
 for an operation that crosses about one second, and keep its
 status, progress semantics, cancellation/recovery, and blocking decision in the
@@ -62,16 +64,11 @@ WebAssembly project/host/render-mode signals, or Blazor app-shell/component
 work; [extensions/README.md](extensions/README.md) only when editing extensions.
 Unknown stacks use core only.
 
-<!-- lean-audit:sync-intentional -->
-The four stack extensions above load for Build, Extract, and Review — every
-extension whose detection signals match the in-scope stack. In Lookup, do not
-load full stack extensions on detection alone: answer from the core reference
-matched section, and pull a single stack extension only when the question is
-specifically about that stack's runtime mechanics. Vite + React loads Vite then React; React + Next.js stays React then Next.js. Vite works alone. In Lookup,
-if an answer needs a composed stack pair, load in that order; never load the
-whole detected-stack set. If it genuinely needs more than the matching pair's
-mechanics, escalate to Review or Build (which load every matching extension) or
-ask — do not under-answer from a single extension.
+Detection identifies available guidance. In every mode, read only relevant core
+and extension sections; expand for dependencies, uncertainty, or material risk.
+Lookup may combine multiple needed stack excerpts without changing mode or
+asking merely because more than one stack is involved. Vite precedes React, and React precedes Next.js, when their combined mechanics
+are relevant. Vite works alone.
 
 Before changing trigger metadata, workflow, extension selection, grounding, or
 evals, load [references/evals](references/evals) and
@@ -82,20 +79,21 @@ synthetic/paraphrased.
 
 1. Select mode, scope, actor outcome, app type, workflow, route/screen boundary,
    and question.
-2. Prefer `rg`; inspect inputs, detect runtime, load and announce extensions.
+2. Prefer `rg`; inspect inputs, detect runtime, read relevant extension sections.
 3. Assimilate user flows, routes, layouts, screens, components, state/data,
    forms, storage, navigation, screen composition, baseline primitives, build
    config, and observability; apply project assimilation before generating,
    reviewing, migrating, or extending app structure.
-4. When the layout-and-flow route matches, derive screens from the complete
-   flow, explore unsettled directions before selection, and keep flow-step,
-   route, state, layout-region, DOM, reading, and focus-order traceability.
+4. When layout-and-flow guidance applies, derive screens from the user flow and
+   preserve relevant route, state, layout, DOM, reading, and focus-order links.
+   Use alternatives or formal traceability artifacts when they help the task;
+   do not pause routine reversible design choices for approval.
    Classify operations that cross about one second, including housekeeping, by
    their status onset, total, blocking scope, terminal transition, and recovery.
 5. Check for a paired `docs/architecture/<feature>.dediren/` package when app
    route, screen, or workflow changes may affect architecture views.
 6. Separate fact from inference, choose the smallest move, include available
-   validation, then emit contract/footer.
+   validation, then report the result and material limits.
 
 ## Mode Outputs
 
@@ -103,24 +101,25 @@ synthetic/paraphrased.
   rendering/browser, interaction states, screen composition, rough alternatives
   when required, selected layout contract, responsive transformation, baselines,
   validation, delegations.
-- Extract: signals, current flow, entry/exit points, dead ends, recovery and
-  resumption, route/screen map, ownership, rendering, baselines, debt, next move.
-- Review: actionable findings only; `block` unusable/inaccessible/unresponsive
-  flow, broken route/component ownership, state/data ambiguity, unsafe rendering,
-  or unvalidated runtime behavior. Tie layout-and-flow findings to flow-step IDs
-  or layout regions.
+- Extract: relevant current flow, entry/exit points, recovery and resumption,
+  routes, ownership, and rendering facts. Add debt judgments only when requested.
+- Review: actionable findings with concrete usability, accessibility, ownership,
+  state, or rendering consequences. Missing runtime evidence limits the claim
+  requiring it; it does not itself block a source-only review. Locate layout
+  findings in the affected source, flow step, or region.
 - Lookup: default, tradeoff, citation, delegation, one-line footer.
 
-Every final answer reports mode, extensions, reference path, verification layer
-(`static`, `dom`, `behaviour`, `visual`, `a11y-tool`, `runtime`, `human`),
-assimilation, delegations, and limits. Findings use
-`[APP-<family>-<n>] <file>:<line>` with bucket, layer, severity, evidence,
-action, and citation. If none, say so with limits.
+Lead with the result, relevant findings or changes, validation, and material
+limits. Keep Lookup direct. Give a detailed mode/extension/layer/assimilation
+inventory only when requested or needed by an actual consumer. Formal findings
+retain their defined codes, file evidence, severity, consequence, and action;
+omit unused fields and routine negative disclosures.
 
 ## Stop Conditions
 <!-- lean-audit:sync-intentional -->
 
-Stop when source/scope is missing, sibling ownership dominates, required
-runtime/visual/a11y/performance evidence is absent, load-bearing debt has no
-smaller safe move, extension validation is unavailable, or output would copy a
-broken legacy route/component/state/rendering pattern.
+Stop the affected action when authority or essential evidence is missing, or
+when it would introduce a concrete unsafe or incompatible change. Disclose the
+limited conclusion and continue useful independent work. Missing runtime,
+visual, a11y, performance, or cloud evidence limits only the claim requiring it;
+a reference difference or unavailable optional tool is not itself a task stop.

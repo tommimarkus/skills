@@ -110,3 +110,9 @@ documentation.
   list-detail, supporting-pane, and feed relationships. They remain optional
   starting points rather than Android or Material templates. Across these new
   anchors, no examples, layouts, or source prose are copied.
+
+- Source: approved marketplace judgment-led simplification and the synthetic
+  behavior cases in this skill. Handling: repo-authored scenarios exercise
+  proportionate reading/reporting, project-compatible decisions, and paired
+  authority/safety/evidence controls. Case definitions are not claims of executed
+  model evaluations or measured speed improvements.

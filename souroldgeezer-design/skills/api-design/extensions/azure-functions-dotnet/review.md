@@ -4,9 +4,12 @@ Review classifications and carve-outs for [the azure-functions-dotnet core](../a
 
 ## Load condition
 
-Load this file in Review mode. In Extract, load it only when the user explicitly
-requests a debt or compliance verdict. For a narrow Lookup, load it only when
-the question asks for a finding code or carve-out. Do not load it in Build.
+Read relevant finding criteria, positive signals, or carve-outs for the requested judgment.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Smell codes
 
@@ -16,7 +19,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`afdotnet.HC-2`** — Per-invocation unpooled `HttpClient` handler construction inside a function body. Factory-created clients backed by configured handlers are valid. *Layer:* static.
 - **`afdotnet.HC-3`** — Hardcoded connection string or access key in `local.settings.json` being committed, or in a `.cs` literal. *Layer:* static.
 - **`afdotnet.HC-4`** — `AuthorizationLevel.Anonymous` on a trigger that handles non-public data (no Entra ID validator, no managed-identity-authenticated caller). *Layer:* static.
-- **`afdotnet.HC-5`** — Error path returns bare JSON / plain string rather than `application/problem+json`. *Layer:* static.
+- **`afdotnet.HC-5`** — Error path breaks the declared stable failure contract or exposes secrets/internal traces; a compatible established JSON envelope is valid. *Layer:* static.
 - **`afdotnet.HC-6`** — POST mutation without `Idempotency-Key` support when retries are expected; or retries without dedup. *Layer:* static + contract.
 - **`afdotnet.HC-7`** — 429 emitted without `Retry-After`. *Layer:* static.
 - **`afdotnet.HC-8`** — Outbound HTTP call has no `traceparent` propagation evidence. `IHttpClientFactory` is one supported mechanism, not the only one. *Layer:* static.
@@ -25,7 +28,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`afdotnet.HC-11`** — `[FunctionName(...)]` attribute in isolated-worker code (should be `[Function(...)]`). *Layer:* static.
 - **`afdotnet.HC-12`** — Missing Application Insights / OpenTelemetry registration in `Program.cs`. *Layer:* static.
 - **`afdotnet.HC-13`** — Non-deterministic API inside an orchestrator function (`DateTime.UtcNow`, `Guid.NewGuid()`, direct I/O) — violates Durable determinism. *Layer:* static.
-- **`afdotnet.HC-14`** — Missing OpenAPI annotations / document for an added endpoint. *Layer:* static + contract.
+- **`afdotnet.HC-14`** — Added endpoint has no reviewable compatible contract or its declared annotations/document are stale or contradict handlers. *Layer:* static + contract.
 - **`afdotnet.HC-15`** — CORS wildcard (`allowedOrigins: ["*"]`) on an authenticated Function app. CORS on Azure Functions is configured at the **platform tier** — `Microsoft.Web/sites` `cors.allowedOrigins` in Bicep / Terraform, Azure portal, or `az functionapp cors` CLI — **not in code**. Source-only grep cannot find this; IaC review is required. *Layer:* iac.
 
 ### Low-confidence

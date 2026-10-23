@@ -311,4 +311,4 @@ Checklist:
 
 ## 10. Output Contracts
 
-Build, Extract, Review, and Lookup outputs are defined in the skill workflow. All modes must report mode, extensions loaded, reference path, verification layers used, project assimilation, delegations, and limits.
+Build, Extract, Review, and Lookup outputs are defined in the skill workflow. Lead with the useful result, relevant validation, and material limits. Detailed mode, extension, verification-layer, assimilation, and delegation inventories are for requested formal reports or actual handoff consumers, not mandatory boilerplate.

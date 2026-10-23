@@ -9,11 +9,14 @@ responsive/accessibility, positive-signal, and carve-out guidance.
 
 1. The skill detects stack signals from file types, manifests, host files,
    runtime setup, and framework-specific syntax.
-2. Every matching extension is loaded.
+2. Read matching extension sections relevant to the decision. Expand when
+   dependencies, uncertainty, or material risk requires it; detection alone
+   does not mandate the whole pack, and Lookup may combine relevant excerpts.
 3. Extension guidance augments the app-design reference and adds namespaced
    finding codes.
-4. Extensions never override core app-design rules. A carve-out only suppresses
-   a core smell when the exact stack pattern still satisfies the core rule.
+4. Apply defaults in the context of project contracts. A justified alternative
+   is not a defect merely because it differs; preserve actual accessibility,
+   state, rendering, and interaction requirements.
 
 ## Required Sections
 

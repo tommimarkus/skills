@@ -4,9 +4,12 @@ Review classifications and carve-outs for [the Python ASGI / WSGI core](../pytho
 
 ## Load condition
 
-Load this file in Review mode. In Extract, load it only when the user explicitly
-requests a debt or compliance verdict. For a narrow Lookup, load it only when
-the question asks for a finding code or carve-out. Do not load it in Build.
+Read relevant finding criteria, positive signals, or carve-outs for the requested judgment.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Smell codes
 
@@ -34,9 +37,9 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`pyapi.HC-7`** — Long-lived ASGI/WSGI service initializes lifecycle-owned
   clients/resources but has no shutdown/close path for them. *Layer:* static +
   runtime.
-- **`pyapi.HC-8`** — An endpoint is added/changed while the generated OpenAPI
-  artifact is stale, generation is nondeterministic/unreviewed, or no CI
-  contract-drift check connects the declared authority to handlers. *Layer:*
+- **`pyapi.HC-8`** — An endpoint is added/changed while its declared contract
+  authority is stale, unreviewable, or inconsistent with handlers. A compatible
+  OpenAPI version, equivalent contract, or appropriate focused drift check is valid. *Layer:*
   static + contract.
 
 ### Low-confidence
@@ -68,7 +71,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
   state and structured trace fields propagate outbound.
 - **`pyapi.POS-6`** — Streaming has disconnect/cancellation cleanup and closes
   upstream resources.
-- **`pyapi.POS-7`** — OpenAPI 3.1 artifact is deterministic, operation IDs are
+- **`pyapi.POS-7`** — The declared contract artifact is deterministic, operation IDs are
   stable, and CI checks lint/diff/handler conformance.
 
 ## Carve-outs

@@ -1,16 +1,17 @@
 # Infra Design Extensions
 
 Extensions add platform and IaC-specific evidence to the core
-`infra-design` workflow. They do not override the core reference at
+`infra-design` workflow. Apply their defaults with project contracts and the
+core reference at
 `../../../docs/infra-reference/infra-design.md`.
 
 ## Load Order
 
 1. Detect all matching signals in source files, manifests, deployment scripts,
    CI/CD workflows, and IaC roots.
-2. Load every matching extension. Azure Bicep projects load both `azure.md` and
-   `bicep.md`; Azure Terraform projects load both `azure.md` and
-   `terraform.md`.
+2. Read relevant sections of matching extensions. Azure+Bicep or Azure+Terraform
+   questions may need both excerpts, including in Lookup; detection alone does
+   not mandate whole packs. Expand for dependencies, uncertainty, or material risk.
 3. Apply extension design defaults, positive signals, and smell codes on top of
    the core reference.
 4. Delegate security posture findings to `devsecops-audit` even when the source

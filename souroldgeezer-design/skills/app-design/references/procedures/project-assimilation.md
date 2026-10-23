@@ -5,16 +5,17 @@ tokens, component libraries, state/data patterns, forms, browser storage,
 rendering boundaries, navigation shell, visual/runtime evidence, or diffs are
 in scope.
 
-Direction is one-way: assimilate the project to the app-design reference, not
-the reference to the project. Reuse compliant app primitives, flag
-non-compliant primitives as legacy debt, and never extend a broken route,
-component, state, rendering, or browser pattern into added code.
-Discover and classify current user flows, recovery and resumption, layout
-family, and adaptive order before proposing a redesign.
+Start from the user's outcome and the project's actual contracts. Bundled
+conventions are strong defaults, not authority to redesign a compatible project.
+Reuse justified local structure; a reference difference alone is not debt.
+Identify concrete incompatibility, unsafe behavior, or a substantiated
+maintenance consequence before recommending migration. Factual Extract records
+behavior and uncertainty without unsolicited compliance judgments.
 
 ## Discovery
 
-Inspect source-readable locations before deciding:
+Inspect the relevant source-readable locations before deciding; do not require
+a complete project inventory for a bounded change:
 
 1. Current user flows: actor and goal, entry and observable completion, main
    path, branches, cancellation, external touchpoints, dead ends, and recovery
@@ -58,28 +59,26 @@ Loaded extensions own deeper framework-specific discovery and carve-outs.
 
 ## Conflict Handling
 
-Classify conflicts as `reused`, `legacy debt`, `blocking debt`, or
-`migration performed`.
-
-- Added app code must comply with the core reference and loaded extensions.
-- Existing visual or component conventions can be reused only when they preserve
-  responsive, accessibility, i18n, and interaction-state requirements.
-- If requested work would depend on or extend blocking debt, stop and ask for
-  migration scope or propose the smallest safe app migration move.
-- If a legacy pattern is not migrated, name the file, violated rule or finding
-  family, and reason it remains out of scope.
-- `blocking debt` is a stop-and-ask state, not a footer line: once resolved it is
-  disclosed as `Migrations performed` (if migrated) or `Legacy debt` (if the user
-  accepts the smallest safe move without migrating). The footer discloses those
-  end states; `reused` needs no debt line.
+- Preserve compatible local contracts and explain a material departure from a
+  reference default once when it changes the recommendation.
+- Judge candidate debt by evidence and consequence. Existing debt is fixed only
+  within the authorized scope; do not expand a routine task to satisfy a rubric.
+- Stop only the affected implementation action when a concrete unsafe or
+  incompatible change cannot be avoided within authority. Ask for the material
+  decision or propose the smallest safe move; continue independent work.
+- Read-only Review reports load-bearing or blocking debt and continues its
+  remaining analysis. Missing runtime or human evidence limits the conclusion
+  needing it, not unrelated source-grounded findings.
 
 ## Footer Block
 
-Use this shape when assimilation applies:
+Use this optional shape for a requested formal report or a real handoff
+consumer. Ordinary answers summarize only material reuse, migration, and limits;
+they do not need an assimilation inventory or routine debt footer.
 
 ```text
 Project assimilation:
-  Reused: <compliant local routes/components/tokens/state patterns and evidence>
+  Reused: <compatible local routes/components/tokens/state patterns and evidence>
   Legacy debt: <file:line - rule or finding family - reason not migrated>
   Migrations performed: <file:line - rule or finding family fixed>
 ```

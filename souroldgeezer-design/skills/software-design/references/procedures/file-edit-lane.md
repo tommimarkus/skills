@@ -24,7 +24,10 @@ alone never overrides the content and decision boundary.
 
 ## Selection precedence
 
-Apply this order and stop at the first source that settles a safe operation:
+Honor explicit user and repository requirements first. Otherwise choose the
+shortest safe available operation: a known small literal edit may use
+`apply_patch` directly. The sources below are available when selection is
+unresolved, not a checklist to execute before every edit:
 
 1. Follow the user's explicit tool, operation, or output requirement.
 2. Follow repository guidance. Where that guidance applies, prefer `jq` for
@@ -48,11 +51,11 @@ or filename. For example, identify a capability as `json-sort` or `yaml-set`,
 not by the file it may edit. Do not let a cache entry carry target-specific
 authority or override current user/repository instructions.
 
-When the lane loads and its cache helper is available, let that helper perform
-opportunistic garbage collection once. Garbage-collection absence or failure is
-not a reason to block the edit; continue without cached advice. Do not invent a
-cache location, schema, freshness rule, or cleanup command when the helper does
-not expose one.
+The capability cache and its maintenance helper are optional. Use them only
+when they help the current operation; do not run discovery, documentation
+queries, or garbage collection merely because the lane loaded. Cache absence or
+failure does not block the edit. Preserve explicit target and authority
+boundaries; do not invent a cache location or maintenance contract.
 
 ## Edit and validate
 
@@ -76,7 +79,6 @@ operation.
 
 ## Narrow result
 
-Report `lane: File Edit`, changed paths, the selected format-operation
-capability and why it won precedence, validation evidence, and any limit. Do not
-emit the normal software-design mode, layers, assimilation, architecture
-pairing, findings, or footer.
+Report changed paths, relevant validation, and material limits concisely. Give
+`lane: File Edit` and tool-selection detail only when requested or useful to a
+consumer; omit normal design inventories, findings, and footer.

@@ -17,3 +17,9 @@
 - Test-code lane facts: production-side ambient defaults ground on https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/quality-rules/ca1305; https://peps.python.org/pep-0686/; https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Locale.html; https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/Clock.html; https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl; https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap07.html; https://docs.rs/chrono/. URL-only grounding; wording is repo-authored, and each test-code file's own `Sources:` line carries its runner, fixture, time, and parallel-run links.
 
 All smell codes, card wording, prompts, examples, design heuristics, and fragility/native-evidence evals are repo-authored.
+
+- Source: approved marketplace judgment-led simplification and the synthetic
+  behavior cases in this skill. Handling: repo-authored scenarios exercise
+  proportionate reading/reporting, project-compatible decisions, and paired
+  authority/safety/evidence controls. Case definitions are not claims of executed
+  model evaluations or measured speed improvements.

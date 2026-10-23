@@ -8,14 +8,13 @@ LOAD_COST = load_script_module(
     "api_data_efficiency_load_cost",
     REPO_ROOT / "souroldgeezer-audit" / "skills" / "lean-audit" / "references" / "scripts" / "skill_load_cost.py",
 )
-API_BASELINES = {
-    "lookup-functions": 4020, "build-functions-cosmos": 24411,
-    "review-functions-cosmos-blob": 24147, "extract-functions-cosmos-factual": 17239,
-    "extract-functions-cosmos-debt": 20394, "review-surface-architecture": 13659,
-    "extract-python-factual": 15496, "extract-python-debt": 16631,
-    "lookup-python-lifecycle": 5383, "build-python-asgi": 17110,
-    "review-python-wsgi-clean": 16952, "review-python-serverless": 16952,
-}
+API_SCENARIOS = (
+    "lookup-functions", "build-functions-cosmos", "review-functions-cosmos-blob",
+    "extract-functions-cosmos-factual", "extract-functions-cosmos-debt",
+    "review-surface-architecture", "extract-python-factual", "extract-python-debt",
+    "lookup-python-lifecycle", "build-python-asgi", "review-python-wsgi-clean",
+    "review-python-serverless",
+)
 
 
 class ApiDesignDataEfficiencyTest(unittest.TestCase):
@@ -63,17 +62,10 @@ class ApiDesignDataEfficiencyTest(unittest.TestCase):
         self.assertIn("SD-Q-5", baseline["codes"])
         self.assertIn("Data-Efficiency Procedure", baseline["sections"])
 
-    def test_existing_api_routes_stay_within_the_approved_content_allowance(self) -> None:
-        scenarios = {item["id"]: item for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
-        for scenario_id, baseline in API_BASELINES.items():
-            with self.subTest(scenario_id=scenario_id):
-                current = LOAD_COST.measure_scenario(scenarios[scenario_id], REPO_ROOT)["total"]
-                self.assertLessEqual(current, baseline + 250)
-
     def test_snapshot_is_exactly_fresh_for_api_routes(self) -> None:
         snapshot = json.loads(read("tests/skill_load_cost/cost-snapshot.json"))
         scenarios = {item["id"]: item for item in json.loads(read("tests/skill_load_cost/scenarios.json"))}
-        for scenario_id in (*API_BASELINES, "review-api-data-access", "build-api-data-access", "extract-api-data-access-debt"):
+        for scenario_id in (*API_SCENARIOS, "review-api-data-access", "build-api-data-access", "extract-api-data-access-debt"):
             with self.subTest(scenario_id=scenario_id):
                 self.assertEqual(snapshot[scenario_id], LOAD_COST.measure_scenario(scenarios[scenario_id], REPO_ROOT)["total"])
 

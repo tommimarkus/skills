@@ -1,6 +1,6 @@
 # Extension: Azure Blob Storage (Block Blobs)
 
-Stack-specific additions to the `api-design` skill for Azure Blob Storage (Block Blobs via `Azure.Storage.Blobs` SDK v12). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Blob-specific detection, hosting, assimilation, and shared safety rules on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Blob Storage (Block Blobs via `Azure.Storage.Blobs` SDK v12). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Blob-specific detection, hosting, assimilation, and shared safety rules on top while preserving the core safety and evidence requirements.
 
 Scope: **Block Blobs** (the common case for API payloads). Append Blobs and Page Blobs are out of scope. ADLS Gen2 hierarchical-namespace accounts (`isHnsEnabled=true`) are not covered here; the ACL surface differs and warrants a separate extension.
 
@@ -26,16 +26,11 @@ Rules tagged `[SAS-direct]`, `[API-proxy]`, or `[Both]`.
 
 ## Mode lanes
 
-This core file is the always-loaded azure-blob-storage stack surface. Load exactly one
-mode lane when the task requires it:
-
-- **Build:** read [`azure-blob-storage/build.md`](azure-blob-storage/build.md) for detailed primitives and `*.PAT-*` implementation patterns.
-- **Review:** read [`azure-blob-storage/review.md`](azure-blob-storage/review.md) for `*.HC-*`, `*.LC-*`, and `*.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`azure-blob-storage/build.md`](azure-blob-storage/build.md)
+for implementation or [`azure-blob-storage/review.md`](azure-blob-storage/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 

@@ -36,14 +36,14 @@ condition.
 `SD-C-2`, `SD-C-4`, `SD-S-2`, `SD-E-2`, `SD-Q-2`, and .NET/Python evals.
 Merge back if fresh-agent runs show no lift or weak evidence.
 
-2026-07 Lookup load cap: Lookup answers from the matched catalog only; the
-core reference is not loaded. Catalogs carry `Cite` anchors; the gating text
-names the escalation cue (code evidence, cross-section tradeoffs, or no
-matching row -> Review/Build or ask). Retest: behavior evals
-`software-design-behavior-lookup-catalog-only` and
-`software-design-behavior-lookup-escalation`; scenario `sd-lookup-principle`.
-Merge back (drop the cap) if fresh-agent lookups under-answer or mis-cite
-sections.
+2026-07 Lookup load cap (retired by the approved judgment-led revision): the
+previous catalog-only rule escalated code evidence or cross-section questions
+to Review/Build. The replacement reads relevant catalog, core, and stack
+excerpts without a count-based mode change; it expands inspection for actual
+uncertainty or risk. Retest the existing narrow Lookup cases and the new
+`software-design-behavior-bounded-production-reading` and
+`software-design-behavior-project-aware-review-continues` controls. These cases
+are defined expectations, not a claim that a fresh model retest has run.
 
 2026-07 Python application/library expansion: python.md broadened from
 tooling-only to package/module/application/library design, closing the

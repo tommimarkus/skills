@@ -3,7 +3,7 @@
 Stack-specific additions to the `api-design` skill for Node.js HTTP APIs. The
 core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md)
 stays framework-neutral; this extension layers Node.js runtime, hosted-process,
-and serverless-handler mechanics on top without overriding core rules.
+and serverless-handler mechanics on top while preserving the core safety and evidence requirements.
 
 Source anchors used for this extension:
 
@@ -64,16 +64,11 @@ Rules are tagged `[Hosted]`, `[Serverless]`, `[Adapter]`, or `[Both]`.
 
 ## Mode lanes
 
-This core file is the always-loaded nodejs stack surface. Load exactly one
-mode lane when the task requires it:
-
-- **Build:** read [`nodejs/build.md`](nodejs/build.md) for detailed primitives and `*.PAT-*` implementation patterns.
-- **Review:** read [`nodejs/review.md`](nodejs/review.md) for `*.HC-*`, `*.LC-*`, and `*.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`nodejs/build.md`](nodejs/build.md)
+for implementation or [`nodejs/review.md`](nodejs/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 
@@ -91,7 +86,8 @@ Detailed signatures and implementation guidance live in [`nodejs/build.md`](node
 
 - Target a supported Node.js runtime with deterministic dependency installation.
 - Bound request bodies and timeouts, keep request state out of module globals, and reuse expensive clients safely.
-- Emit RFC 9457 problem details on error paths; durable work must be enqueued before a serverless response returns.
+- Preserve the stable error contract; RFC 9457 problem details are the default
+  for a new contract. Required durable work is accepted before a serverless response returns.
 - Keep secrets out of source, authenticate non-public routes, and verify webhook signatures over raw bounded bytes.
 
 ## Project assimilation (Node.js-specific)

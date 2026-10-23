@@ -29,10 +29,11 @@ screenshots.
   deprecate decisions without asserting traffic, latency, ownership, or runtime
   benefit from static contracts.
 
-Mode-routing evals are original synthetic cases. They assert that factual
-Extract stays core-only, explicit debt/compliance Extract adds only Review,
-Build excludes Review, Review excludes Build, and Lookup remains bounded to an
-anchored core rule plus at most one relevant stack lane.
+Mode-routing evals are original synthetic cases. They distinguish factual
+Extract from requested judgment and select only relevant core/lane excerpts.
+Lookup may combine multiple relevant stacks without count-based escalation;
+compatible project contracts take precedence over default mechanics while
+safety, protocol validity, and honest evidence remain protected.
 
 - Sources: [EF Core efficient querying](https://learn.microsoft.com/en-us/ef/core/performance/efficient-querying), [ADO.NET SQL connection pooling](https://learn.microsoft.com/en-us/sql/connect/ado-net/sql-server-connection-pooling?view=sql-server-ver17), [HttpClient guidelines](https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines), and [DbContext configuration](https://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/).
   Handling: URL-only evidence for the lifetime and query-shaping rules; bundled
@@ -42,3 +43,9 @@ anchored core rule plus at most one relevant stack lane.
   Handling: primary standards grounding for HEAD's no-content rule, the 401
   challenge requirement, and the problem-details media type and fields;
   examples and eval cases remain repo-authored and do not reproduce RFC text.
+
+- Source: approved marketplace judgment-led simplification and the synthetic
+  behavior cases in this skill. Handling: repo-authored scenarios exercise
+  proportionate reading/reporting, project-compatible decisions, and paired
+  authority/safety/evidence controls. Case definitions are not claims of executed
+  model evaluations or measured speed improvements.

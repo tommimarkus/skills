@@ -2,13 +2,13 @@
 
 Load for Build, Extract, and Review.
 
-Apply the listed defaults when the user has not supplied an answer. Ask only when a default would be unsafe, contradict supplied evidence, require destructive work, add cost, or materially change public behavior.
+Apply the listed defaults when the user and project contracts do not supply a compatible choice. Ask only when a material missing decision or authority prevents the next safe step; continue independent work and avoid unnecessary preflight questions.
 
 ## Inputs And Defaults
 
 | Input | Default when absent | Ask when |
 |---|---|---|
-| Consumer scope | Mixed consumers; use public-contract discipline with OpenAPI, stable errors, cursor pagination, and `Retry-After` on throttling | The endpoint is public or partner-facing and auth/contract exposure is unclear |
+| Consumer scope | Inspect actual consumers; preserve compatible contracts and prefer OpenAPI, stable errors, bounded pagination, and usable retry guidance for a new surface | The endpoint is public or partner-facing and auth/contract exposure is unclear |
 | Auth model | OAuth 2.0 / OIDC, maintained session/JWT middleware, or Entra ID + managed identity for Azure targets; no secrets in code | The request asks for anonymous, key-only, or shared-secret auth on non-public data |
 | Framework / hosting stack | Detect from manifests and source; unknown stacks use the core reference only | Stack-specific runtime mechanics are required but no extension covers them |
 | Hosting target and performance posture | Record evidence when present; do not invent runtime-specific SLO choices | The task asks for p95, cold-start, RU, storage-latency, or scale claims |
@@ -18,5 +18,4 @@ Apply the listed defaults when the user has not supplied an answer. Ask only whe
 
 ## Output Disclosure
 
-Include a `Defaults applied:` line when any default materially shaped the result.
-Name any question that was skipped because a safe default existed.
+Explain a material default or exception once when it helps the reader assess the result. Do not list skipped questions or routine defaults.

@@ -95,13 +95,13 @@ class PythonApiExtensionRoutingTest(unittest.TestCase):
         build = behavior["api-design-behavior-python-build-hosted-asgi"]
         wsgi = behavior["api-design-behavior-python-review-wsgi-clean"]
         serverless = behavior["api-design-behavior-python-review-serverless"]
-        self.assertIn("exclude both Build and Review lanes", factual["required_checks"])
-        self.assertIn("load the Python core and Review lane", debt["required_checks"])
+        self.assertIn("avoid unrelated Build and Review detail for a factual baseline", factual["required_checks"])
+        self.assertIn("read relevant Python core and Review criteria for the requested judgment", debt["required_checks"])
         self.assertIn(
-            "load the matched core reference plus at most one Python lane",
+            "read relevant core-reference and Python excerpts for the narrow lifecycle question",
             lookup["required_checks"],
         )
-        self.assertIn("exclude the Review lane", build["required_checks"])
+        self.assertIn("avoid unrelated Review detail for the requested implementation", build["required_checks"])
         self.assertIn(
             "apply the WSGI close carve-out and withhold pyapi.HC-5",
             wsgi["required_checks"],

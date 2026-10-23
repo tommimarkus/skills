@@ -15,9 +15,8 @@ class AppDesignViteExtensionSurfaceTest(unittest.TestCase):
 
         self.assertIn("extensions/vite.md", skill)
         self.assertIn("load it before the React extension", skill)
-        self.assertIn("Vite + React loads Vite then React", skill)
-        self.assertIn("React + Next.js stays React then Next.js", skill)
         self.assertLess(skill.index("extensions/vite.md"), skill.index("extensions/react.md"))
+        self.assertLess(skill.index("extensions/react.md"), skill.index("extensions/nextjs.md"))
         self.assertIn("vite.md", readme)
         self.assertIn("Vite", readme)
         for text in (skill, claude_agent):

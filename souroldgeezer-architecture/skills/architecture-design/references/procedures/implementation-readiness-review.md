@@ -3,7 +3,8 @@
 Use in Review mode when the user asks whether architecture docs are enough as
 an implementation handoff, where findings should live, or whether a package can
 guide implementation without the rest of the source material. In Build mode,
-load only § Build Readiness Disclosure at closeout.
+use § Build Readiness Disclosure when the requested handoff or readiness claim
+needs it; a bounded label/source change does not require a full inventory.
 
 Report: implementation-readiness verdict; evidence inventory; architecture-documentation findings; other source material findings; skill/package issue classification; ArchiMate equivalence; Implementation impact. Recommend links to implementation contracts, not duplicated contracts. Do not treat architecture docs as a complete implementation specification. runtime/package readiness claims are separate from implementation-handoff completeness claims.
 
@@ -44,10 +45,12 @@ defects unless the package claimed that detail.
 
 ## Build Readiness Disclosure
 
-Build mode ends by enumerating the architecture-owned classes above, each
-marked present or absent in the package. A class is present only when the
-package models it as first-class elements and relations, not only as edge
-labels:
+When the requested Build includes implementation handoff or a readiness claim,
+report the relevant architecture-owned concern classes present or absent. Use
+the full enumeration below for a requested formal report. Do not require it for
+a bounded mechanical change, and do not infer implementation sufficiency from a
+successful package build. A class is present only when the package models it as
+first-class elements and relations, not only as edge labels:
 
 - product/stakeholder intent: Motivation, Requirement, or Constraint content,
   or a documented viewpoint and quality target;

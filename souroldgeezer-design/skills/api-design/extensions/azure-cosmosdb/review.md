@@ -4,9 +4,12 @@ Review classifications and carve-outs for [the azure-cosmosdb core](../azure-cos
 
 ## Load condition
 
-Load this file in Review mode. In Extract, load it only when the user explicitly
-requests a debt or compliance verdict. For a narrow Lookup, load it only when
-the question asks for a finding code or carve-out. Do not load it in Build.
+Read relevant finding criteria, positive signals, or carve-outs for the requested judgment.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Smell codes
 

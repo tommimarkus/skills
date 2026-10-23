@@ -62,20 +62,11 @@ or `[Both]`.
 
 ## Mode lanes
 
-This core file is the always-loaded Python stack surface. Load exactly one mode
-lane when the task requires it:
-
-- **Build:** read [`python/build.md`](python/build.md) for detailed primitives
-  and `pyapi.PAT-*` implementation patterns.
-- **Review:** read [`python/review.md`](python/review.md) for `pyapi.HC-*`,
-  `pyapi.LC-*`, and `pyapi.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane
-  only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most
-  the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`python/build.md`](python/build.md)
+for implementation or [`python/review.md`](python/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 
@@ -105,7 +96,7 @@ Detailed signatures and implementation guidance live in
 - Treat disconnect and cancellation as normal streaming paths: release the
   upstream iterator/file/connection in `finally`, propagate cancellation after
   cleanup, and bound stream time and bytes.
-- Keep OpenAPI 3.1 generation repeatable: one declared contract source,
+- Keep the declared contract generation repeatable (prefer OpenAPI 3.1 for a new contract):
   stable operation identifiers, deterministic inputs/order, and CI that fails
   on an unreviewed generated-contract diff or code/contract mismatch.
 - Preserve core HTTP semantics. Delegate code-level security review and secure
@@ -149,7 +140,7 @@ assimilation footer.
 | §3.14 observability | Process-start telemetry, request-scoped structured fields, W3C trace propagation |
 | §3.15 hosting | ASGI server, WSGI gateway, or serverless adapter selected explicitly in deployment wiring |
 | §3.16 data access | Process/warm-instance client or pool, closed through lifecycle ownership |
-| §4.5 OpenAPI | Checked-in or deterministically generated OpenAPI 3.1 plus CI diff/contract checks |
+| §4.5 OpenAPI | Reviewable contract authority or deterministic generation, with checks against handlers |
 
 ## Applies to reference sections
 

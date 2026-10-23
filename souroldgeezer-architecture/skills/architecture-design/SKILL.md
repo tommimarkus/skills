@@ -30,14 +30,14 @@ handoff facts.
 
 Pre-flight: inspect prompt, target package/source paths, existing dediren source,
 selected notation/profile, rendered SVG/OEF/XMI evidence, validation logs,
-requested mode, quality target, and export need. Infer only the default mode. If
-target/evidence/scope is missing or ambiguous, ask the user before
-edits/findings.
+requested mode, quality target, and export need. Infer safe defaults within the
+authorized outcome. Ask the user when a material decision or authority is missing; absent
+evidence limits only the conclusion requiring it, not independent findings.
 
 ## Modes
 
-- **Build**: create/edit package source from architect intent; close with the
-  build readiness disclosure
+- **Build**: create/edit package source from architect intent; use the build
+  readiness disclosure when an implementation handoff or readiness claim needs it
   ([implementation-readiness-review](references/procedures/implementation-readiness-review.md)
   § Build Readiness Disclosure).
 - **Extract**: lift evidenced code/IaC/API/UI/workflow facts; mark
@@ -57,8 +57,8 @@ Build.
 
 ## Workflow
 
-1. Load only the [architecture](../../docs/architecture-reference/architecture.md)
-   sections the mode needs; do not read it whole. By mode:
+1. Read relevant [architecture](../../docs/architecture-reference/architecture.md)
+   sections for the actual decision, not the whole reference. Navigation by mode:
    - **Build / Extract**: §1 operating contract, §2 quality levels, §3 package
      source, §5 relationship discipline, §7 view rules, §9 runtime evidence; add
      §4 layers/aspects and §6 diagram kinds when choosing element or view types;
@@ -73,10 +73,9 @@ Build.
      `docs/architecture/*.dediren/` package exists and the task touches a
      shared element or the landscape package.
 
-   This map is a floor, not a cap: pull §10 OEF, §11 profile, §14 pitfalls, or
-   any other section the moment the task reaches it, and escalate a Lookup to
-   the fuller Build/Extract/Review set (or ask) when a bounded answer no longer
-   covers the work. Read the
+   This map identifies available guidance, not a mandatory preload. Read only
+   the needed excerpts; expand for uncertainty, dependencies, or material risk.
+   A Lookup may consult multiple sections without changing mode. Read the
    [operational workflow](references/procedures/architecture-operational-workflow.md)
    before running Build/Extract/Review operational steps; a Lookup that makes no
    runtime claim may skip it.

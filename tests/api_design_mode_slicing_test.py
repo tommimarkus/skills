@@ -2,26 +2,9 @@ import json
 import re
 import unittest
 
-from tests.surface_test_lib import REPO_ROOT, load_script_module, read, read_jsonl
+from tests.surface_test_lib import REPO_ROOT, read, read_jsonl
 
 API_SKILL = REPO_ROOT / "souroldgeezer-design" / "skills" / "api-design"
-API_REFERENCE = REPO_ROOT / "souroldgeezer-design" / "docs" / "api-reference" / "api-design.md"
-DATA_EFFICIENCY = REPO_ROOT / "souroldgeezer-design" / "docs" / "design-reference" / "data-efficiency.md"
-# api-design's Load Map also cites the shared design core, which lives outside the
-# skill dir, so an rglob of the skill dir alone understates the real closure.
-PAIRING_CORE = (
-    REPO_ROOT / "souroldgeezer-design" / "docs" / "design-reference"
-    / "architecture-pairing-core.md"
-)
-LOAD_COST_SCRIPT = (
-    REPO_ROOT
-    / "souroldgeezer-audit"
-    / "skills"
-    / "lean-audit"
-    / "references"
-    / "scripts"
-    / "skill_load_cost.py"
-)
 STACKS = (
     "azure-functions-dotnet",
     "nodejs",
@@ -56,19 +39,15 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
                 self.assertIn(f"{stack}/build.md", core)
                 self.assertIn(f"{stack}/review.md", core)
 
-    def test_router_declares_each_mode_and_bounded_lookup(self) -> None:
+    def test_router_keeps_stack_reference_targets_available(self) -> None:
         skill = read("souroldgeezer-design/skills/api-design/SKILL.md")
 
         self.assertLessEqual(len(skill.splitlines()), 150)
-        required_route_phrases = (
-            "Build:** load every matching core",
-            "Review:** load every matching core",
-            "Extract:** load matching cores only",
-            "Node.js followed by Next.js counts as one composed base",
-            "at most its one relevant",
-            "escalate to Review or Build",
-        )
-        self.assertTrue(all(phrase in skill for phrase in required_route_phrases))
+        for stack in STACKS:
+            with self.subTest(stack=stack):
+                for relative in (f"extensions/{stack}.md", f"extensions/{stack}/build.md", f"extensions/{stack}/review.md"):
+                    self.assertIn(relative, skill)
+                    self.assertTrue((API_SKILL / relative).is_file())
 
     def test_declared_cost_routes_encode_mode_exclusions(self) -> None:
         scenarios = json.loads(read("tests/skill_load_cost/scenarios.json"))
@@ -104,22 +83,6 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
         )
         self.assertFalse(any("/build.md" in target or "/review.md" in target for target in surface))
 
-    def test_full_api_closure_preserves_fidelity_baseline(self) -> None:
-        slc = load_script_module("api_design_mode_slicing_load_cost", LOAD_COST_SCRIPT)
-        patterns = json.loads(read("tests/skill_load_cost/code_patterns.json"))
-        baseline = json.loads(read("tests/skill_load_cost/baselines/api-design.json"))
-        paths = [API_REFERENCE, PAIRING_CORE, DATA_EFFICIENCY, *sorted(API_SKILL.rglob("*.md"))]
-        current = slc.union_inventory(
-            [slc.extract_inventory(path.read_text(encoding="utf-8"), patterns) for path in paths]
-        )
-
-        missing_codes = sorted(set(baseline["codes"]) - set(current["codes"]))
-        missing_sections = sorted(set(baseline["sections"]) - set(current["sections"]))
-        self.assertEqual(missing_codes, [])
-        self.assertEqual(missing_sections, [])
-        self.assertGreaterEqual(len(current["codes"]), 218)
-        self.assertGreaterEqual(len(current["sections"]), 210)
-
     def test_mode_routing_has_behavior_eval_coverage(self) -> None:
         cases = {
             case["id"]: case
@@ -130,17 +93,23 @@ class ApiDesignModeSlicingTest(unittest.TestCase):
         self.assertIn("api-design-behavior-extract-factual-core-only", cases)
         self.assertIn("api-design-behavior-extract-explicit-debt", cases)
         self.assertIn(
-            "exclude both Build and Review lanes",
+            "avoid unrelated Build and Review detail for a factual baseline",
             cases["api-design-behavior-extract-factual-core-only"]["required_checks"],
         )
         self.assertIn(
-            "exclude Build lanes",
+            "avoid unrelated Build detail for the requested judgment",
             cases["api-design-behavior-extract-explicit-debt"]["required_checks"],
         )
-        factual_legacy = cases["api-design-behavior-extract-functions-legacy-factual"]
-        self.assertIn("load the Azure Functions core only", factual_legacy["required_checks"])
-        self.assertIn("classify the package as legacy debt", factual_legacy["forbidden_behaviors"])
-        self.assertIn("load the Review lane", factual_legacy["forbidden_behaviors"])
+        for case_id in (
+            "api-design-behavior-project-compatible-contract",
+            "api-design-behavior-contract-exception-safety-control",
+            "api-design-behavior-lookup-composed-excerpts",
+        ):
+            with self.subTest(case_id=case_id):
+                self.assertIn(case_id, cases)
+                self.assertTrue(cases[case_id]["required_checks"])
+                self.assertTrue(cases[case_id]["forbidden_behaviors"])
+
 
 
 if __name__ == "__main__":

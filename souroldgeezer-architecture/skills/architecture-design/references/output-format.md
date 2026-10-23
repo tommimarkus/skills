@@ -1,11 +1,17 @@
-Return evidence, notation, cross-notation links, quality, export readiness,
-findings, executive summary, footer. Build/Extract: package state, groups,
-blockers. Build also
-ends with the build readiness disclosure — architecture-owned concern classes
-present vs. absent per
+Lead with the result, artifact links, relevant validation, and material limits.
+Keep a bounded change or Lookup concise; do not emit a full technical footer,
+executive summary, concern-class inventory, or routine negative fields by default.
+The detailed contracts below are for a requested formal report or actual handoff
+consumer. References elsewhere to named footer fields may be satisfied inline
+in ordinary output; preserve their evidence when it affects a claim or reliance.
+
+Build/Extract explain relevant package changes and blockers; Review leads with
+supported findings and their evidence, consequence, and action. Use
+`[ARCH-*]` codes when they help a formal review or consumer. A Build-readiness
+inventory is conditional per
 [implementation-readiness-review](procedures/implementation-readiness-review.md)
-§ Build Readiness Disclosure. Review: `[ARCH-*] finding; evidence; severity;
-action`. Lookup: brief/footer.
+§ Build Readiness Disclosure. Concision never removes material uncertainty,
+partial export coverage, original-versus-copy provenance, or failed validation.
 
 Implementation-readiness review fields: implementation-readiness verdict, evidence
 inventory, architecture-documentation findings, other source material findings,
@@ -113,11 +119,10 @@ Notable choices:
 
 ## Executive Summary
 
-Build, Extract, and Review output carries a required executive summary
-immediately above the Footer; Lookup (bounded brief/footer answers) is exempt.
-Write it for a non-technical sponsor deciding what to approve, fund, or
-escalate: plain words only — no `ARCH-*` codes, quality-level tokens, file
-paths, or notation/dediren jargon. Those stay in the Footer.
+Use an executive summary when requested or useful to a sponsor deciding what
+to approve, fund, or escalate. Use plain words and evidence-proportionate reliance
+claims. A formal report may place it above the technical Footer; an ordinary
+answer need not duplicate its result in two formats.
 
 ```text
 Executive summary:
@@ -142,6 +147,10 @@ regressions that change what the reader may rely on must also surface here as
 plain-words risks/asks, not only as footer fields.
 
 ## Footer
+
+Optional detailed template for an explicit formal-report request or an actual
+consumer; ordinary output includes only relevant facts and material limits.
+Do not replace structured runtime tool envelopes with this prose template.
 
 ```
 Mode: build | extract | review | lookup

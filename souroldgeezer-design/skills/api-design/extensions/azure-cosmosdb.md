@@ -1,6 +1,6 @@
 # Extension: Azure Cosmos DB (NoSQL API)
 
-Stack-specific additions to the `api-design` skill for Azure Cosmos DB (NoSQL API, `Microsoft.Azure.Cosmos` SDK v3). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Cosmos-specific detection, hosting, assimilation, and shared safety rules on top without overriding core rules.
+Stack-specific additions to the `api-design` skill for Azure Cosmos DB (NoSQL API, `Microsoft.Azure.Cosmos` SDK v3). The core reference [`../../../docs/api-reference/api-design.md`](../../../docs/api-reference/api-design.md) stays framework-neutral; this extension layers Cosmos-specific detection, hosting, assimilation, and shared safety rules on top while preserving the core safety and evidence requirements.
 
 Scope: the **NoSQL (Core SQL) API** only. Cosmos MongoDB, Cassandra, Gremlin, and Table APIs have different SDK surfaces and idioms; they are not covered here.
 
@@ -28,16 +28,11 @@ Pairing: Flex Consumption + Cosmos `[Serverless]` is the cheapest all-serverless
 
 ## Mode lanes
 
-This core file is the always-loaded azure-cosmosdb stack surface. Load exactly one
-mode lane when the task requires it:
-
-- **Build:** read [`azure-cosmosdb/build.md`](azure-cosmosdb/build.md) for detailed primitives and `*.PAT-*` implementation patterns.
-- **Review:** read [`azure-cosmosdb/review.md`](azure-cosmosdb/review.md) for `*.HC-*`, `*.LC-*`, and `*.POS-*` classifications plus exact carve-outs.
-- **Extract:** keep this core only for a factual baseline. Load the review lane only when the user explicitly requests a debt or compliance verdict.
-- **Lookup:** keep this core for detection and factual mechanics; load at most the one lane needed by the narrow question.
-
-The core and one selected lane form the extension contract. Build and Review
-lanes are mutually exclusive unless the user explicitly changes mode.
+Read relevant core sections and detail from [`azure-cosmosdb/build.md`](azure-cosmosdb/build.md)
+for implementation or [`azure-cosmosdb/review.md`](azure-cosmosdb/review.md) for findings and carve-outs.
+The [workflow load map](../SKILL.md#load-map) owns task-relevant selection,
+project-compatible defaults, and multi-stack Lookup. Detection alone does not
+require a full pack; factual Extract does not acquire an unsolicited verdict.
 
 ## Stack-specific primitives
 

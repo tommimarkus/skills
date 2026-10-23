@@ -2,7 +2,8 @@
 
 Per-stack packs loaded on demand by the `api-design` skill. The workflow in
 [`../SKILL.md`](../SKILL.md) owns route selection; every stack pack separates
-an always-loaded core from mutually exclusive Build and Review lanes.
+a stack core from Build and Review detail lanes. Read only the sections needed
+for the task; detection alone does not require a full pack.
 
 ## File layout per extension
 
@@ -17,56 +18,49 @@ Each stack has three files:
   `<stack>.POS-*` classifications plus exact carve-outs.
 
 The core and its selected lane form one extension contract. Lanes add detail;
-they do not replace or weaken the core API reference.
+they refine the core API defaults and evidence requirements. Compatible project
+contracts may justify alternatives while preserving protocol validity and safety.
 
 ## Load order
 
-1. Detect stacks from manifests, source, and deployment signals using each
-   core file's `Name and detection signals` section.
-2. Load every matching core for Build, Extract, and Review.
-3. Select lanes by mode:
-   - Build loads each matching `build.md` and excludes `review.md`.
-   - Review loads each matching `review.md` and excludes `build.md`.
-   - Factual Extract loads cores only. Explicit debt/compliance Extract also
-     loads matching review lanes and discloses the escalation.
-   - Lookup starts from one anchored core-reference section. A stack-specific
-     Lookup loads one stack core plus at most one relevant lane.
-4. Apply the selected rules after the framework-neutral reference.
-
-A Lookup that needs more than one stack's mechanics, both lanes, or a data
-extension in addition to the Node.js/Next.js base escalates to Review or Build,
-or asks the user. Node.js followed by Next.js is the one composed-base
-exception and counts as a single runtime stack for this cap.
+1. Detect task-relevant stacks from manifests, source, and deployment signals.
+2. Read relevant core sections and the Build or Review detail needed for the
+   decision. The other lane is available when its detail actually matters; do
+   not preload every detected stack or both lanes.
+3. Factual Extract records facts without an unsolicited compliance verdict.
+   A requested debt/compliance judgment reads the applicable Review criteria.
+4. Lookup may combine multiple relevant core or lane excerpts without changing
+   mode. Expand inspection when uncertainty, dependencies, or material risk
+   requires it, not merely because an extension-count cap was reached.
+5. Compose Node.js before Next.js when both mechanics matter. Apply the same
+   task-relevance rule to compute and data stacks.
 
 ## Review Or Extract Rules
 
-Review always loads the matching review lanes. Factual Extract stays core-only;
-an explicit debt/compliance Extract adds only matching review lanes and reports
-that choice in its footer.
+A supported finding needs evidence of a violated project contract, actual unsafe
+behavior, or a material consequence. A different error format, OpenAPI version,
+versioning scheme, or telemetry product is not by itself a finding. Existing
+codes identify the concern; their high-confidence bucket does not establish
+severity or override a compatible project contract.
 
 ## Footer Field
 
-The ordinary API-design footer lists the selected mode, every core and lane
-loaded, evidence layers, project assimilation, delegations, and limits. An
-Extract that adds review detail states the user request that triggered it.
+Report the result and material evidence limits concisely. Give the selected
+mode, cores, lanes, assimilation, and delegation inventory only for a requested
+formal report or actual consumer. Explain material exceptions once.
 
 ## Extensions compose
 
-Build, Review, and Extract compose every detected stack. An Azure Functions
-API that stores entities in Cosmos DB and payloads in Blob Storage loads all
-three cores, then the lane selected by the mode for each core. A hosted Next.js
-API loads the Node.js core first and the Next.js core second, then the same
-selected lane for both. A Python API loads the Python core for ASGI, WSGI, or
-serverless signals, then selects exactly one Python lane for Build or Review.
+Compose the excerpts needed for the decision. An Azure Functions API may need
+Cosmos and Blob guidance for a storage change, while a bounded handler edit may
+need neither. A hosted Next.js API reads relevant Node.js guidance before its
+Next.js specialization. Preserve the namespaces `afdotnet.*`, `nodejs.*`,
+`nextjs.*`, `pyapi.*`, `cosmos.*`, and `blob.*` so supported findings remain
+attributable; a namespace is not an instruction to load unrelated rules.
 
-Smell-code namespaces are orthogonal: `afdotnet.*`, `nodejs.*`,
-`nextjs.*`, `pyapi.*`, `cosmos.*`, and `blob.*`. Pattern namespaces use the same
-prefixes. Findings therefore remain attributable when Review composes multiple
-packs, while Build patterns remain attributable across compute and data layers.
-
-On conflict, an exact review-lane carve-out wins only for its documented stack
-boundary. Extensions never override the core contract, security, reliability,
-observability, or verification-layer baseline.
+On conflict, inspect the actual project contract and exact runtime boundary.
+Preserve safety, protocol validity, and honest evidence; use justified defaults
+or project-compatible alternatives instead of mandatory migration.
 
 ## Current extensions
 
@@ -103,8 +97,8 @@ Review lanes own smell codes, positive signals, and carve-outs.
 5. Put only finding classifications, positive signals, and carve-outs in
    Review. A review action may describe the required fix without loading Build.
 6. Add the core to the `SKILL.md` load map and this table.
-7. Add route tests proving mode inclusion and exclusion, then measure a declared
-   scenario before updating the committed cost snapshot.
+7. Add representative route and behavior cases for relevant selection and
+   safety, then update affected declared cost scenarios and snapshots deliberately.
 8. Document common composition with existing stacks.
 
 ## Future hosted API extensions
@@ -117,7 +111,7 @@ generic API contract in the core reference.
 
 - Extensions are not general framework guides.
 - Extensions do not duplicate the framework-neutral API reference.
-- A mode lane may not smuggle the other lane's concrete code namespace into
-  its closure.
+- Detail lanes keep their code ownership separate; consulting another lane for
+  a relevant decision does not change that ownership.
 - Factual Extract does not produce a compliance verdict from core-only
   evidence.

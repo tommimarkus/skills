@@ -4,9 +4,12 @@ Review classifications and carve-outs for [the nodejs core](../nodejs.md).
 
 ## Load condition
 
-Load this file in Review mode. In Extract, load it only when the user explicitly
-requests a debt or compliance verdict. For a narrow Lookup, load it only when
-the question asks for a finding code or carve-out. Do not load it in Build.
+Read relevant finding criteria, positive signals, or carve-outs for the requested judgment.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Smell codes
 
@@ -15,7 +18,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`nodejs.HC-1`** — `app.listen(...)`, `server.listen(...)`, or `fastify.listen(...)` in a serverless handler entrypoint. Serverless platforms own the listener. *Layer:* static.
 - **`nodejs.HC-2`** — Hosted raw `node:http` / framework listener exposed without request/header timeout configuration and without a documented reverse-proxy contract. *Layer:* static + iac.
 - **`nodejs.HC-3`** — JSON, form, or raw body parsing without an explicit size limit on a public route. *Layer:* static.
-- **`nodejs.HC-4`** — Error path returns bare JSON / string / HTML instead of `application/problem+json`. *Layer:* static + contract.
+- **`nodejs.HC-4`** — Error path breaks the declared stable failure contract or leaks secrets/internal traces; a compatible established JSON envelope is valid. *Layer:* static + contract.
 - **`nodejs.HC-5`** — POST mutation without `Idempotency-Key` support or natural-key dedup when clients may retry. *Layer:* static + contract.
 - **`nodejs.HC-6`** — 429 emitted without `Retry-After`. *Layer:* static.
 - **`nodejs.HC-7`** — Secret literal in source, committed `.env*`, committed serverless local settings, or token in query string. *Layer:* static.
@@ -23,7 +26,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 - **`nodejs.HC-9`** — Unawaited promise, timer, or in-memory queue used for required work after a serverless response returns. *Layer:* static.
 - **`nodejs.HC-10`** — Callback-style Lambda handler on a Node.js runtime where the official AWS docs require or recommend async handlers for the target version. *Layer:* static.
 - **`nodejs.HC-11`** — Per-request construction of an expensive handler, dispatcher, database pool, queue client, or OpenTelemetry provider inside handler logic. Operation-scoped sessions, transactions, and readers remain valid. *Layer:* static.
-- **`nodejs.HC-12`** — Missing OpenAPI document / generator for an added endpoint. *Layer:* static + contract.
+- **`nodejs.HC-12`** — Added endpoint has no reviewable compatible contract, or its declared document/generator contradicts handler behavior. *Layer:* static + contract.
 - **`nodejs.HC-13`** — Boundary validation absent for request body/query/params on a mutation or public endpoint. *Layer:* static + contract.
 - **`nodejs.HC-14`** — Webhook signature checked after JSON parsing, compared with `===`, or accepted without timestamp freshness. *Layer:* static.
 - **`nodejs.HC-15`** — Hosted API lacks graceful shutdown handling while using a long-lived listener. *Layer:* static.
@@ -58,7 +61,7 @@ Do not flag the following:
 - Framework default body limits when the framework documents a bounded default
   and the route does not override it upward; still record the cap.
 - `Response.json(...)` / `res.json(...)` on successful 2xx responses. The
-  problem+json requirement applies to error paths.
+  error paths retain the project's stable contract; problem+json is the new-contract default.
 - Public health, readiness, liveness, and static metadata endpoints without
   auth when they return no private data and are rate-limited.
 - Next.js Route Handlers / Pages API routes when `nextjs.md` also loads; apply

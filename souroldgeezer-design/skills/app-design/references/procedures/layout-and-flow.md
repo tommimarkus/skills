@@ -1,12 +1,11 @@
 # Layout And Flow Procedure
 
-Use this procedure for Build, Extract, or Review work involving a multi-screen
-flow, material layout redesign, dashboard or workspace composition, or an
-unresolved layout direction. In Lookup, use it only for an explicit layout- or
-flow-mechanics question. Skip the whole procedure only for routine
-component/state work or a narrow change whose layout direction is already
-approved. A substantial flow or material-layout task still needs flow analysis
-after its direction is approved; it simply skips the alternatives checkpoint.
+Use relevant sections for multi-screen flows, material layout redesign,
+dashboards, workspaces, and layout or flow questions. Keep analysis proportionate
+to the requested outcome. Routine component/state work and narrow approved-layout
+changes can skip the procedure. Substantial work still needs relevant flow and
+recovery reasoning after direction is approved; it need not recreate unchanged
+contracts or produce every artifact below.
 
 Keep the result framework-neutral. Project-native patterns take precedence when
 they satisfy the core app-design contract. This procedure does not own brand,
@@ -14,7 +13,8 @@ typography, art direction, or a particular diagram or design application.
 
 ## Flow Mapping
 
-Create or extract the flow in this order:
+Inspect the user flow in the order useful to the decision; these are prompts
+for relevant branches, not a mandatory inventory for every screen:
 
 1. Name the actor and outcome: the user's goal, entry, preconditions, and
    observable completion. Do not use a component tree, service boundary, or
@@ -31,9 +31,9 @@ Create or extract the flow in this order:
 8. Review for unexplained dead ends and duplicate steps, including back,
    reload, and interrupted-session behavior.
 
-Give every step a stable flow-step ID and trace it to the route or screen, user
-action, visible system feedback or state, next paths, and recovery. Use a
-compact table for a mostly linear journey:
+Keep important links between user action, route/screen, visible feedback, next
+paths, and recovery. Use stable flow-step IDs and a compact table when they help
+coordinate a multi-screen change or a requested formal review:
 
 | Step ID | Route / screen | User action | System feedback / state | Next or recovery |
 |---|---|---|---|---|
@@ -44,10 +44,11 @@ become materially clearer than in the compact table. Keep the stable IDs in the
 diagram and accompanying contracts; the diagram format is the user's or
 project's choice.
 
-For each screen reached by the flow, complete a screen-state matrix covering
-default, loading, empty, error, offline, unauthorized, success, and
-destructive-confirmation behavior. Mark a state not applicable only with a
-reason. State changes must preserve a visible next action or recovery path.
+Consider relevant default, loading, empty, error, offline, unauthorized, success,
+and destructive-confirmation behavior. Use a screen-state matrix when it makes
+material branches or ownership clearer; do not enumerate irrelevant states or
+justify each omission. State changes preserve a visible next action or recovery
+path.
 For an operation that crosses about one second, record the state transition
 information required by the [operation-feedback default](../../../../docs/app-reference/app-design.md#39-loading-error-empty-offline-and-unauthorized-states): status onset,
 known or unknown total, blocking scope, and completion, failure, cancellation,
@@ -72,20 +73,24 @@ These patterns are options, not mandatory templates. Reject a pattern when its
 extra regions compete with the primary task or when its narrow transformation
 would remove an essential step.
 
-When a material direction is unsettled, present two or three low-fidelity text
-wireframes. Label every alternative `unapproved`, identify its primary region,
-show wide and narrow reading order, and explain the tradeoffs for flow,
-information density, recovery, and adaptation. Then pause for user selection or
-combination before committing that direction to implementation or a settled
-design contract.
+For authorized implementation, choose a sensible reversible direction from the
+user goal, constraints, and project patterns and proceed. Explain a consequential
+choice briefly. Do not require alternatives or approval for routine design
+judgment; preserve an already-approved direction.
 
-Skip alternatives for a narrow fix or an already-approved direction. Disclose
-the reason so an omitted checkpoint is not mistaken for silent design approval.
+When the user asks to compare or select directions, present meaningful rough
+alternatives with wide/narrow order and tradeoffs; two or three often suffice.
+Label proposals `unapproved` when approval is pending, and pause for user
+selection or combination when the user requested that checkpoint. Also ask when
+a material product choice cannot safely be inferred; continue independent work
+while it is unresolved. Do not invent product policy under the guise of a
+reversible layout choice.
 
 ## Selected Layout Contract
 
-After selection, write one layout contract for each screen or stable screen
-family. Record:
+After choosing a direction, preserve the relevant layout decisions in source or
+a compact contract for the affected screen or stable screen family. Record the
+following when they matter to implementation or a requested handoff:
 
 - each region's purpose, flow-step IDs, priority, and relationship to the
   primary task;
@@ -103,18 +108,18 @@ family. Record:
 - visual, DOM, reading, and focus order. A visual rearrangement must not create
   a meaning-changing DOM, reading, or focus sequence.
 
-Trace region IDs back to their flow-step IDs and forward to route/screen and
-state contracts. When a wide supporting pane becomes a narrow single-column
+When using region and flow-step IDs, keep their links to route/screen and state
+contracts coherent. When a wide supporting pane becomes a narrow single-column
 journey, place or reveal it at the point where it supports the primary task;
 do not move it ahead of that task in DOM or focus order merely to match a wide
 visual position.
 
-For Build, the target flow map, selected contract, state matrix, and responsive
-transformation are design inputs to implementation. For Extract, record what
+For Build, use only the flow map, selected contract, state matrix, and responsive
+transformation artifacts needed for the change. For Extract, record what
 the current UI actually does, its entry and exit points, dead ends, and recovery
-or resumption. For Review, attach each finding to a flow-step ID or layout region
-rather than issuing a screen-wide opinion. Lookup stays concise: answer the
-explicit mechanic and retain the normal one-line footer.
+or resumption. For Review, locate findings in the affected source, flow step, or
+layout region rather than issuing a screen-wide opinion. Lookup stays concise:
+answer the explicit mechanic and disclose only material evidence limits.
 
 ## Evidence Boundaries
 

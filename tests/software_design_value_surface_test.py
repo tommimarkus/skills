@@ -6,15 +6,8 @@ from tests.surface_test_lib import compact, read, read_jsonl
 
 SOFTWARE_SKILL = "souroldgeezer-design/skills/software-design"
 
-# The audit-handoff contract asserted on both the SKILL.md surface and the
-# matching behavior eval's required checks — one list so the two stay in sync.
-AUDIT_HANDOFF_PHRASES = (
-    "classify adjacent audit triggers",
-    "devsecops-audit Quick",
-    "test-quality-audit Quick",
-    "disclose unavailable",
-    "not applicable with reason",
-)
+# Optional specialist review is covered by behavior cases rather than a mandatory
+# follow-up workflow for every implementation or test edit.
 
 
 def _behavior_checks_and_forbidden(behaviors: dict, case_id: str) -> tuple[str, str]:
@@ -33,11 +26,18 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
         self.assertIn("review diff against the design decision", skill)
         self.assertIn("validate", skill)
 
-    def test_build_mode_classifies_adjacent_audit_handoffs(self) -> None:
-        skill = compact(read(f"{SOFTWARE_SKILL}/SKILL.md"))
-
-        for phrase in AUDIT_HANDOFF_PHRASES:
-            self.assertIn(phrase, skill)
+    def test_bounded_work_and_project_review_have_paired_behavior_cases(self) -> None:
+        cases = {
+            case["id"]: case
+            for case in read_jsonl(f"{SOFTWARE_SKILL}/references/evals/behavior-cases.jsonl")
+        }
+        for case_id in (
+            "software-design-behavior-bounded-production-reading",
+            "software-design-behavior-project-aware-review-continues",
+        ):
+            with self.subTest(case_id=case_id):
+                self.assertTrue(cases[case_id]["required_checks"])
+                self.assertTrue(cases[case_id]["forbidden_behaviors"])
 
     def test_extensions_define_concrete_smell_codes(self) -> None:
         expected_codes = {
@@ -84,10 +84,6 @@ class SoftwareDesignValueSurfaceTest(unittest.TestCase):
         self.assertIn("review the diff", checks)
         self.assertIn("jump straight to code", forbidden)
 
-        checks, forbidden = _behavior_checks_and_forbidden(behaviors, "software-design-behavior-build-audit-handoff")
-        for phrase in AUDIT_HANDOFF_PHRASES:
-            self.assertIn(phrase, checks)
-        self.assertIn("duplicate security or test-quality rubric", forbidden)
 
     def test_model_pressure_justifies_stack_extensions(self) -> None:
         pressure = read(f"{SOFTWARE_SKILL}/references/evals/model-pressure.md")

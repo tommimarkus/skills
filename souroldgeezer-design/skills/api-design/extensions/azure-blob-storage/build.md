@@ -4,9 +4,12 @@ Implementation detail for [the azure-blob-storage core](../azure-blob-storage.md
 
 ## Load condition
 
-Load this file only in Build mode, or for a narrow Lookup that explicitly asks
-for an implementation primitive or pattern from this stack. Do not load it in
-Review or factual Extract.
+Read relevant implementation primitives or patterns for the requested change.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Stack-specific primitives
 

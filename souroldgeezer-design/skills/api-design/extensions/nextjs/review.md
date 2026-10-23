@@ -4,16 +4,20 @@ Review classifications and carve-outs for [the nextjs core](../nextjs.md).
 
 ## Load condition
 
-Load this file in Review mode. In Extract, load it only when the user explicitly
-requests a debt or compliance verdict. For a narrow Lookup, load it only when
-the question asks for a finding code or carve-out. Do not load it in Build.
+Read relevant finding criteria, positive signals, or carve-outs for the requested judgment.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Smell codes
 
 ### High-confidence
 
-- **`nextjs.HC-1`** — Route Handler or Pages API error path returns bare JSON
-  / string instead of `application/problem+json`. *Layer:* static + contract.
+- **`nextjs.HC-1`** — Route Handler or Pages API error path breaks the declared
+  stable failure contract or leaks secrets/internal traces; a compatible
+  established JSON envelope is valid. *Layer:* static + contract.
 - **`nextjs.HC-2`** — Public mutating Route Handler / Pages API / Server Action
   lacks authz check or explicit public-write declaration. *Layer:* static.
 - **`nextjs.HC-3`** — Server Action exposed or documented as a partner/public
@@ -86,7 +90,7 @@ the question asks for a finding code or carve-out. Do not load it in Build.
 Do not flag the following:
 
 - `Response.json(...)`, `NextResponse.json(...)`, or `res.json(...)` on
-  successful 2xx responses. The problem+json requirement applies to errors.
+  successful 2xx responses. Errors follow the stable project contract; problem+json is the new-contract default.
 - Server Actions used only by first-party UI forms, provided they are not
   documented as partner/public API and still enforce auth/validation.
 - Static/cached GET Route Handlers for genuinely public, read-only, non-user

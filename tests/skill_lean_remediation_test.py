@@ -17,7 +17,6 @@ class SkillLeanRemediationTest(unittest.TestCase):
         self.assertIn("Existing API with no requested change", skill)
         self.assertIn("defaults to Extract", skill)
         self.assertIn("New endpoint or feature defaults to Build", skill)
-        self.assertIn("they never weaken the core reference", skill)
 
         procedures = "souroldgeezer-design/skills/api-design/references/procedures/"
         assimilation = read(procedures + "project-assimilation.md")
@@ -53,8 +52,8 @@ class SkillLeanRemediationTest(unittest.TestCase):
             self,
             preflight.split("\n## ", 1)[0],
             (
-                "Apply the listed defaults when the user has not supplied an answer.",
-                "Ask only when a default would be unsafe",
+                "Apply the listed defaults when the user and project contracts",
+                "Ask only when a material missing decision or authority",
             ),
         )
         self.assertIn(

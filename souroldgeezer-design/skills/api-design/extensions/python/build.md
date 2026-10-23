@@ -4,9 +4,12 @@ Implementation detail for [the Python ASGI / WSGI core](../python.md).
 
 ## Load condition
 
-Load this file only in Build mode, or for a narrow Lookup that explicitly asks
-for an implementation primitive or pattern from this stack. Do not load it in
-Review or factual Extract.
+Read relevant implementation primitives or patterns for the requested change.
+A narrow question may consult this lane without changing mode; factual Extract
+does not acquire an unsolicited compliance verdict. Do not preload the whole
+lane or unrelated stacks. Patterns illustrate strong defaults; preserve a
+compatible project contract unless actual safety or protocol requirements rule
+it out. A missing preferred format or tool alone is not a finding.
 
 ## Stack-specific primitives
 
@@ -61,7 +64,7 @@ Review or factual Extract.
   warm-instance initialization, not per request. Carry `traceparent`, route,
   operation identifier, and authenticated subject through request-scoped
   context; flush exporters during hosted shutdown where the provider requires it.
-- Choose one OpenAPI 3.1 authority: a reviewed source document or a generator
+- Choose one reviewable contract authority (prefer OpenAPI 3.1 for new APIs): a source document or a generator
   driven by declared routes/schemas. Pin generator inputs, normalize ordering,
   keep `operationId` stable, publish the generated output at a stable path, and
   make CI lint, diff, and contract-test it. Generation is not proof that a
@@ -122,7 +125,7 @@ path for early termination. Maps §3.12, §3.14.
 
 ### `pyapi.PAT-stable-openapi` `[Both]`
 
-One OpenAPI 3.1 authority produces a deterministic artifact with stable
+One declared contract authority produces a deterministic artifact with stable
 operation identifiers. CI lints the artifact, rejects an unreviewed generated
 diff, and contract-tests handlers; release output publishes the approved spec.
 Maps §2.1, §4.5.
