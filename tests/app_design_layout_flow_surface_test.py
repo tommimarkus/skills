@@ -157,8 +157,6 @@ class AppDesignLayoutFlowSurfaceTest(unittest.TestCase):
             "souroldgeezer-design/.claude-plugin/plugin.json",
             "souroldgeezer-design/.codex-plugin/plugin.json",
             ".claude-plugin/marketplace.json",
-            "CLAUDE.md",
-            "AGENTS.md",
         )
         for path in publication_surfaces:
             with self.subTest(path=path):

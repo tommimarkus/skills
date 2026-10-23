@@ -519,18 +519,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         contract = "### Dediren MCP adapter contract"
         common = ("shared launcher/router has no harness detection", "Generic local-client compatibility")
         self._assert_sections(
-            (REPO_ROOT / "AGENTS.md", contract, common + (
-                "absolute `workspaceRoot` on every tool call",
-                "Streamable HTTP is future work only",
-                "authentication, origin validation, port and service lifecycle, session isolation, and workspace authorization",
-                "Preserve the legacy verified-release-cache fallback",
-            )),
-            (REPO_ROOT / "CLAUDE.md", contract, common + (
-                "absolute `workspaceRoot`",
-                "Streamable HTTP is future work only",
-                "`startup_timeout_sec` is seconds",
-                "`timeout` is milliseconds",
-            )),
             (REPO_ROOT / "docs" / "runtime-support.md", "## Install and adapters", common + (
                 "absolute `workspaceRoot` per tool call",
                 "Streamable HTTP is future work only",
@@ -640,11 +628,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
 
     def test_multi_notation_scope_includes_archimate_and_uml(self) -> None:
         expectations = {
-            # CLAUDE.md carries multi-notation scope at orientation level only;
-            # profile commands and uml-xmi depth live in the skill surfaces below.
-            REPO_ROOT / "CLAUDE.md": [
-                "ArchiMate® 3.2 + UML®",
-            ],
+            # Notation detail belongs to the skill and its on-demand references.
             ARCH_PLUGIN / "skills" / "architecture-design" / "SKILL.md": [
                 "ArchiMate® and UML® dediren packages",
                 "cross-notation handoff links",
@@ -1340,8 +1324,6 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
     def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
         pin = "2026.10.0"
         expectations = {
-            REPO_ROOT / "AGENTS.md": f"pin `{pin}`",
-            REPO_ROOT / "CLAUDE.md": f"pin `{pin}`",
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": f"(`{pin}`)",
             ARCH_PLUGIN
             / "skills"
