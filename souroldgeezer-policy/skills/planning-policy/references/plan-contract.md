@@ -170,13 +170,6 @@ initial-inspection question may justify an audit route, load
 
 ## Approval and dispatch readiness
 
-The executable plan names capability requirements and portable tiers, not a
-universal available model. A new unpinned run may choose an evidenced executor
-through the existing supplied assignments and exact capability binding; follow
-[new-run executor selection](strict-workflow.md#new-run-executor-selection).
-Existing mapped runs and explicit pins retain their execution settings. This
-selection does not relax any field, approval identity, or readiness check below.
-
 For a valid v5 plan, `approval_ready` is true when all decision-complete plan
 fields, including every leaf's `capability_requirements`, validate. It may be
 approval-ready before any host is selected. `dispatch_ready` becomes true only

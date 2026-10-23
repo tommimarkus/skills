@@ -73,10 +73,8 @@ audit only for one bounded initial-inspection question whose evidence cannot be
 resolved by targeted inspection/tests and can change approach or acceptance;
 otherwise use the owning design skill.
 
-Select each leaf's portable tier under the plan contract. Existing mapped runs
-and explicit pins retain their adapter mapping; new unpinned runs may select
-available executors before initialization under the procedure below. No worker
-self-substitution or silent per-leaf runtime tuning.
+Select each leaf's portable tier under the plan contract; apply New-run executor
+selection below.
 
 Each completed leaf is also checked once by an independent read-only verifier
 ([verify handoff](verify-handoff.md)) unless the plan sets
@@ -99,28 +97,18 @@ at integration, before final verification.
 
 ## New-run executor selection
 
-Before initializing a new strict run, resolve executor availability and the
-leaf's actual capability requirements from current host evidence. The bundled
-tier map is a supported reproducible choice, not a claim that its identifiers
-are available on every host. Without an explicit user/model pin, an available
-equivalent at the required capability may be selected with a brief reason;
-do not guess capabilities or silently weaken the tier.
+Before a new unpinned run, select an available equivalent using current capability
+evidence, not model-name guesses. Use
+`init-v5 --assignments-file A --capability-binding-file B` with actual
+executor/effort/worktree and exact binding; `--host` retains the fixed map.
+Native workers keep tier behavior through supported overrides or general-purpose
+assignments. Select independent read-only reviewers by `verifier_tier`; record
+actual model/effort/evidence once.
 
-Use the existing `init-v5 --assignments-file FILE --capability-binding-file FILE`
-interface for that selection, not `--host`. Assign each leaf's actual executor,
-effort, and persistent worktree, with a matching `planning-capability-binding-v1`
-and current evidence. Record any selected reviewer and effort in the ordinary
-verification note; it still follows the packet's `verifier_tier` and the shared
-read-only verifier contract. Host adapters retain the same managed builder and
-verifier procedures when using native executors.
-
-Existing `--host` runs, approved assignments, explicit pins, plan digests,
-capability requirements, and ledger-selected retry tiers remain unchanged.
-Never edit a checkpoint or the shared tier map to make a dispatch fit. An
-explicit-assignment retry uses the existing matching replacement-binding path
-when its executor changes; the ledger still owns eligibility and target tier.
-If essential capability is unavailable or a required pin cannot be honored,
-return the applicable blocker and keep useful completed work.
+Preserve existing runs, pins, approved identity, requirements, and ledger retry
+decisions. Executor changes use `--model-or-alias` with matching replacement
+`--capability-binding-file`. Never edit checkpoints/maps or weaken capabilities;
+missing essential capability or a required pin blocks the dependent action.
 
 ## Orchestrator readability
 

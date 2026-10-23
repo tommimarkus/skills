@@ -1,10 +1,10 @@
 # Worker handoff and return preflight
 
 Use for ledger-backed v5 delegation. The parent resolves approval and capability
-binding; `dispatch` verifies the worktree identity (creating it with
-`--create-from`), starts the assigned attempt and returns the packet. The generated packet transports those decisions; it grants no
-approval, permission or new retry. Existing single-step manual handoffs retain
-their versioned contract and must carry relevant shared decisions.
+binding; `dispatch` checks worktree identity (`--create-from` creates it), starts
+the attempt, and returns its packet. Honor its bound executor, pins, and
+capabilities; it grants no new authority or retry. Existing single-step manual
+handoffs retain their versioned contract and relevant shared decisions.
 
 After `in_progress`, generate the packet from the current stored assignment:
 
@@ -22,12 +22,6 @@ returns `blocked:environment`, and the worker continues to the next member; any
 other stop halts the batch. The parent repairs that member per the
 [ledger contract](ledger-contract.md) batch rule.
 Do not give a worker the whole plan or reconstruct a packet from prose.
-
-A new unpinned run may have selected an available executor through the existing
-supplied assignment/binding interface. The packet's `executor` and exact binding
-remain authoritative. A native executor follows the same assigned tier behavior
-and this procedure; it never self-substitutes a model or treats that selection
-as permission to alter scope, capabilities, return shape, or retry policy.
 
 `dispatch` also stores the packet under the run and returns its absolute
 `packet_path` with a generated, host-neutral `prompt` (within 1,200 characters,

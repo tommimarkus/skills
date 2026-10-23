@@ -1,6 +1,6 @@
 # Verifier handoff
 
-Managed procedure for the read-only verifier of one completed leaf. The
+Verify one completed leaf read-only, honoring assigned executor, pins, and capabilities. The
 parent runs `verify-handoff` and `record-verify`; the verifier sees only the
 generated `planning-verify-handoff-v1` packet (at most 16 KiB) and never the
 builder's notes, logs, or reasoning. The packet carries `schema`,
@@ -11,14 +11,6 @@ builder's notes, logs, or reasoning. The packet carries `schema`,
 `base_commit`, `returned_commit`, `budget`, `changeset`, `outside_write_set`,
 `prior_verify` (null unless a retry: `verify_id`, `rejected_commit`,
 `findings`), and `return_schema`.
-
-For a new explicit-assignment run, an available equivalent executor may have
-been selected for `verifier_tier` under
-[new-run executor selection](strict-workflow.md#new-run-executor-selection).
-Its actual model/effort and capability evidence belong in the parent's normal
-verification note. It follows this same procedure with the unchanged packet;
-the choice never relaxes read-only independence, checks, or return validation.
-Explicit reviewer pins and existing mapped runs retain their mapping.
 
 ## Inputs and reads
 

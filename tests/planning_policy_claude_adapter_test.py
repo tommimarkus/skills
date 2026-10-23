@@ -50,8 +50,12 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         for verifier, entry in HOST_TIERS["verifiers"].items():
             self.assertIn(f"`souroldgeezer-policy:{verifier}` (`{entry['model']}`/`{entry['effort']}`)", flat)
         self.assertIn("new-run executor selection", flat)
-        self.assertIn("explicit assignment/binding interface", flat)
-        self.assertIn("equivalent reviewer", flat)
+        selection = section(
+            (ADAPTER.parent.parent / "references/strict-workflow.md").read_text(),
+            "## New-run executor selection",
+        )
+        self.assertIn("--assignments-file", selection)
+        self.assertIn("independent read-only reviewers", selection)
 
     def test_adapter_leaves_retry_targeting_to_the_ledger(self):
         adapter = ADAPTER.read_text(encoding="utf-8")

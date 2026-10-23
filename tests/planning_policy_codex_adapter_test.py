@@ -3,6 +3,8 @@ import re
 import unittest
 from pathlib import Path
 
+from tests.surface_test_lib import section
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ADAPTER = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/extensions/codex.md"
@@ -41,8 +43,12 @@ class PlanningPolicyCodexAdapterTest(unittest.TestCase):
         self.assertIn("`plan-step-standard` (default)", self.text)
         self.assertIn("https://developers.openai.com/api/docs/guides/latest-model", self.text)
         self.assertIn("new-run executor selection", self.text)
-        self.assertIn("explicit assignment/binding interface", flat)
-        self.assertIn("equivalent reviewer", flat)
+        selection = section(
+            (ADAPTER.parent.parent / "references/strict-workflow.md").read_text(),
+            "## New-run executor selection",
+        )
+        self.assertIn("--assignments-file", selection)
+        self.assertIn("independent read-only reviewers", selection)
 
     def test_requires_complete_handoff_and_honest_stops(self):
         for marker in (

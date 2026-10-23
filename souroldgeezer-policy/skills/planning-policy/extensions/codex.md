@@ -67,8 +67,7 @@ step. Give concurrent writers separate persistent worktrees. Set
 than inherited conversation context. The parent keeps decomposition,
 integration, and end-to-end verification.
 
-For an existing mapped run, explicit model pin, or a new run deliberately using
-`--host codex`, use this settled mapping:
+For mapped runs and explicit pins, use this table:
 
 | Portable tier | Codex model and reasoning effort |
 |---|---|
@@ -79,14 +78,10 @@ For an existing mapped run, explicit model pin, or a new run deliberately using
 
 This follows the official [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model). It is a repository mapping, not a claim that every account exposes every model.
 
-For a new run without an explicit model pin, follow
-[new-run executor selection](../references/strict-workflow.md#new-run-executor-selection)
-before initialization. An available evidenced equivalent uses the existing
-explicit assignment/binding interface; it does not change this table or any
-resumed run. Initialize with `init-v5 --host codex --evidence ...` only when
-choosing the mapped lane, which derives assignments and the binding from the
-shared tier map; this table stays pinned to it. Pass the
-generated `prompt` from `dispatch` to the agent unchanged, appending host facts
+For workers, reviewers, and retries, apply
+[new-run executor selection](../references/strict-workflow.md#new-run-executor-selection).
+Mapped initialization uses `init-v5 --host codex --evidence ...`.
+Pass the generated `prompt` from `dispatch` to the agent unchanged, appending host facts
 only. Launch the steps a `next` block lists in `concurrent` together
 (concurrent `spawn_agent` calls in the same turn).
 
@@ -107,20 +102,15 @@ Mapped per-leaf verification uses `spawn_agent` with `fork_turns: "none"` once p
 `verify-handoff` packet group, passing the packet unchanged: `gpt-5.6-terra` /
 `medium` for mechanical and standard builds, `gpt-5.6-sol` / `high` for
 analytical and deep builds, as named by `verifier_tier`. Never pass builder
-context. A newly initialized explicit-assignment run may use an available
-equivalent reviewer selected for the packet's `verifier_tier`, with its
-capability and actual model/effort recorded in the task's verification note.
-Load the same [verifier procedure](../references/verify-handoff.md), preserve
-the packet and read-only independence, and honor any explicit reviewer pin.
+context. Every selected reviewer follows the same
+[verifier procedure](../references/verify-handoff.md).
 
 Parent review, including each target the `task` names, precedes `record-return`;
 after a verifier pass, use the [ledger contract](../references/ledger-contract.md)
 `record-verify --parent-review` lane.
 
-If a required pin or an existing mapped run's selection is unavailable, do not silently downgrade it. Return
-`blocked:model_unavailable` with the requested tier/model/effort and the host's
-availability evidence. A parent may reassign or execute locally only when that
-alternative fits existing authority; changing an explicit user pin needs permission.
+If a required mapping or pin is unavailable, do not silently downgrade it:
+return `blocked:model_unavailable` with tier/model/effort and availability evidence.
 
 ## Ledger-owned retry remediation
 
@@ -130,14 +120,10 @@ digest, diagnosis and action, reuse or fresh executor mode, next agent/host,
 target portable tier, and optional paired evidence. It does not expose raw
 history or a host transcript.
 
-Mapped retries use the mapping above. Honor the ledger-selected tier and executor;
-the parent and agent never change them. In an explicit-assignment run, a parent
-selecting another executor uses the existing `--model-or-alias` and matching
-`--capability-binding-file` route without changing the ledger's retry tier,
-attempt cap, or reuse/fresh decision. Preserve explicit pins. If the required
-executor remains unavailable, return
-`blocked:model_unavailable` with target tier/model/effort and availability
-evidence. An agent needing more reasoning returns `blocked:needs_higher_tier`
+Mapped retries use the table; explicit-assignment retries follow the shared
+selection rule. Preserve the ledger-selected tier, attempt cap, and reuse/fresh
+decision. An unavailable required executor returns `blocked:model_unavailable`.
+An agent needing more reasoning returns `blocked:needs_higher_tier`
 with bounded evidence; it never selects its retry. Repairable stops (`blocked:environment`, or any
 stop amended after its return) retry at the same tier; only reasoning stops
 escalate. A wrong write/read set, acceptance command, or attempt cap is not
