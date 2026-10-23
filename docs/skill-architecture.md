@@ -11,10 +11,10 @@ deterministic validation, context discipline, stop conditions, output contracts,
 rerun guidance, behavioral evidence, and an improvement loop that can detect
 both progress and degradation.
 
-Use this document for judgment only after deterministic validation is exhausted.
-Use `scripts/skill-architecture-report.sh` for repeatable detection and report
-formatting when that script is available; skill workflows should stay thin by
-delegating structural validation to the tool.
+Use deterministic tools for repeatable structural checks and independent judgment
+for the decisions those tools cannot settle. A detector nomination is useful
+evidence, not a prerequisite for an evidenced observation. Select checks for the
+requested task; do not exhaust unrelated machinery before exercising judgment.
 
 For repository navigation, start with the [contributor guide](contributing.md).
 Use [skill evaluation evidence](skill-evaluation.md) when the change needs
@@ -22,16 +22,31 @@ trigger, behavior, model-pressure, or source-grounding evidence.
 
 ## Load Conditions
 
-Load this document at the start of any task that creates, edits, reviews,
-triages, plans, or fixes a skill-related surface in this repository. That
-includes published plugin skills, matching agents, runtime metadata, bundled
-references, extensions, deterministic machinery, manifests, marketplace
-entries, repo-internal authoring skills, and repo docs that describe those
-surfaces.
+For skill-related work, read the working principles below and the affected
+skill's entry. Read further sections when they inform the change, its consumers,
+or its verification. The whole standard is a maintainer reference, not a mandatory
+preload for every edit or inspection.
 
-Use it before choosing the change shape. The report is the repeatable closeout
-check, but it cannot recover decisions that were made without the craft standard
-in context.
+## Working Principles
+
+- Start from the user's authorized outcome and the project's actual contracts.
+  Bundled conventions are strong defaults; a compatible, justified alternative
+  is not a defect merely because it differs from the reference.
+- Scale reading, planning, delegation, checks, and reporting to the decision and
+  its consequences. Detecting a stack or file type identifies available guidance;
+  it does not require loading all of it. Expand inspection when evidence or risk
+  calls for it, without adding modes or ceremony for routine work.
+- Continue within existing authority. Ask for material missing decisions or
+  authority, and stop an unsafe action; keep useful independent analysis moving.
+  Explicit user boundaries, including plan-first and no-rerun requests, bind.
+- Distinguish source facts, tool results, and judgment. Missing essential evidence
+  limits the conclusion that needs it; it does not invalidate unrelated work.
+- Report the result, relevant checks, and material limits concisely. Keep detailed
+  schemas for actual consumers or explicit requests, and record meaningful
+  exceptions once instead of repeating routine inventories.
+- Preserve user state, provenance, and explicit authority for publication and
+  destructive actions. Deliberately retire unnecessary rules and their obsolete
+  tests; validate the behavior that replaces them rather than preserving wording.
 
 ## Four Authoring Surfaces
 
@@ -90,12 +105,12 @@ lines. At the cap, put the addition in the on-demand reference that owns its
 topic; a reviewed `[[skill_budget]]` is for content every route needs, and
 joining lines to pass the count is not a fix.
 
-When shortening prose to meet a load budget, list each removed or shortened
-rule-bearing sentence in the handoff or commit and map its obligations to
-retained wording on the same load route or an always-loaded source. Before
-landing, the integrator verifies that mapping; without an equivalent, retain the
-obligation and tighten wording or justify a budget change. Token counts and
-code/heading inventories do not prove semantic retention.
+For a behavior-preserving rewrite, check that necessary obligations remain on
+the selected load route. For an intentional policy change, explain the retired
+obligation and its replacement or removal in the normal change rationale; do not
+require an equivalent to an obligation deliberately removed. Review behavioral
+evidence and real consumers. Token counts and code/heading inventories do not
+prove semantic retention, and no per-sentence mapping is required.
 
 A capability the `SKILL.md` advertises must be one the supported runtime can
 actually express. Verify a composed claim — a specific mode × notation × export
