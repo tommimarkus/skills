@@ -88,13 +88,13 @@ saved.Select(s => s.Name).Should().BeEquivalentTo(items);
 These smells apply under both the unit and integration rubrics. Unit-only low-confidence smells live in [`unit.md`](unit.md).
 
 
-### `dotnet.LC-2` — `[Theory]` with `[InlineData]` where all cases produce the same expected value
+### `dotnet.LC-2` — `[Theory]` rows without distinct contract obligations
 
 **Applies to:** `unit, integration` — refines core `LC-8` / `I-LC-4`.
 
-**Detection:** multiple `[InlineData(...)]` on a `[Theory]` where inspection shows every case asserts the same expected literal.
+**Detection:** multiple `[InlineData(...)]` on a `[Theory]` where contract-partition review finds no distinct obligation or failure mode. Equal expected literals alone are not a smell.
 
-**Why low-confidence:** the parameterization isn't doing work. May indicate the author intended to cover equivalence classes but the assertion is too coarse.
+**Why low-confidence:** rows may be unnecessary repetition or their assertions may be too coarse. Confirm the contract first: different rejection boundaries can legitimately have equal expected results.
 
 ---
 
@@ -140,11 +140,11 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 ## Framework-specific positive signals (`dotnet.POS-*`)
 
-### `dotnet.POS-1` — `[Theory]` with `TheoryData<...>` or `MemberData` and *varied* expected values
+### `dotnet.POS-1` — `[Theory]` with `TheoryData<...>` or `MemberData` covering distinct obligations
 
 **Applies to:** `unit, integration`
 
-**Why positive:** the parameterization covers equivalence classes with meaningful variation, not just repetition.
+**Why positive:** the rows protect named equivalence classes or boundaries; expected results may be equal when the obligations differ.
 
 ---
 

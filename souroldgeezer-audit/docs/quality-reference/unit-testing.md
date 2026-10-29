@@ -59,7 +59,7 @@ Beck: "if the tests all pass, the code under test should be suitable for product
 
 | Heuristic | Applies to |
 |---|---|
-| Every branch of conditional logic needs at least one case | `if`, `switch`, ternary, early-return, pattern match |
+| Distinct observable obligations and relevant failure modes need coverage; implementation branches are investigation clues, not automatic test requirements | `if`, `switch`, ternary, early-return, pattern match |
 | Happy path *and* each distinct sad path | Any function with failure modes |
 | Boundary conditions derived from equivalence partitions: below / at / above validation ranges, state-transition edges, empty / one / many collection cardinality, nullability boundaries, numeric limits, parser grammar limits, temporal windows | Numeric, string, collection, parser, validation, state-machine, and time-window inputs |
 | Invariants (things that must always be true) | Encryption non-determinism, serialization round-trips, ordering, idempotency |
@@ -131,7 +131,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 5. **Dates, GUIDs, or random values in the expected position.** Usually masks non-determinism.
 6. **Zero negative tests** for a function with documented error modes.
 7. **Excessive setup (>20 lines) for a single assertion.** Either the SUT has too many dependencies, or the test is reconstructing production state rather than isolating a behavior slice.
-8. **Parameterized test where all cases assert the same thing.** The parameterization isn't doing work.
+8. **Parameterized cases with no distinct obligation or failure mode.** Review contract partitions before calling rows redundant; equal expected values alone are not a smell (see [testing-core.md](testing-core.md#synchronization-and-execution-cost)).
 9. **Skipped / ignored / quarantined test with no linked justification.**
 10. **Non-trivial assertion with no failure message or requirement note.**
 11. **Parameterized test with missing contract-derived boundary values.** The
@@ -145,7 +145,7 @@ Split into high-confidence (clear smell) and low-confidence (worth flagging, req
 1. **Test name reads as a requirement sentence.**
 2. **Expected value has an external source:** a spec, RFC test vector, sample file, domain invariant, linked ticket.
 3. **Assertions on the return value or published side effect**, not on internal mock invocations.
-4. **Parameterized tests covering boundaries or equivalence classes**, with *varied* expected values.
+4. **Parameterized tests covering distinct contract boundaries or equivalence classes**, including equal expected values when they protect different obligations.
 5. **Separate tests for happy path and each distinct sad path.**
 6. **Comments citing a requirement, spec, or invariant on non-obvious expected values.** Rare but gold.
 7. **Tests that express an invariant** (round-trip, idempotency, commutativity) rather than a single point.
@@ -163,7 +163,7 @@ The hardest class to catch because they look identical to real tests. Signals, i
 2. **Mutation testing survival.** A test that passes when the code it supposedly exercises is mutated is, by definition, insensitive to that code's behavior. Static analysis cannot run mutation testing but can recommend it as the ground truth.
 3. **Name vocabulary.** Tests using the implementation's vocabulary (`Dictionary`, `Iterator`, `Handler`) instead of the domain's (`UserProfile`, `Order`, `Permission`) tend to be implementation-derived.
 4. **Equality against a large literal blob.** Often a paste of observed output.
-5. **Branch coverage without assertion differentiation.** Two tests cover different branches but assert the same thing → at least one is incidental coverage.
+5. **Execution without obligation evidence.** Different executed branches do not establish distinct regression protection by themselves; identical expected values do not establish redundancy either. Trace each case to its contract partition or failure mode.
 6. **Git provenance (if available).** Test added in the same commit as the implementation, with no red-green-refactor history.
 
 ---

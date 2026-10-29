@@ -14,6 +14,25 @@ adaptations stay in the lane rubric.
   failing these pillars removes coverage without visible cost. Each lane rubric
   keeps only its lane-specific consequence sentence (integration §2.8, e2e §2.8).
 
+## Synchronization and execution cost
+
+A bounded wait succeeds on an observable state predicate or completion signal;
+its timeout only bounds failure. Readiness polling and auto-retrying assertions
+are valid when they observe the actual required state and preserve meaningful
+failure diagnostics. Do not flag them merely for using a timeout, including in
+setup. Fixed sleeps, success based only on elapsed time, and retries that repeat
+failed operations until an error disappears conceal missing synchronization or
+failure; those remain findings. Distinguish a contractually retrying SUT from a
+test that masks its failure.
+
+Evaluate parameterized and generated tests by the distinct obligations they
+protect and their actual execution cost, not test-function count. Equal expected
+values can exercise different contract partitions or failure modes. For generated
+tests, include evaluations, filtering, shrinking, and actual fixture/reset
+lifetimes when judging cost; generator syntax alone establishes neither coverage
+nor superiority over examples. Use project evidence and budgets rather than
+inventing limits or requiring new instrumentation.
+
 ## Pinned expectations and re-pin review
 
 Assess individual assertions, including mixed assertions in one test; filenames,

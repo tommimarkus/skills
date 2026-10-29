@@ -76,7 +76,7 @@ Applies when `SKILL.md` step 0b selects the unit rubric. Cite as `HC-N`, `LC-N`,
 `LC-5` — Dates, GUIDs, or random values in the expected position; usually masks non-determinism.
 `LC-6` — Zero negative tests for a function with documented error modes.
 `LC-7` — Excessive setup (>20 lines) for a single assertion; either too-many-dependencies SUT or test reconstructs production state instead of isolating behavior.
-`LC-8` — Parameterized test where all cases assert the same thing; parameterization isn't doing work.
+`LC-8` — Parameterized cases lack distinct obligations or failure modes after contract-partition review; equal expected values alone are not redundancy.
 `LC-9` — Skipped / ignored / quarantined test with no linked justification (`Skip=""`, `[Ignore]` with no reason, or reason string containing no issue number, URL, or ticket reference). A quarantine without an exit criterion becomes the permanent home for the flake.
 `LC-10` — Non-trivial assertion with no failure message; a complex or non-obvious expected value asserted without a `Because(...)` reason, xUnit message argument, or inline comment tying the expectation to a requirement. On failure, the message tells a future debugger nothing.
 `LC-11` — Parameterized test missing contract-derived boundary values. A `[Theory]` / `[TestCase]` / `it.each` exercises a finite set of numeric, string, collection, parser, validation, state, or time-window inputs while visible partitions or constraints have uncovered boundary coverage items. Generic sentinels (`0`, `1`, `-1`, `null`, empty, max) count only when they are actual boundaries for the visible contract; otherwise record `sentinel-only` or `partial-boundary`.
@@ -87,12 +87,12 @@ Applies when `SKILL.md` step 0b selects the unit rubric. Cite as `HC-N`, `LC-N`,
 `POS-1` — Test name reads as a requirement sentence.
 `POS-2` — Expected value has an external source (spec, RFC vector, sample file, domain invariant, linked ticket).
 `POS-3` — Assertions on return value or published side effect (not on internal mock invocations).
-`POS-4` — Parameterized tests covering contract-derived boundaries / equivalence classes with *varied* expected values. Boundary rows must map to a stated or inferable domain partition; arbitrary sentinel rows do not earn this signal by themselves.
+`POS-4` — Parameterized tests covering distinct contract-derived boundaries / equivalence classes, including equal expected values for different obligations. Boundary rows must map to a stated or inferable domain partition; arbitrary sentinel rows do not earn this signal by themselves.
 `POS-5` — Separate tests for happy path and each distinct sad path.
 `POS-6` — Comments citing a requirement, spec, or invariant on non-obvious expected values.
 `POS-7` — Test expresses an invariant (round-trip, idempotency, commutativity, associativity, bounds).
 `POS-8` — Meaningful failure message on a non-trivial assertion; FluentAssertions `.Because(...)` or xUnit/NUnit message argument explains *what should be true and why*, not just that the assertion is present.
-`POS-9` — Property-based test harness detected (FsCheck, Hedgehog, Hypothesis, QuickCheck, CsCheck, or equivalent). A property-based test expressing an invariant over a generated domain is strictly stronger than any finite example-based test; reward it regardless of the test's other signals.
+`POS-9` — Property-based test with a named invariant, suitable generators, and explicit contract-boundary examples where relevant. Tool syntax alone is not positive evidence; generated tests do not override other findings or automatically replace examples. Assess actual evaluation and fixture/reset cost under testing-core.
 
 ### Gap codes (deep mode only)
 
@@ -121,13 +121,13 @@ Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefix
 `I-HC-A2` — Shared seed data mutated across tests; cross-test pollution by construction.
 `I-HC-A3` — Test depends on migration ordering without declaring it.
 `I-HC-A4` — Shared container with no per-test data scoping; first test's writes are the second test's preconditions.
-`I-HC-A5` — `Thread.Sleep`, `WaitFor`, retry-until-green loops; flake in slow motion.
+`I-HC-A5` — Fixed sleeps, elapsed-time success conditions, or retries concealing failed operations; bounded state waits are valid synchronization under testing-core.
 `I-HC-A6` — Test asserts on log text that is not a published audit event.
 `I-HC-A7` — Migration test runs against an empty database and asserts nothing about row state.
 `I-HC-A8` — Snapshot of a full entity graph with no schema source; characterization at the integration layer.
 `I-HC-A9` — Test writes data and never cleans up, or only cleans up on the happy path.
 `I-HC-A10` — Incidental coverage; test sweeps a large amount of code into execution but the only assertion is "no exception thrown."
-`I-HC-A11` — Fragile setup; arrange block depends on state it cannot guarantee (its own retry loop, seed data it did not create, live third-party boundary without a stub, shared mutating factory) — non-deterministic by construction.
+`I-HC-A11` — Fragile setup; arrange block depends on state it cannot guarantee (retries concealing failed operations, seed data it did not create, live third-party boundary without a stub, shared mutating factory). Bounded setup readiness waits are valid synchronization.
 
 ### High-confidence smells, sub-lane B / out-of-process contract (I-HC-B*)
 
@@ -145,8 +145,8 @@ Applies when `SKILL.md` step 0b selects the integration rubric. Codes are prefix
 `I-LC-1` — One giant test class covering unrelated features.
 `I-LC-2` — Test name ends in `_Works` / `_Integration` / `_EndToEnd` with no requirement in the name.
 `I-LC-3` — Expected values with no external provenance; may be fine, may be pasted from the SUT.
-`I-LC-4` — Parameterized test where every case asserts the same thing.
-`I-LC-5` — Fixture rebuilt from scratch in every test; may indicate the fixture is too ambitious.
+`I-LC-4` — Parameterized cases lack distinct obligations or failure modes after contract-partition review; equal expected values alone are not redundancy.
+`I-LC-5` — Repeated fixture construction is not a smell by itself: cheap deterministic setup can protect isolation. Assess expensive repetition through Deep lifecycle evidence; recommend sharing only with immutable or safely resettable resources and failure-safe cleanup.
 `I-LC-6` — Broad integration test where a narrow one would do; seam conflation.
 
 ### Positive signals (I-POS-*)
@@ -169,15 +169,15 @@ Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** perfo
 
 `E-HC-F1` — No user-observable assertion; clicks through a flow but asserts only a URL match or element presence.
 `E-HC-F2` — Implementation selectors (CSS class, xpath, internal id, test-id without accessible-name fallback) instead of role/label/accessible-name locators.
-`E-HC-F3` — Hardcoded wall-clock waits: sleeps, fixed-duration delays, fixed-budget wait primitives, retry-until-green loops.
-`E-HC-F4` — Happy path only; one valid user, one valid input, no error state, no edge case.
+`E-HC-F3` — Fixed sleeps, elapsed-time success conditions, or retries concealing failed operations; bounded state waits and auto-retrying assertions are valid synchronization.
+`E-HC-F4` — A relevant browser-specific failure outcome is uncovered across the feature's applicable suite. Check sibling and cheaper-layer coverage; a focused happy-path journey alone is not a defect.
 `E-HC-F5` — Shared browser context, cookies, localStorage, or sessionStorage across tests; cross-test pollution by construction.
 `E-HC-F6` — Test name describes UI steps (`Clicks_Login_Button`) instead of user outcomes (`Anonymous_User_Signs_In`).
 `E-HC-F7` — DOM snapshot / golden-file assertion against rendered markup with no published schema; characterization at the most expensive layer in the suite.
 `E-HC-F8` — Pixel / visual regression against a baseline with no review gate, owner, or drift process.
 `E-HC-F9` — Asserts against third-party widget internals the test does not own (OAuth provider DOM, payment iframe, analytics SDK).
 `E-HC-F10` — Test exercises only what an integration test already proves (HTTP contract shape, status codes, response body); belongs in the integration lane.
-`E-HC-F11` — Fragile setup; per-test arrange block depends on state it cannot guarantee (retry loop in setup, seed data not created by the test, UI-navigation to create preconditions a backend API could seed, live third-party boundary, shared mutating factory).
+`E-HC-F11` — Fragile setup; per-test arrange block depends on state it cannot guarantee (retries concealing failed operations, seed data not created by the test, UI-navigation to create preconditions a backend API could seed, live third-party boundary, shared mutating factory). Bounded readiness waits remain valid.
 
 ### High-confidence smells, sub-lane A / accessibility audit (E-HC-A*)
 
@@ -193,7 +193,7 @@ Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** perfo
 `E-HC-P1` — Perf budget with no external source (Web Vitals threshold, RUM baseline, team SLO); a pasted literal in performance clothing.
 `E-HC-P2` — Single-sample assertion on a noisy metric (one LCP measurement, not p75/p95 across N runs with N and the percentile declared).
 `E-HC-P3` — No cold-vs-warm distinction; a cached navigation is asserted at the same budget as a cold load.
-`E-HC-P4` — Budget asserted against localhost; proves nothing about production perf.
+`E-HC-P4` — Measurement environment does not support the claimed budget. Controlled local regression budgets are valid within their declared scope; production claims need representative environment evidence.
 `E-HC-P5` — Perf test quarantined with a skip tag instead of having its flake root-caused.
 `E-HC-P6` — Hardware or CI-shape assumption uncontrolled (CPU count, GPU, throttling profile, container CPU share); the test measures the hardware, not the code.
 
@@ -209,7 +209,7 @@ Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** perfo
 
 `E-LC-1` — One giant test class covering journey, a11y, perf, and security concerns at once.
 `E-LC-2` — Test name ends in `_Works` / `_E2E` / `_Journey` / `_Integration` with no user outcome in the name.
-`E-LC-3` — Parameterized test where every case asserts the same thing.
+`E-LC-3` — Parameterized cases lack distinct obligations or failure modes after contract-partition review; equal expected values alone are not redundancy.
 `E-LC-4` — Full stack launched for a one-line DOM-text assertion; may be critical smoke, may be incidental coverage.
 `E-LC-5` — Page Object with >20 methods covering multiple unrelated pages; likely a god-object carrying multiple lanes' concerns.
 `E-LC-6` — Test's only wait is a navigation predicate with no subsequent content check; navigation completed but page state is unverified.
@@ -218,7 +218,7 @@ Sub-lanes: **F** functional user journey, **A** accessibility audit, **P** perfo
 
 `E-POS-1` — Test name reads as a user story (`Anonymous_User_Signs_In_And_Reaches_Authenticated_Home`).
 `E-POS-2` — Locators derived from accessible role, accessible name, visible text, label association, or placeholder; no raw CSS or xpath in the test body.
-`E-POS-3` — Condition-based waits only; no wall-clock sleeps, fixed-duration delays, or fixed-budget wait primitives anywhere in the test or its helpers.
+`E-POS-3` — Bounded state waits, including setup readiness and auto-retrying assertions; no fixed sleeps, elapsed-time success conditions, or retries concealing failed operations.
 `E-POS-4` — Perf budget cited against Web Vitals / RUM baseline / SLO with a link in the test or a peer comment.
 `E-POS-5` — A11y audit cites a WCAG conformance level, runs after interaction as well as at load, and any rule suppression has a linked justification.
 `E-POS-6` — Per-test data, user, and session ownership; each test creates its own fixtures and owns its own browser context.
@@ -239,7 +239,7 @@ For auditors trained on Gerard Meszaros's *xUnit Test Patterns* (xunitpatterns.c
 | Conditional Test Logic | `HC-4` | `if` / `for` / `while` / `try-catch` in the test body. |
 | Hard-Coded Test Data | `HC-3` | Pasted literal with no external provenance. |
 | Test Logic in Production | `I-HC-B2`, `E-HC-S5`, `I-HC-A6` (log-contract variant) | Test reaches a test-only endpoint, debug route, or production log-text coupling. |
-| Eager Test | `LC-8`, `I-LC-4`, `E-LC-3` | Parameterized test where all cases assert the same thing (no-op eager variant); a test bundling multiple distinct behaviors. |
+| Eager Test | `LC-8`, `I-LC-4`, `E-LC-3` | Parameterized rows with no distinct contract obligation after partition review; a test bundling unrelated behaviors. Equal expected values alone do not establish either smell. |
 | Test Code Duplication | `E-LC-5` | Page Object god-object with duplicated navigation / setup across pages. |
 | Resource Optimism | `HC-11`, `I-HC-A5`, `I-HC-A11` | Test assumes the clock, filesystem, network, or shared fixture is in a known state without verifying it. |
 | Slow Test | `dotnet.LC-5` (slow unit), Suite health runtime evidence in deep-mode step 5 | Runtime outliers are reported against project budgets or as observed distribution facts. |

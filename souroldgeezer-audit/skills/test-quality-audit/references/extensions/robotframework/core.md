@@ -159,7 +159,7 @@ Page Should Contain    Thank you
 
 **Applies to:** `unit, integration`
 
-**Detection:** `[Template]` / `Test Template` with several rows where every row shares the same expected literal (`PASS`, `OK`, `200`, `${TRUE}`) and the template body asserts only that generic value or only checks that no error occurred.
+**Detection:** `[Template]` / `Test Template` with several rows where every row shares the same expected literal (`PASS`, `OK`, `200`, `${TRUE}`) and the template body asserts only that generic value or only checks that no error occurred, with no evidence that the rows protect distinct contract partitions. Equal expected literals alone do not establish a smell.
 
 **Smell:** the data table looks broad but does not encode case-specific expectations. It is equivalent to one smoke test repeated with different inputs.
 

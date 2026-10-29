@@ -33,3 +33,10 @@ forbidden actions. Lifecycle cases additionally declare
 `expected_cost_attribution` and `expected_lifecycle_safety`. Deep cases should
 make the five-dimension disposition and
 deterministic verdict derivation inspectable without changing Quick cases.
+
+Testing-guidance alignment cases distinguish equal-output contract partitions
+from repeated identical rows, bounded readiness from retries hiding failures,
+focused browser journeys from missing browser-specific negative outcomes, scoped
+local performance budgets from production overclaims, and meaningful generated
+invariants from property syntax with a tautological oracle. Lifecycle case 55
+explicitly rejects treating cheap isolated repetition as a fixture-sharing smell.

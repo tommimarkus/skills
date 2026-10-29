@@ -59,7 +59,7 @@ The seam being exercised is a real dependency, not a fake. The assertion is on t
 A single named seam, a single named scope, a single named expected outcome. When it fails the failure points at one thing. Broad integration tests (§3) violate this by construction and must justify it.
 
 ### 2.6 Deterministic
-No `Sleep`, no `WaitFor` with a wall-clock budget, no retry-until-green loops. Time is controlled. Randomness is seeded. Network is in-band (a real dependency, started by the test) or stubbed at the deployment boundary, never both.
+Apply [shared synchronization rules](testing-core.md#synchronization-and-execution-cost): bounded state waits are valid; fixed sleeps and retries masking failed operations are not. Control domain time and seed randomness. Network is in-band (a real dependency, started by the test) or stubbed at the deployment boundary, never both.
 
 ### 2.7 Fast enough to run in CI on every commit
 Beck's *SlowTest* applies double here. Judge setup cost against the project's
@@ -150,13 +150,13 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 2. **`I-HC-A2`** — Shared seed data mutated across tests. Cross-test pollution by construction.
 3. **`I-HC-A3`** — Test depends on migration ordering without declaring it. Reorder the file list, watch the suite collapse.
 4. **`I-HC-A4`** — Shared container with no per-test data scoping. The first test's writes are the second test's preconditions.
-5. **`I-HC-A5`** — Wall-clock sleeps, polling budgets, retry-until-green loops, any `wait-for` primitive whose exit condition is the elapsed clock rather than a state predicate. Flake in slow motion.
+5. **`I-HC-A5`** — Fixed sleeps, elapsed-time success conditions, or test retries that conceal failed operations. Bounded waits on state predicates are valid under [the shared rule](testing-core.md#synchronization-and-execution-cost).
 6. **`I-HC-A6`** — Test asserts on log text that is not a published audit event. Couples the test to a string.
 7. **`I-HC-A7`** — Migration test runs against an empty database and asserts nothing about row state. Proves the migration parses; nothing more.
 8. **`I-HC-A8`** — Snapshot of a full entity graph with no schema source. Pure characterization at the integration layer.
 9. **`I-HC-A9`** — Test writes data and never cleans up — or only cleans up on the happy path. Flake compounds with run count.
 10. **`I-HC-A10`** *(integration analogue of unit-testing §6)* — Incidental coverage. The test sweeps a large amount of code into execution but the only assertion is "no exception thrown." High line coverage, near-zero behavioral coverage.
-11. **`I-HC-A11`** — Fragile setup. The arrange block depends on state or behavior it cannot guarantee: its own retry loop or wait-for-state, seed data the test did not create, a live third-party boundary with no stub, or a shared factory that mutates across tests without per-test isolation. Distinct from `I-HC-A2`/`I-HC-A4` (shared-state *mutation*): this smell targets the *arrange block itself* as a risk surface — setup that is non-deterministic by construction. Rewrite: seed preconditions with per-test factories and unique keys (`I-POS-4`); stub third-party boundaries at the process boundary; if the setup genuinely needs retries, that is a finding against the backend's determinism, not a reason to retry in the test.
+11. **`I-HC-A11`** — Fragile setup. The arrange block depends on state or behavior it cannot guarantee: retries that conceal failed operations, seed data the test did not create, a live third-party boundary with no stub, or a shared factory that mutates across tests without per-test isolation. Distinct from `I-HC-A2`/`I-HC-A4` (shared-state *mutation*): this smell targets the *arrange block itself* as a risk surface — setup that is non-deterministic by construction. Rewrite: seed preconditions with per-test factories and unique keys (`I-POS-4`); stub third-party boundaries at the process boundary; bounded readiness waits are valid synchronization, including in setup. Judge retries against the operation's contract; repeating a failed operation until it passes is not readiness evidence.
 
 ### 5.2 High-confidence smells, sub-lane B (out-of-process contract) — `I-HC-B1..I-HC-B8`
 
@@ -174,7 +174,7 @@ Codes are prefixed `I-` to distinguish from the unit-testing rubric, which uses 
 1. **`I-LC-1`** — One giant test class covering unrelated features. Suggests no per-feature thinking; more likely to harbor cross-test coupling.
 2. **`I-LC-2`** — Test name ends in `_Works` or `_Integration` or `_EndToEnd` with no requirement in the name.
 3. **`I-LC-3`** — Expected values with no external provenance. May be fine; may be a paste from the SUT.
-4. **`I-LC-4`** — Parameterized test where every case asserts the same thing. The parameterization is doing no work.
+4. **`I-LC-4`** — Parameterized cases lack distinct contract obligations or failure modes after partition review. Equal expected values alone are not evidence of redundancy.
 5. **`I-LC-5`** — Fixture rebuilt from scratch in every test. This is not a
    smell by repetition alone: cheap deterministic setup can correctly protect
    isolation across tests with distinct assertions. In Deep mode, evaluate an
@@ -217,7 +217,7 @@ Flake is the second-biggest failure mode after scope confusion, and the two are 
 
 - **Shared state.** Two tests reading or writing the same row, key, blob, or topic.
 - **Container lifetime.** A container reused across tests without resetting the state the test depends on.
-- **Time.** Reads of the wall clock, wall-clock sleeps, retry budgets measured in seconds rather than in state transitions.
+- **Time.** Uncontrolled domain-clock reads, fixed sleeps, and test retries masking errors. Bounded condition waits follow [the shared synchronization rule](testing-core.md#synchronization-and-execution-cost).
 - **Randomness.** Unseeded RNGs, GUIDs in assertion positions.
 - **Network.** External HTTP calls inside a test that claims to be hermetic.
 - **Test ordering.** Implicit or explicit assumptions about which test ran first.
@@ -249,7 +249,7 @@ matches or their assertions differ.
 ### 8.1 Signals static analysis can use
 
 - **Missing assertions** — a test that calls the SUT and asserts nothing observable is detectable without executing the test.
-- **Sleeps and polling loops** — any wall-clock sleep, fixed-budget wait, or retry-until-green loop — all detectable as patterns.
+- **Wait strategy** — inspect whether success requires observed state or merely elapsed time, and whether retries conceal failed operations; API names and timeout arguments alone do not establish a defect.
 - **Snapshot usage** — `MatchesSnapshot`, `Verify`, golden file diffs — high-confidence when the snapshot has no schema source.
 - **Same-module mocking** — mocks of types declared in the same project as the SUT signal scope confusion.
 - **Cross-test data leakage patterns** — shared fixtures, missing cleanup, hardcoded keys, fixture mutation.

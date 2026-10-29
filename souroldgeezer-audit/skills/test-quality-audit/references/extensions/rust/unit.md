@@ -75,7 +75,7 @@ as default, `--no-default-features`, `--all-features`, or documented
 Applies to: unit
 
 Detection: test rows name below/at/above, empty/single/many, invalid/valid, or
-state-transition boundaries with distinct expected results.
+state-transition boundaries protecting distinct obligations, including equal expected results for different boundaries.
 
 ### `rust.POS-4` -- typed error assertion
 

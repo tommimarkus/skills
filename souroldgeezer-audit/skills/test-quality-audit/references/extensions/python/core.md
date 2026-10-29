@@ -129,7 +129,7 @@ contract, plus the corresponding invalid partition where one exists.
 Applies to: unit, integration
 
 Detection: `pytest.mark.parametrize` or `subTest` covers contract-derived
-boundary/equivalence classes with varied expected values.
+distinct boundary/equivalence classes; equal expected values are valid for different obligations.
 
 ### `python.POS-2` — property-based invariant
 

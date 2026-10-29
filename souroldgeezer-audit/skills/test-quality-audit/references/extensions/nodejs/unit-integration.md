@@ -139,14 +139,14 @@ When no richer contract is visible, fall back to generic sentinel signals:
 
 **Detection:** `import fc from 'fast-check'` plus `fc.assert(fc.property(fc.integer(), ..., (a, b) => ...))`, OR `import { test } from '@fast-check/vitest'` with `test.prop(...)`, OR `import jsc from 'jsverify'` with `jsc.forall(...)`.
 
-**Why positive:** a property-based test expresses a domain invariant over a generated input space instead of pinning a finite set of examples. Correct implementations pass for the whole domain; characterization tests written from observed output cannot be phrased this way.
+**Why positive:** a named domain invariant is checked with suitable generators and explicit boundary examples where relevant. Imports and property syntax alone earn no positive signal and do not establish exhaustive coverage or superiority over examples. Apply testing-core's execution-cost rule.
 
 ---
-### `nodejs.POS-4` — `it.each` / `test.each` with meaningfully varied expected values
+### `nodejs.POS-4` — `it.each` / `test.each` covering distinct contract partitions
 
 **Applies to:** `unit, integration` — refines core `POS-4`.
 
-**Detection:** an `it.each(...)` / `test.each(...)` whose rows produce distinct expected values (not all identical — that would be core `LC-8`) and map to named equivalence classes or contract-derived boundary values.
+**Detection:** an `it.each(...)` / `test.each(...)` whose rows map to distinct named equivalence classes or contract-derived boundaries. Equal expected results are valid when the rows protect different obligations.
 
 **Why positive:** the parameterization is doing real work — each row is a different specification statement. When rows include contract-derived boundary values, this signals disciplined test design. Do not award this signal for arbitrary sentinel rows when a richer contract is visible.
 

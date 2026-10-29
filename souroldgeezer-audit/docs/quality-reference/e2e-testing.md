@@ -57,7 +57,7 @@ The test name and body should read as a sentence a product owner would recognize
 A locator named by accessible role plus accessible name ("the button labelled *Sign in*") is specification. A locator that looks up a dedicated `data-testid` attribute is a bridge — acceptable when no accessible name is available, but it encodes no user-facing meaning. A deep CSS or xpath path (`.sidebar > ul > li:nth-child(3) a`) is characterization: it will break on every layout refactor and is indistinguishable from a DOM snapshot. Accessible-name selectors double as an implicit accessibility smoke test: if the selector cannot find the element, neither can a screen reader.
 
 ### 2.4 Waits by condition, never by wall clock
-Fixed-duration sleeps and retry-until-green loops are Beck's *SlowTest* plus Khorikov's *flake in slow motion* (see [integration-testing.md §5.1](integration-testing.md)). At the E2E layer they are doubly disqualifying because the browser exposes real state predicates — element visibility, URL match, network response, DOM-condition polling with a condition rather than a clock. If the framework cannot express the condition the test is waiting for, that itself is a finding.
+Apply [the shared synchronization rule](testing-core.md#synchronization-and-execution-cost). Wait for the state the journey requires, such as rendered content or completion of the relevant request. A timeout bounds failure; it is not a fixed-duration wait. Fixed sleeps and retries concealing failed operations remain findings.
 
 ### 2.5 Hermetic, with per-test data and session ownership
 Every test owns its own user account, its own browser context, its own cookies and storage. No test reads state another test wrote. No test inherits a session or a logged-in state from a sibling. Cleanup runs on failure as well as on success. See [integration-testing.md §7](integration-testing.md) for the shared ruleset; the E2E layer adds *browser state* to the list of surfaces that must be reset.
@@ -146,15 +146,15 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 
 1. **`E-HC-F1`** — No user-observable assertion. The test clicks through a flow and asserts only a URL match or an element's presence. The journey could have silently failed in the middle and the test would still pass.
 2. **`E-HC-F2`** — Implementation selectors: CSS class, xpath, internal id, test-id without accessible-name fallback. Breaks on any layout refactor, catches no user-visible regression.
-3. **`E-HC-F3`** — Hardcoded wall-clock waits: sleeps, fixed-duration delays, fixed-budget wait primitives, retry-until-green loops. Flake by construction. (Analogue of [`I-HC-A5`](integration-testing.md).)
-4. **`E-HC-F4`** — Happy path only. One valid user, one valid input, no error state, no edge case. The negative space is where UI bugs live — and E2E is often the only layer that can see them.
+3. **`E-HC-F3`** — Fixed sleeps, elapsed-time success conditions, or test retries concealing failed operations. Bounded state waits and auto-retrying assertions are valid synchronization. (Analogue of [`I-HC-A5`](integration-testing.md).)
+4. **`E-HC-F4`** — A relevant browser-specific failure outcome is uncovered across the feature's applicable suite. Inspect sibling and cheaper-layer coverage before flagging; a focused happy-path journey needs no duplicated negative matrix when the remaining obligations are already proved at sufficient layers. If that coverage is unavailable, record the uncertainty rather than assert a gap.
 5. **`E-HC-F5`** — Shared browser context, cookies, localStorage, or sessionStorage across tests. Cross-test pollution by construction. (Browser-layer analogue of [`I-HC-A2`](integration-testing.md).)
 6. **`E-HC-F6`** — Test name describes UI steps (`Clicks_Login_Button_Then_Types_Email`) instead of user outcomes (`Anonymous_User_Signs_In`). The name is the first thing the audit checks against the provenance question in §1.
 7. **`E-HC-F7`** — DOM snapshot with no published schema: a saved-HTML diff, a serialized component tree, or any golden-file assertion against rendered markup with no spec to anchor it. Characterization at the most expensive layer in the suite.
 8. **`E-HC-F8`** — Pixel / visual regression against a baseline with no review gate, no owner, and no drift process. The baseline is a photograph of today's build.
 9. **`E-HC-F9`** — Asserts against third-party widget internals the test does not own — OAuth provider DOM, payment iframe, analytics SDK state. The widget will change on a schedule the test cannot control.
 10. **`E-HC-F10`** — Test exercises only what an integration test already proves: HTTP contract, status codes, response body shape, header values. Move to sub-lane B of the integration rubric.
-11. **`E-HC-F11`** — Fragile setup. The per-test arrange block depends on state or behavior it cannot guarantee: its own retry loop, seed data the test did not create, UI-navigation to create preconditions a backend API could seed more reliably, a live third-party boundary with no stub (real OAuth, payment, email delivery), or a shared factory that mutates across tests. Distinct from `E-HC-F3` (wall-clock waits in the *test body*) and `E-HC-F5` (shared *browser context* across tests): this smell targets the *arrange block itself* as a risk surface. A setup block with its own retry or wait budget is the strongest signal — the author knew the setup was fragile and papered over it. Rewrite: seed preconditions via a backend API rather than the UI; use per-test factories with unique keys (`E-POS-6`); stub third-party boundaries at the deployment boundary.
+11. **`E-HC-F11`** — Fragile setup. The per-test arrange block depends on state or behavior it cannot guarantee: retries concealing failed operations, seed data the test did not create, UI-navigation to create preconditions a backend API could seed more reliably, a live third-party boundary with no stub (real OAuth, payment, email delivery), or a shared factory that mutates across tests. Distinct from `E-HC-F3` (wall-clock waits in the *test body*) and `E-HC-F5` (shared *browser context* across tests): this smell targets the *arrange block itself* as a risk surface. A bounded setup readiness wait is valid synchronization; a timeout argument alone is not evidence of fragile setup. Flag repeated failed operations masking an error, not observation of the required state. Rewrite: seed preconditions via a backend API rather than the UI; use per-test factories with unique keys (`E-POS-6`); stub third-party boundaries at the deployment boundary.
 
 ### 5.2 High-confidence smells, sub-lane A (accessibility audit) — `E-HC-A1..E-HC-A6`
 
@@ -170,7 +170,7 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 1. **`E-HC-P1`** — Perf budget with no external source. A threshold like `LCP < 2500ms` with no citation to Web Vitals, a RUM baseline, or a team SLO is a pasted literal — the performance-layer analogue of [`HC-3`](unit-testing.md).
 2. **`E-HC-P2`** — Single-sample assertion on a noisy metric. One LCP measurement is noise; a budget must assert against p75 or p95 across N runs with N and the percentile declared.
 3. **`E-HC-P3`** — No cold-vs-warm distinction. A cached navigation is asserted at the same budget as a cold load; the test cannot tell the difference and the budget proves neither case.
-4. **`E-HC-P4`** — Budget asserted against localhost. Localhost is faster than any real network; the assertion is a lower bound on production perf, not an upper bound. At best a smoke test, not a budget.
+4. **`E-HC-P4`** — Measurement environment does not support the claimed budget. Controlled localhost regression budgets are valid for the behavior they measure. A production-performance claim additionally needs representative server, network, cache, and device evidence; hostname alone establishes neither validity nor a defect.
 5. **`E-HC-P5`** — Perf test quarantined with a skip tag rather than having its flake root-caused. Quarantine is not a fix; it is a signal that the budget is wrong, the sampling strategy is wrong, or the metric is not deterministic under CI conditions.
 6. **`E-HC-P6`** — Hardware or CI-shape assumption uncontrolled: CPU count, GPU availability, throttling profile, container CPU share. Perf budgets that pass on a developer laptop and fail on CI are measuring the hardware, not the code.
 
@@ -186,7 +186,7 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 
 1. **`E-LC-1`** — One giant test class covering journey, a11y, perf, and security concerns at once. Suggests no per-lane thinking and makes the suite harder to quarantine selectively.
 2. **`E-LC-2`** — Test name ends in `_Works` / `_E2E` / `_Journey` / `_Integration` with no user outcome in the name.
-3. **`E-LC-3`** — Parameterized test where every case asserts the same thing.
+3. **`E-LC-3`** — Parameterized cases lack distinct obligations or failure modes after contract-partition review. Equal results alone are not redundancy.
 4. **`E-LC-4`** — Full stack launched for a one-line DOM-text assertion. May be a critical smoke test; may be incidental coverage with no stated outcome.
 5. **`E-LC-5`** — Page Object with >20 methods covering multiple unrelated pages. Likely a god-object carrying multiple lanes' concerns.
 6. **`E-LC-6`** — Test's only wait is a navigation predicate (URL matches or navigation event fires) with no subsequent content check. Navigation completed; whether the page loaded and rendered is unverified.
@@ -195,7 +195,7 @@ High-confidence smells are split by sub-lane because the failure modes are incom
 
 1. **`E-POS-1`** — Test name reads as a user story. `Anonymous_User_Signs_In_And_Reaches_Authenticated_Home` beats `LoginFlowTest`.
 2. **`E-POS-2`** — Locators derived from accessible role, accessible name, visible text, label association, or placeholder. No raw CSS or xpath in the test body.
-3. **`E-POS-3`** — Condition-based waits only. No wall-clock sleeps, fixed-duration delays, or fixed-budget wait primitives anywhere in the test or its helpers.
+3. **`E-POS-3`** — Bounded condition-based waits, including setup readiness and auto-retrying assertions; no fixed sleeps, elapsed-time success conditions, or retries masking failed operations.
 4. **`E-POS-4`** — Perf budget cited against Web Vitals, a RUM baseline, or an SLO with a link in the test or a peer comment.
 5. **`E-POS-5`** — A11y audit cites a WCAG conformance level, runs after interaction as well as at load, and any rule suppression has a linked justification.
 6. **`E-POS-6`** — Per-test data, user, and session ownership. Each test creates its own fixtures and owns its own browser context.
@@ -236,7 +236,7 @@ Flake at the E2E layer is the same failure mode as at the integration layer, amp
 ### 7.2 Rules
 
 - Every test owns its own browser context. No shared cookies, no shared localStorage, no shared session. The context is the E2E-layer analogue of integration sub-lane A's per-test data ownership.
-- No wall-clock waits. Ever. If the framework cannot express the condition, the finding is the framework gap, not the test.
+- Wait on observable conditions with bounded failure timeouts under [the shared rule](testing-core.md#synchronization-and-execution-cost). Missing condition support is a framework gap; a timeout alone is not a defect.
 - Animations are disabled or controlled per test run (`prefers-reduced-motion`, framework-level animation flag, injected CSS).
 - Third-party boundaries are stubbed at the network layer or served by a provider test mode. Live-provider E2E tests belong in a separate, infrequently-run lane — never the per-commit suite.
 - Each test explicitly declares cold vs. warm load and controls the browser state accordingly.
@@ -251,7 +251,7 @@ A quarantined E2E test is a scope failure the suite has learned to ignore. Quara
 
 ### 8.1 Signals static analysis can use
 
-- **Wait primitives.** Wall-clock sleeps, fixed-duration delays, fixed-budget wait calls, retry-until-green loops — detectable as patterns.
+- **Wait strategy.** Inspect state predicates, elapsed-time success, and retries masking failed operations; a timeout or wait API name alone is not a finding.
 - **Selector style.** Raw CSS selectors, xpath, test-ids-without-accessible-name — detectable lexically.
 - **Snapshot usage.** Snapshot/golden-file assertions, saved-HTML diffs, visual-regression calls — high-confidence when no baseline workflow is referenced.
 - **Assertion target.** Whether the test asserts on user-observable output or on URLs/DOM presence only.
@@ -344,6 +344,8 @@ Servers* applies doubly when the browser is in the loop.
 - [axe-core](https://github.com/dequelabs/axe-core) and [Deque University](https://dequeuniversity.com/) — the rule set most teams actually audit against, plus the documentation of its limits (keyboard flow and focus management are not axe's job).
 
 ### Performance
+- [Lighthouse variability](https://github.com/GoogleChrome/lighthouse/blob/main/docs/variability.md) — controlled local environments can reduce measurement volatility; interpret results within their declared scope.
+- [Lighthouse throttling](https://github.com/GoogleChrome/lighthouse/blob/main/docs/throttling.md) — explicit network and CPU profiles bound simulated-environment claims.
 - [web.dev — Core Web Vitals](https://web.dev/articles/vitals) — canonical thresholds for LCP, INP, CLS.
 - [web.dev — Defining the Core Web Vitals metrics thresholds](https://web.dev/articles/defining-core-web-vitals-thresholds) — the reasoning behind the numbers, for budget provenance.
 
