@@ -56,7 +56,7 @@ robot --log NONE --report NONE \
   <robot-target>
 ```
 
-Compare the two xUnit files by test case name and outcome. Any test whose status differs is a runtime-proven flake finding.
+Compare the two xUnit files by test case name and outcome. Only pass/fail divergence under comparable inputs is observed inconsistency; skipped, missing, or unexecuted identities are unknown.
 
 ### Gating
 
@@ -77,7 +77,7 @@ No Robot-Framework-level mutation tool is declared. Use the SUT language extensi
 
 ### 2. Install instructions
 
-Do not install a Robot-specific mutation tool for this extension. Install the mutation tool declared by the detected SUT language extension, or skip mutation testing with state B when only Robot Framework is detected.
+Do not install a Robot-specific mutation tool for this extension. Optional setup belongs outside the read-only audit and requires matching authority; never install tooling merely to complete an audit. Follow the [shared mutation procedure](../../procedures/mutation-testing.md), or skip with state B when only Robot Framework is detected.
 
 ### 3. Detection command
 

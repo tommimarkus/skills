@@ -128,7 +128,7 @@ npx mocha --reporter mocha-junit-reporter \
   'test/**/*.test.js'
 ```
 
-Run twice (swap `run1` for `run2` on the second run). Diff the JUnit XML outputs: compare every `<testcase>` element's `pass/fail/skip` status between the two runs. Any test that diverges is a runtime-proven flake finding.
+Run twice (swap `run1` for `run2` on the second run). Diff the JUnit XML outputs: compare every `<testcase>` element's `pass/fail/skip` status between the two runs. Only pass/fail divergence under comparable inputs is observed inconsistency; skipped, missing, or unexecuted identities are unknown.
 
 ### Gating
 

@@ -501,6 +501,12 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         mutation = read(procedures / "mutation-testing.md")
         self.assertIn("installation alone", mutation)
         self.assertIn("authority covering", mutation)
+        self.assertNotIn('treat as "skipped — limitation"', mutation)
+        self.assertNotIn("state B or state C", mutation)
+        for stack in ("nodejs", "robotframework"):
+            deep = read(SKILL_ROOT / "references/extensions" / stack / "deep.md")
+            self.assertNotIn("runtime-proven flake finding", deep)
+            self.assertIn("unexecuted identities are unknown", deep)
         recovery = read(RECOVERY)
         self.assertNotIn("slower than the last recorded run", recovery)
         self.assertIn("elapsed feedback time", recovery)
