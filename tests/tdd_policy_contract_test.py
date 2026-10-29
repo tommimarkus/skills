@@ -17,6 +17,10 @@ PLANNING_CORE = ROOT / "souroldgeezer-policy/skills/planning-policy/references/c
 TEST_QUALITY_SKILL = ROOT / "souroldgeezer-audit/skills/test-quality-audit/SKILL.md"
 
 NEW_BEHAVIOR_CASES = {
+    "tdd-policy-behavior-pin-regression": "implementation regression",
+    "tdd-policy-behavior-pin-reviewed-identity": "artifact identity",
+    "tdd-policy-behavior-pin-wording-and-coupling": "incidental coupling",
+    "tdd-policy-behavior-pin-unknown-source": "evidence limit",
     "tdd-policy-behavior-covered-refactor-no-red": "existing passing tests",
     "tdd-policy-behavior-characterize-before-refactor": "characterization",
     "tdd-policy-behavior-requirement-change-updates-expectation": "rationale",

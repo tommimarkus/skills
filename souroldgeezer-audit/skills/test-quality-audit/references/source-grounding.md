@@ -127,3 +127,13 @@ examples, fixtures, schemas, diagrams, logos, or screenshots.
   structure-coupled consumer accepts ordinary named exception records while
   retaining verify-then-retire evidence. These scenarios are original and do
   not claim measured productivity improvements.
+
+## Pin-maintenance clarification (2026-10-29)
+
+Source: maintainer request reporting repeated Fivee acceptance/re-pin cycles.
+The motivating Dispel report mentions 18 failures at `1544ed1f`; that report
+remains unverified and was not reproduced here. Fivee owns its concrete
+dependency map in `docs/TESTING.md`; no Fivee tests are changed or pruned by
+this clarification. Handling: idea-only, original guidance and synthetic
+evaluations; no copied report, fixtures, or third-party text. These are
+maintainer policy decisions, not measured improvements in runtime or quality.

@@ -171,9 +171,11 @@ ordinary task note, commit message, or PR/MR text, naming an existing test that
 a behavior-preserving refactor had to edit. It is not a mandatory TDD footer.
 Read it only from accessible task records or history when the project keeps it
 there; when it is absent, report nothing and ask for no instrumentation. The
-record is evidence that the named test is tied to structure below the seam, so
-make the test a `verify-then-retire` candidate whose first step is a rewrite at
-the seam, with the original retired under the gate above. The record is
+record needs assertion-level confirmation under
+[testing-core's pin review](../../../../docs/quality-reference/testing-core.md#pinned-expectations-and-re-pin-review):
+an edited justified identity or exact-output check alone is not coupling. When
+incidental structure below the seam caused the edit, make the test a
+`verify-then-retire` candidate whose first step is a rewrite at the seam, with the original retired under the gate above. The record is
 stronger than similarity or never-failed history because a behavior-preserving
 change broke the test, yet it never retires a test by itself.
 

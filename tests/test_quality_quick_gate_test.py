@@ -84,7 +84,7 @@ class TestQualityQuickGateTest(unittest.TestCase):
         for case_id, case in cases.items():
             with self.subTest(case_id=case_id):
                 self.assertIn(case["mode"], {"quick", "deep"})
-                self.assertIn(case["expected_gate"], {"fail", "pass-limited", None})
+                self.assertIn(case["expected_gate"], {"fail", "not-evaluated", "pass-limited", None})
                 if case["mode"] == "quick":
                     self.assertIsNotNone(case["expected_gate"])
                     self.assertNotIn("Gap-", " ".join(case["expected_smells"]))

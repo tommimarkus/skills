@@ -179,7 +179,9 @@ Ask when mode is ambiguous; do not deep-enumerate ordinary Quick targets.
 
 ## Rules and Stop Conditions
 
-- Assume SUT output may be wrong; do not derive expected values from it.
+- Assume SUT output may be wrong; do not accept it as expectation authority.
+  Apply testing-core's pinned-expectation review before re-pinning or judging
+  coupling, including its reviewed-artifact identity distinction.
 - Audit public APIs/user-observable behavior, not private methods, internals, or
   delegation glue.
 - Reward positives; stay read-only unless fixes are requested.

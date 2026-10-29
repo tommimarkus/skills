@@ -14,6 +14,40 @@ adaptations stay in the lane rubric.
   failing these pillars removes coverage without visible cost. Each lane rubric
   keeps only its lane-specific consequence sentence (integration §2.8, e2e §2.8).
 
+## Pinned expectations and re-pin review
+
+Assess individual assertions, including mixed assertions in one test; filenames,
+hash equality, snapshot syntax, repeated failures, or re-pin history alone do
+not establish coupling. Before recommending an update, identify the protected
+contract and expectation source: an accepted requirement, compatibility promise,
+reviewed source/artifact, or justified baseline. Inspect the underlying source
+and behavioral delta rather than accepting regenerated output.
+
+- **Implementation regression:** preserve the expectation; recommend fixing the
+  implementation.
+- **Intentional contract change:** update the obsolete expectation with the
+  contract rationale under the project's behavioral-change discipline.
+- **Legitimate artifact-identity change:** after reviewing the changed artifact
+  and provenance, update its identity expectation while retaining semantic and
+  compatibility checks. Computing a digest of reviewed bytes establishes
+  identity, not semantic correctness.
+- **Incidental coupling:** recommend an assertion at the intended seam without
+  silently discarding distinct regression protection.
+
+Preserve justified exact hashes, wording, canonicalization, byte stability, and
+replay checks. Missing contract or expectation provenance is an evidence limit,
+not permission to re-pin or proof that an assertion is disposable. Apply these
+rules before snapshot smells or structure-coupled history; retain existing
+supersession and `verify-then-retire` gates for lost coverage.
+
+For authorized remediation, use focused diagnosis and convergence, then affected
+component checks using the consumer's documented dependency map when available,
+then required acceptance gates at project cadence. Avoid repeated broad acceptance
+attempts while focused failures remain unresolved; never waive required gates.
+This is advice about execution scope, not authority for an audit to edit tests
+or run a suite in Quick mode. Ordinary change rationale suffices: no new pin
+registry, mandatory paperwork, or mutation run on every change.
+
 ## Local confirmation and task authority
 
 Apply existing task authority to cheap, known-safe local confirmations,

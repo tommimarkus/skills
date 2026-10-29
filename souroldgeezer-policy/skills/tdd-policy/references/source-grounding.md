@@ -143,8 +143,9 @@ Sources are linked and paraphrased; none of their text is bundled.
   operators cannot establish the absence of distinct value when none is found.
   The 2026-10-24 maintainer decision therefore makes mutation evidence advisory
   and follows project cadence rather than requiring it every GREEN.
-- `structure-coupled` records. That a behavior-preserving refactor had to edit
-  a test is evidence the test is tied to internal structure. A compact named-test
+- `structure-coupled` records. Edits caused by incidental internal structure
+  during a behavior-preserving refactor provide coupling evidence; legitimate
+  identity or contractual exact-output updates alone do not. A compact named-test
   exception note in the ordinary task result or commit/PR record is evidence for
   `test-quality-audit`'s `verify-then-retire`, stronger than similarity or
   history, but it never retires a test by itself. The exception note is the record; no
@@ -204,3 +205,13 @@ installed, so a shared support module stood in for `conftest.py`.
   independently, so a relative link into another plugin cannot resolve. When
   the named skill is absent the neutral rules still stand on their own, and the
   footer records the gap as `stack idioms: n/a`.
+
+## Pin-maintenance clarification (2026-10-29)
+
+Source: maintainer request reporting repeated Fivee acceptance/re-pin cycles.
+The motivating Dispel report mentions 18 failures at `1544ed1f`; that report
+remains unverified and was not reproduced here. Fivee owns its concrete
+dependency map in `docs/TESTING.md`; no Fivee tests are changed or pruned by
+this clarification. Handling: idea-only, original guidance and synthetic
+evaluations; no copied report, fixtures, or third-party text. These are
+maintainer policy decisions, not measured improvements in runtime or quality.

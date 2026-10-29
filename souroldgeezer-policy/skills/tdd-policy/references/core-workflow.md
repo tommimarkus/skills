@@ -101,6 +101,27 @@ and how many collaborators it calls:
 - code both complex and highly connected → split it first, handing the design
   to `software-design`, then test each part as above.
 
+## Maintaining pinned expectations
+
+Before re-pinning a hash, snapshot, wording, or golden value, identify the
+contract it protects and the expectation's source: an accepted requirement,
+compatibility promise, reviewed source/artifact, or justified baseline. Review
+the underlying source and behavioral delta, not just regenerated output.
+An implementation regression needs an implementation fix; an intentional
+contract change follows the requirement-change rule above. A legitimate
+artifact-identity change may update its digest after review without changing
+semantic expectations. Incidental coupling calls for a seam-based assertion,
+retaining distinct regression protection. Missing provenance is an evidence
+limit, not permission to accept the current output.
+
+Judge individual assertions, not filenames or snapshot syntax. Exact hashes,
+wording, canonicalization, byte stability, and replay checks can be contractual;
+preserve them when justified. A reviewed artifact's identity can be computed
+from its bytes; that computation does not establish semantic correctness.
+Use ordinary change notes for material rationale, not a new pin registry or
+mandatory form. Assertion weakening still needs the existing supersession or
+verified-retirement evidence; a re-pin is not retirement authority.
+
 ## Selecting the RED test
 
 Inspect the existing tests before choosing where to express RED, then decide in
@@ -125,7 +146,10 @@ order:
    declared seam itself sits at that level, as a CLI or wire-protocol seam
    does); record that reason with the relevant checks.
 4. **Retention.** Ask of every test to be kept: *Would a behavior-preserving
-   refactor force this test to change?* If yes, the test is tied to internal
+   refactor force this test to change?* First apply "Maintaining pinned
+   expectations": an edited contractual
+   identity or exact-output assertion is not by itself coupling. If only
+   incidental internal structure forces the edit, the test is tied to internal
    structure: write it at the seam, or keep it only as a scaffold test, one
    below the seam that drives out an internal design step while the seam RED is
    failing. The seam RED always comes first, and the same cycle's REFACTOR
@@ -199,7 +223,11 @@ order:
 ## Execution scope
 
 - RED/GREEN: run the focused scenario only.
-- After convergence: run the affected module or component tests.
+- After convergence: run the affected module or component tests, following
+  the project's documented dependency map and commands when available.
+- Acceptance: run required acceptance gates after convergence at their declared
+  cadence. Diagnose and resolve focused/affected failures before another broad
+  acceptance attempt; this progression does not waive required gates.
 - Full suite: at the repository's declared cadence (pre-commit, closeout, CI),
   never per RED/GREEN step.
 
@@ -224,7 +252,9 @@ tests this cycle wrote, touched, or made redundant:
   the seam stay as ordinary regression tests and retire later only through
   supersession.
 - **Structure-coupled tests.** When a behavior-preserving refactor in this
-  cycle needed edits to existing tests, those tests are structure-coupled. List
+  cycle needed edits to existing assertions because they pin incidental
+  internal structure, those tests are structure-coupled. Apply "Maintaining
+  pinned expectations" first; a justified identity update is not sufficient. List
   them once as `structure-coupled: <named tests>` in the task result or ordinary
   commit/PR note, and rewrite each at the seam where the cycle's scope allows;
   otherwise leave it. This exception note is the record, with no new telemetry:

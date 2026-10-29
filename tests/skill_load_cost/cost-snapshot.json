@@ -1,11 +1,11 @@
 {
-  "quick-node-unit": 25044,
-  "deep-nextjs-suite": 52434,
-  "quick-python-unit": 13019,
-  "deep-python-suite": 20118,
-  "deep-python-suite-recovery": 21798,
-  "quick-node-e2e": 26044,
-  "deep-dotnet-e2e": 24807,
+  "quick-node-unit": 25423,
+  "deep-nextjs-suite": 52875,
+  "quick-python-unit": 13398,
+  "deep-python-suite": 20559,
+  "deep-python-suite-recovery": 22239,
+  "quick-node-e2e": 26423,
+  "deep-dotnet-e2e": 25248,
   "lean-audit-prose": 8955,
   "lean-audit-source-code": 9309,
   "lean-audit-skill-surface": 8955,
@@ -38,7 +38,7 @@
   "arch-build-archimate": 27290,
   "arch-extract-dotnet": 28432,
   "arch-review-package": 29675,
-  "deep-dotnet-e2e-scaled": 26020,
+  "deep-dotnet-e2e-scaled": 26461,
   "quick-devsecops-gha": 25754,
   "deep-devsecops-gha": 31249,
   "ip-triage-js": 11487,
@@ -58,5 +58,5 @@
   "review-api-software-composed": 13029,
   "sd-test-code-python": 3157,
   "sd-test-code-typescript": 3133,
-  "tdd-enforce": 5183
+  "tdd-enforce": 5502
 }
