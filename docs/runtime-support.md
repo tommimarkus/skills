@@ -31,7 +31,7 @@ spec-aware Copilot, and Antigravity.
 | Codex, legacy fallback | `.codex-plugin/plugin.json` and `mcp/codex.mcp.json` | Literal paths, plugin-relative `cwd: "."`, no supplied plugin-data root. |
 | Copilot CLI, Agent Plugins | Root `plugin.json` and `mcp.json`; ignores the legacy MCP file | Host exports absolute plugin-data variables; does not expand root-file tokens. |
 | Copilot CLI, legacy fallback | `mcp/copilot.mcp.json` | Uses `${PLUGIN_ROOT}` and explicit `DEDIREN_HOME` from `${COPILOT_PLUGIN_DATA}`. |
-| Antigravity / Gemini CLI | `mcp_config.json` alongside root `plugin.json` | Uses `${PLUGIN_ROOT}` and explicit `DEDIREN_HOME` from `${PLUGIN_DATA}/dediren`. |
+| Antigravity / Gemini CLI | `mcp_config.json` alongside root `plugin.json` | Launcher in `args` under `${PLUGIN_ROOT}` (`command` is not expanded); explicit `DEDIREN_HOME` from `${PLUGIN_DATA}/dediren`. |
 
 The shared root `mcp.json` deliberately declares no `env` or `cwd`: Codex would
 expand a token there while Copilot would leave it literal. The shared

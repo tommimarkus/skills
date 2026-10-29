@@ -113,7 +113,8 @@ def add_mcp_packaging(repo: Path) -> None:
         {
             "mcpServers": {
                 "example": {
-                    "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                    "command": "bash",
+                    "args": [f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"],
                     "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
                 }
             }
@@ -843,13 +844,57 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "missing",
         )
 
-        def use_foreign_token_in_antigravity_mcp_config(repo: Path) -> None:
+        def put_plugin_root_in_antigravity_command(repo: Path) -> None:
             write_mcp_config(
                 repo / EXAMPLE_PLUGIN,
                 {
                     "mcpServers": {
                         "example": {
                             "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                            "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                        }
+                    }
+                },
+                "mcp_config.json",
+            )
+
+        self._assert_mcp_fixture_flags(
+            put_plugin_root_in_antigravity_command,
+            f"{EXAMPLE_PLUGIN}/mcp_config.json",
+            "mcpServers.example.command",
+            "bare executable name",
+        )
+
+        def omit_bundled_launcher_from_antigravity_args(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "mcpServers": {
+                        "example": {
+                            "command": "bash",
+                            "args": [],
+                            "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                        }
+                    }
+                },
+                "mcp_config.json",
+            )
+
+        self._assert_mcp_fixture_flags(
+            omit_bundled_launcher_from_antigravity_args,
+            f"{EXAMPLE_PLUGIN}/mcp_config.json",
+            "mcpServers.example.args",
+            "${PLUGIN_ROOT}",
+        )
+
+        def use_foreign_token_in_antigravity_mcp_config(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "mcpServers": {
+                        "example": {
+                            "command": "bash",
+                            "args": [f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}"],
                             "env": {"EXAMPLE_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/example"},
                         }
                     }

@@ -635,6 +635,99 @@ def check_copilot_mcp_server_block(
             )
 
 
+def check_plugin_root_data_substitutions(
+    repo: Path,
+    path: Path,
+    field: str,
+    server: dict[str, Any],
+    *,
+    include_command: bool,
+    findings: list[Finding],
+) -> None:
+    """Reject substitution tokens outside ${PLUGIN_ROOT} and ${PLUGIN_DATA}."""
+    for value_field, value in server_string_fields(
+        field, server, include_command=include_command
+    ):
+        for token in SUBSTITUTION_TOKEN_RE.findall(normalize_text(value)):
+            if token not in AGENT_PLUGINS_SUBSTITUTIONS:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        value_field,
+                        "only ${PLUGIN_ROOT} / ${PLUGIN_DATA} substitute here",
+                        "${" + token + "}",
+                    )
+                )
+
+
+def check_antigravity_mcp_server_block(
+    repo: Path,
+    path: Path,
+    plugin_dir: Path,
+    servers: dict[str, Any],
+    findings: list[Finding],
+) -> None:
+    """Check Antigravity's native ``mcp_config.json`` server block.
+
+    Antigravity expands ``${PLUGIN_ROOT}`` and ``${PLUGIN_DATA}`` only in
+    ``args``, ``env``, and ``cwd`` — never in ``command``. A ``${PLUGIN_ROOT}``
+    in ``command`` is passed literally to ``os/exec`` and fails with ``no such
+    file or directory``, so ``command`` must be a bare executable name and the
+    bundled launcher path must live in ``args`` under ``${PLUGIN_ROOT}``.
+    """
+    root_token = "${PLUGIN_ROOT}"
+    for name, server in valid_mcp_servers(repo, path, servers, findings):
+        field = f"mcpServers.{name}"
+        command = normalize_text(server.get("command"))
+        if not command or "/" in command or "\\" in command or "${" in command:
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    f"{field}.command",
+                    "bare executable name (Antigravity does not expand ${PLUGIN_ROOT} or ${PLUGIN_DATA} in command)",
+                    command or "missing",
+                )
+            )
+
+        args = server.get("args")
+        if not isinstance(args, list):
+            findings.append(
+                Finding(
+                    repo_relative(repo, path),
+                    f"{field}.args",
+                    f"argument array with at least one path under {root_token}",
+                    normalize_text(args) or "missing",
+                )
+            )
+        else:
+            bundled_args = [
+                (index, normalize_text(value))
+                for index, value in enumerate(args)
+                if isinstance(value, str) and normalize_text(value).startswith(root_token)
+            ]
+            if not bundled_args:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, path),
+                        f"{field}.args",
+                        f"at least one bundled executable path under {root_token}",
+                        normalize_text(args),
+                    )
+                )
+            for index, arg in bundled_args:
+                require_bundled_executable(
+                    findings,
+                    repo,
+                    path,
+                    f"{field}.args[{index}]",
+                    plugin_dir / arg[len(root_token) :].lstrip("/"),
+                )
+
+        check_plugin_root_data_substitutions(
+            repo, path, field, server, include_command=False, findings=findings
+        )
+
+
 def check_agent_plugins_mcp_server_block(
     repo: Path,
     path: Path,
@@ -671,17 +764,9 @@ def check_agent_plugins_mcp_server_block(
                 )
             )
 
-        for value_field, value in server_string_fields(field, server, include_command=True):
-            for token in SUBSTITUTION_TOKEN_RE.findall(normalize_text(value)):
-                if token not in AGENT_PLUGINS_SUBSTITUTIONS:
-                    findings.append(
-                        Finding(
-                            repo_relative(repo, path),
-                            value_field,
-                            "only ${PLUGIN_ROOT} / ${PLUGIN_DATA} substitute here",
-                            "${" + token + "}",
-                        )
-                    )
+        check_plugin_root_data_substitutions(
+            repo, path, field, server, include_command=True, findings=findings
+        )
 
         env = server.get("env", {})
         if isinstance(env, dict):
@@ -997,13 +1082,11 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
             ag_declared = ag_config.get("mcpServers")
             if isinstance(ag_declared, dict):
                 antigravity_servers = ag_declared
-                check_claude_mcp_server_block(
+                check_antigravity_mcp_server_block(
                     repo,
                     antigravity_mcp_path,
                     plugin_dir,
                     antigravity_servers,
-                    "${PLUGIN_ROOT}",
-                    ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}", "${COPILOT_PLUGIN_DATA}"),
                     findings,
                 )
             else:

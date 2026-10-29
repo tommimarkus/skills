@@ -1138,9 +1138,10 @@ def run_host_smoke(
         assert_managed_runtime_home(
             repo, agy_mcp_env, agy_plugin_data, label="Antigravity"
         )
-        agy_command = expand_codex(
-            agy_server["command"], plugin_root=agy_arch_root, plugin_data=agy_plugin_data
-        )
+        # Antigravity expands ${PLUGIN_ROOT} and ${PLUGIN_DATA} in args, env, and
+        # cwd, never in command; passing command unexpanded reproduces the live
+        # host's os/exec behavior.
+        agy_command = str(agy_server.get("command", ""))
         agy_args = [
             expand_codex(value, plugin_root=agy_arch_root, plugin_data=agy_plugin_data)
             for value in agy_server.get("args", [])

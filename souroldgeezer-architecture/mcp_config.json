@@ -1,7 +1,10 @@
 {
   "mcpServers": {
     "dediren": {
-      "command": "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh",
+      "command": "bash",
+      "args": [
+        "${PLUGIN_ROOT}/skills/architecture-design/references/scripts/dediren-mcp.sh"
+      ],
       "env": {
         "DEDIREN_HOME": "${PLUGIN_DATA}/dediren"
       }
