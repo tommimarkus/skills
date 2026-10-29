@@ -90,9 +90,10 @@ not change global Git configuration.
 ## Keep the runtime lanes aligned
 
 Every published plugin appears in both marketplaces and has Claude and legacy
-Codex manifests. When a root Agent Plugins `plugin.json` exists, its name,
-description, skills path, and normalized SemVer version stay aligned with the
-legacy Codex manifest; it is also the native Copilot manifest where supported.
+Codex manifests, plus `.antigravity-plugin/plugin.json` for non-MCP plugins.
+When a root Agent Plugins `plugin.json` exists, its name, description, skills
+path, and normalized SemVer version stay aligned with the legacy Codex manifest;
+it is also the native Copilot and Antigravity manifest where supported.
 Marketplace entries never carry a version.
 
 Portable workflow belongs under `skills/**`. Put host metadata, hook
@@ -148,7 +149,7 @@ Publication retains the complete ordered gates and an unconditional host smoke
 with both safety flags. The receipt binds commit and tree. After exactly one
 allowed atomic version-cell follow-up, use `record --version-followup`; any other
 publication-source drift needs a fresh full receipt. Only the documented Claude,
-normalized Codex/root-manifest and README version cells qualify. Proportionate
+normalized Codex/Antigravity/root-manifest and README version cells qualify. Proportionate
 local verification never substitutes for publication evidence or authority.
 
 Do not report a pipeline's downstream status as the check's status. Host smoke

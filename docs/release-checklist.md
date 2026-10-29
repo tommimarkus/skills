@@ -17,8 +17,8 @@ operational changes.
   local paths, and each plugin has `.codex-plugin/plugin.json`.
 - Confirm the Claude and Codex manifests express the same semantic version:
   padded `YYYY.0M.MICRO` in Claude and normalized `YYYY.M.MICRO` in Codex.
-  When a native Copilot `plugin.json` exists, keep its normalized version aligned
-  with Codex. Neither marketplace may carry a `version` key.
+  Keep `.antigravity-plugin/plugin.json` and any native Copilot / root `plugin.json`
+  normalized version aligned with Codex. Neither marketplace may carry a `version` key.
 - Validate every Codex plugin with the current first-party plugin validator when
   the installed CLI exposes one.
 
@@ -65,5 +65,6 @@ spelling `YYYY.M.MICRO` from it.
 
 Feature branches carry no release increment. At integration on `main`, compute
 the next stamp with `scripts/version_stamp.py`, then update the Claude manifest,
-Codex manifest, any native Copilot manifest, and matching README cell together.
+Codex manifest, Antigravity manifest, any native Copilot manifest, and matching
+README cell together.
 Do not add a version to a marketplace entry.

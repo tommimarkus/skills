@@ -41,8 +41,10 @@ HOST_RELEVANT_PATTERNS = (
     ".agents/plugins/*",
     "*/.claude-plugin/*",
     "*/.codex-plugin/*",
+    "*/.antigravity-plugin/*",
     "*/plugin.json",
     "*/mcp.json",
+    "*/mcp_config.json",
     "*/mcp/*",
     "*/agents/*",
     "*/skills/*/SKILL.md",
@@ -231,6 +233,7 @@ def load_expectations(repo: Path) -> list[PluginExpectation]:
         )
         agents = tuple(sorted(path.stem for path in agents_dir.glob("*.md") if path.is_file()))
         copilot_path = plugin_dir / "plugin.json"
+        antigravity_path = plugin_dir / ".antigravity-plugin" / "plugin.json"
         copilot_version: str | None = None
         if copilot_path.is_file():
             copilot_manifest = read_json(copilot_path)
@@ -240,6 +243,15 @@ def load_expectations(repo: Path) -> list[PluginExpectation]:
             if semantic_version(value) != semantic_version(claude_version):
                 raise SmokeFailure(f"Copilot manifest version differs semantically for {name}")
             copilot_version = value
+        elif antigravity_path.is_file():
+            antigravity_manifest = read_json(antigravity_path)
+            ag_value = antigravity_manifest.get("version")
+            if not isinstance(ag_value, str):
+                raise SmokeFailure(f"Antigravity manifest must declare a version for {name}")
+            if semantic_version(ag_value) != semantic_version(claude_version):
+                raise SmokeFailure(f"Antigravity manifest version differs semantically for {name}")
+        else:
+            raise SmokeFailure(f"missing Antigravity or root plugin.json manifest for {name}")
         expectations.append(
             PluginExpectation(
                 name,
@@ -318,6 +330,9 @@ def default_profile_control_paths(env: Mapping[str, str]) -> tuple[Path, ...]:
         copilot_root / "installed-plugins",
         copilot_root / "plugin-data",
         copilot_marketplaces,
+        home / ".gemini" / "config" / "config.json",
+        home / ".gemini" / "config" / "plugins",
+        home / ".gemini" / "config" / "mcp_config.json",
     )
 
 
@@ -1102,7 +1117,42 @@ def run_host_smoke(
             env=copilot_mcp_env,
             label="Copilot",
         )
-        if not codex_tools == claude_tools == copilot_tools:
+        agy_arch_root = state_root / "agy-plugins" / architecture.name
+        shutil.copytree(repo / architecture.name, agy_arch_root)
+        assert_installed_skills(agy_arch_root, architecture, state_root, "Antigravity")
+        agy_servers = read_json(agy_arch_root / "mcp_config.json").get("mcpServers", {})
+        agy_server = agy_servers.get("dediren")
+        if not isinstance(agy_server, dict):
+            raise SmokeFailure("Antigravity plugin omitted the Dediren adapter")
+        agy_plugin_data = runtime_data / "agy" / architecture.name
+        agy_mcp_env = without_inherited_data_roots(env)
+        agy_mcp_env.pop("CODEX_HOME", None)
+        agy_mcp_env.pop("CLAUDE_CONFIG_DIR", None)
+        agy_mcp_env.pop("CLAUDE_PROJECT_DIR", None)
+        agy_mcp_env.pop("COPILOT_HOME", None)
+        agy_mcp_env.pop("COPILOT_CACHE_HOME", None)
+        for key, value in agy_server.get("env", {}).items():
+            agy_mcp_env[key] = expand_codex(
+                value, plugin_root=agy_arch_root, plugin_data=agy_plugin_data
+            )
+        assert_managed_runtime_home(
+            repo, agy_mcp_env, agy_plugin_data, label="Antigravity"
+        )
+        agy_command = expand_codex(
+            agy_server["command"], plugin_root=agy_arch_root, plugin_data=agy_plugin_data
+        )
+        agy_args = [
+            expand_codex(value, plugin_root=agy_arch_root, plugin_data=agy_plugin_data)
+            for value in agy_server.get("args", [])
+        ]
+        agy_tools = mcp_runner(
+            [agy_command, *agy_args],
+            cwd=agy_arch_root,
+            workspace_root=repo,
+            env=agy_mcp_env,
+            label="Antigravity",
+        )
+        if not codex_tools == claude_tools == copilot_tools == agy_tools:
             raise SmokeFailure("Dediren tool surfaces differ across host adapters")
 
         summary = SmokeSummary(

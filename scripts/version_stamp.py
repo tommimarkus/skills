@@ -161,20 +161,17 @@ def versions_at_ref(repo_root: Path, ref: str) -> dict[str, str]:
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError):
             continue
         versions[f"{plugin}/.claude-plugin/plugin.json"] = version
-        codex_rel = f"{plugin}/.codex-plugin/plugin.json"
-        codex_text = _git_show(repo_root, ref, codex_rel)
-        if codex_text is not None:
-            try:
-                versions[codex_rel] = json.loads(codex_text)["version"]
-            except (json.JSONDecodeError, KeyError, TypeError):
-                pass
-        copilot_rel = f"{plugin}/plugin.json"
-        copilot_text = _git_show(repo_root, ref, copilot_rel)
-        if copilot_text is not None:
-            try:
-                versions[copilot_rel] = json.loads(copilot_text)["version"]
-            except (json.JSONDecodeError, KeyError, TypeError):
-                pass
+        for rel in (
+            f"{plugin}/.codex-plugin/plugin.json",
+            f"{plugin}/plugin.json",
+            f"{plugin}/.antigravity-plugin/plugin.json",
+        ):
+            manifest_text = _git_show(repo_root, ref, rel)
+            if manifest_text is not None:
+                try:
+                    versions[rel] = json.loads(manifest_text)["version"]
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    pass
     readme_text = _git_show(repo_root, ref, "README.md")
     if readme_text is not None:
         for plugin, version in read_readme_versions(readme_text).items():

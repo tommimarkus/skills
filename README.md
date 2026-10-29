@@ -1,6 +1,6 @@
 # souroldgeezer
 
-Cross-runtime plugin marketplace by Sour Old Geezer. The same skill workflows run in Claude Code™ and Codex, with native GitHub™ Copilot CLI support for the architecture plugin.
+Cross-runtime plugin marketplace by Sour Old Geezer. The same skill workflows run in Claude Code™, Codex, and Antigravity / Gemini CLI (`agy`), with native GitHub™ Copilot CLI support for the architecture plugin.
 
 Published plugins package shared skills with their on-demand references,
 extensions, and evaluation evidence for supported runtimes. Host manifests,
@@ -151,6 +151,20 @@ copilot plugin install souroldgeezer-architecture@souroldgeezer
 ```
 
 For local development, add the clone path as the marketplace source before running the same install command. See [runtime support](docs/runtime-support.md) for adapter boundaries.
+
+### Antigravity / Gemini CLI
+
+Install individual plugins directly from GitHub or a local checkout:
+
+```bash
+agy plugin install https://github.com/tommimarkus/skills/tree/main/souroldgeezer-audit
+agy plugin install https://github.com/tommimarkus/skills/tree/main/souroldgeezer-design
+agy plugin install https://github.com/tommimarkus/skills/tree/main/souroldgeezer-architecture
+agy plugin install https://github.com/tommimarkus/skills/tree/main/souroldgeezer-policy
+agy plugin install https://github.com/tommimarkus/skills/tree/main/souroldgeezer-ops
+```
+
+For local checkout registration without copying, add an `entries` item in `~/.gemini/config/plugins.json` (or `.agents/plugins.json`) pointing at the repository root with `include_only` listing the plugins you want enabled.
 
 ### Dediren runtime (architecture plugin only)
 

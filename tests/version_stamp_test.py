@@ -233,24 +233,26 @@ class GuardTest(unittest.TestCase):
             _git(root, "commit", "-qam", "premature codex stamp")
             self.assertEqual(self._guard(root), 1)
 
-    def test_fails_when_branch_stamps_only_the_root_plugin_json_cell(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._seed(root)
-            manifest = root / "souroldgeezer-audit" / "plugin.json"
-            manifest.write_text(
-                json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.3"}, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            _git(root, "add", "-A")
-            _git(root, "commit", "-qm", "root manifest on main")
-            _git(root, "checkout", "-q", "-b", "feature")
-            manifest.write_text(
-                json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.4"}, indent=2) + "\n",
-                encoding="utf-8",
-            )
-            _git(root, "commit", "-qam", "premature root stamp")
-            self.assertEqual(self._guard(root), 1)
+    def test_fails_when_branch_stamps_only_the_root_or_antigravity_plugin_json_cell(self):
+        for rel in ("plugin.json", ".antigravity-plugin/plugin.json"):
+            with self.subTest(rel=rel), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                self._seed(root)
+                manifest = root / "souroldgeezer-audit" / rel
+                manifest.parent.mkdir(parents=True, exist_ok=True)
+                manifest.write_text(
+                    json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.3"}, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                _git(root, "add", "-A")
+                _git(root, "commit", "-qm", "manifest on main")
+                _git(root, "checkout", "-q", "-b", "feature")
+                manifest.write_text(
+                    json.dumps({"name": "souroldgeezer-audit", "version": "2026.6.4"}, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                _git(root, "commit", "-qam", "premature stamp")
+                self.assertEqual(self._guard(root), 1)
 
     def test_fails_when_branch_stamps_the_readme_cell(self):
         with self._feature_branch() as root:

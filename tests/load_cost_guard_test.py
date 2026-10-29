@@ -76,6 +76,23 @@ class PostEditContentTest(unittest.TestCase):
         result = guard.post_edit_content("MultiEdit", {"edits": []}, "unchanged")
         self.assertEqual(result, "unchanged")
 
+    def test_antigravity_write_and_edit_file_return_expected_content(self):
+        self.assertEqual(
+            guard.post_edit_content("write_file", {"Content": "new"}, "old"), "new"
+        )
+        self.assertEqual(
+            guard.post_edit_content(
+                "write_file", {"Content": " suffix", "Append": True}, "base"
+            ),
+            "base suffix",
+        )
+        self.assertEqual(
+            guard.post_edit_content(
+                "edit_file", {"Target": "foo", "Replacement": "bar"}, "foo and foo"
+            ),
+            "bar and bar",
+        )
+
 
 # ---------------------------------------------------------------------------
 # decide() — unit tests
@@ -410,6 +427,43 @@ class MainIntegrationTest(unittest.TestCase):
             payload = {"cwd": str(root)}
             # Must be fully silent: no block decision and no stray output
             self._assert_silent_fail_open(payload, "no-git case must stay silent")
+
+    def test_antigravity_pretooluse_and_stop_emit_valid_antigravity_json(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            skill_dir = self._mk_skill(root, "lean-skill")
+            _init_git_repo(root)
+            pre_payload = {
+                "toolCall": {
+                    "name": "edit_file",
+                    "args": {
+                        "Path": str(skill_dir / "SKILL.md"),
+                        "Target": "[c](c.md)",
+                        "Replacement": "[c](missing-target.md)",
+                    },
+                },
+                "workspacePaths": [str(root)],
+            }
+            pre_out, _ = self._run_guard_and_parse(
+                pre_payload,
+                exit_msg="antigravity PreToolUse must exit 0",
+                lines_msg="expected JSON decision for broken pointer",
+            )
+            self.assertEqual(pre_out["decision"], "deny")
+            self.assertIn("dangling pointer", pre_out["reason"])
+
+            (skill_dir / "c.md").write_text("## Sec\n(code removed)\n", encoding="utf-8")
+            stop_payload = {
+                "terminationReason": "NO_TOOL_CALL",
+                "workspacePaths": [str(root)],
+            }
+            stop_out, _ = self._run_guard_and_parse(
+                stop_payload,
+                exit_msg="antigravity Stop must exit 0",
+                lines_msg="expected valid JSON object on stdout",
+            )
+            self.assertEqual(stop_out["decision"], "allow")
+            self.assertIn("LA-PUC-1", stop_out["reason"])
 
 
 class CommittedBaselinesStopModeTest(unittest.TestCase):

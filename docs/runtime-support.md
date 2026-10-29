@@ -1,7 +1,8 @@
 # Runtime support
 
 Use the [README installation commands](../README.md#install) for your host.
-Claude Code and Codex support all five plugins and all 16 shared public skills.
+Claude Code, Codex, and Antigravity / Gemini CLI (`agy`) support all five
+plugins and all 16 shared public skills.
 Native Copilot CLI support currently covers `souroldgeezer-architecture` and
 its `architecture-design` skill. The workflows are shared; discovery, tool
 launch, permissions, and configuration belong to each host.
@@ -18,8 +19,10 @@ trust boundaries.
 
 Claude reads `.claude-plugin/marketplace.json`; Codex reads
 `.agents/plugins/marketplace.json`. Every plugin has Claude and legacy Codex
-manifests. The architecture plugin also has the current Agent Plugins root
-`plugin.json` and `mcp.json`, used by Codex and spec-aware Copilot.
+manifests; the four non-MCP plugins also carry `.antigravity-plugin/plugin.json`
+for native Antigravity discovery. The architecture plugin has the current Agent
+Plugins root `plugin.json`, `mcp.json`, and `mcp_config.json`, used by Codex,
+spec-aware Copilot, and Antigravity.
 
 | Host | Architecture MCP configuration | Runtime data |
 |---|---|---|
@@ -28,6 +31,7 @@ manifests. The architecture plugin also has the current Agent Plugins root
 | Codex, legacy fallback | `.codex-plugin/plugin.json` and `mcp/codex.mcp.json` | Literal paths, plugin-relative `cwd: "."`, no supplied plugin-data root. |
 | Copilot CLI, Agent Plugins | Root `plugin.json` and `mcp.json`; ignores the legacy MCP file | Host exports absolute plugin-data variables; does not expand root-file tokens. |
 | Copilot CLI, legacy fallback | `mcp/copilot.mcp.json` | Uses `${PLUGIN_ROOT}` and explicit `DEDIREN_HOME` from `${COPILOT_PLUGIN_DATA}`. |
+| Antigravity / Gemini CLI | `mcp_config.json` alongside root `plugin.json` | Uses `${PLUGIN_ROOT}` and explicit `DEDIREN_HOME` from `${PLUGIN_DATA}/dediren`. |
 
 The shared root `mcp.json` deliberately declares no `env` or `cwd`: Codex would
 expand a token there while Copilot would leave it literal. The shared

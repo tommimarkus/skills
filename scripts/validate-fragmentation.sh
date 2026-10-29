@@ -96,6 +96,19 @@ validate_plugin_manifests() {
       (.interface | type == "object")
     ' "$codex_manifest" >/dev/null
 
+    antigravity_manifest="$plugin_dir/.antigravity-plugin/plugin.json"
+    if [ -f "$antigravity_manifest" ]; then
+      jq -e '
+        type == "object" and
+        (.name | type == "string") and
+        (.version | type == "string" and test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")) and
+        (.description | type == "string") and
+        (.author | type == "object")
+      ' "$antigravity_manifest" >/dev/null
+    else
+      test -f "$plugin_dir/plugin.json"
+    fi
+
     # Runtime manifests own version identity; marketplace entries must never
     # carry a copy that can drift silently.
     jq -n -e \

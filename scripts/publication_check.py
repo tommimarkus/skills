@@ -20,7 +20,7 @@ PUBLICATION_REF = "refs/heads/main"
 OID_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 MANIFEST_RE = re.compile(
     r"^souroldgeezer-[a-z-]+/(?:\.claude-plugin/plugin\.json|"
-    r"\.codex-plugin/plugin\.json|plugin\.json)$"
+    r"\.codex-plugin/plugin\.json|\.antigravity-plugin/plugin\.json|plugin\.json)$"
 )
 README_ROW_RE = re.compile(
     r"^(\|\s*`(?P<plugin>souroldgeezer-[a-z-]+)`\s*\|\s*`)"

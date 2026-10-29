@@ -10,6 +10,8 @@ Errors, unguarded paths, and unavailable baselines/tools fail open.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import subprocess
 from pathlib import Path
@@ -25,11 +27,21 @@ def post_edit_content(tool_name: str, tool_input: dict[str, Any], current: str) 
     if tool_name == "Write":
         content = tool_input.get("content")
         return content if isinstance(content, str) else None
-    if tool_name == "Edit":
-        old, new = tool_input.get("old_string"), tool_input.get("new_string")
-        if isinstance(old, str) and isinstance(new, str):
-            return current.replace(old, new, 1)
-        return None
+    if tool_name == "write_file":
+        content = tool_input.get("Content")
+        if not isinstance(content, str):
+            return None
+        return (current + content) if tool_input.get("Append") is True else content
+    if tool_name in ("Edit", "edit_file"):
+        old_key, new_key = (
+            ("Target", "Replacement") if tool_name == "edit_file" else ("old_string", "new_string")
+        )
+        old, new = tool_input.get(old_key), tool_input.get(new_key)
+        if not (isinstance(old, str) and isinstance(new, str)):
+            return None
+        return (
+            current.replace(old, new) if tool_name == "edit_file" else current.replace(old, new, 1)
+        )
     if tool_name == "MultiEdit":
         text = current
         for e in tool_input.get("edits", []) or []:
@@ -259,13 +271,23 @@ def main() -> int:
     if not fp:
         # Stop event (no file_path) — check session-changed skill files
         try:
+            if payload.get("host") == "antigravity":
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    rc = run_stop_mode(repo_root)
+                notice = buf.getvalue().strip()
+                out: dict[str, Any] = {"decision": "allow"}
+                if notice:
+                    out["reason"] = notice
+                print(json.dumps(out))
+                return rc
             return run_stop_mode(repo_root)
         except Exception as exc:
             hook_envelope.fail_open_log("load-cost-guard", "stop-mode", exc)
             return 0
 
     try:
-        # PreToolUse path (Edit/Write/MultiEdit targeting a .md file)
+        # PreToolUse path (Edit/Write/MultiEdit/edit_file/write_file targeting a .md file)
         if not str(fp).endswith(".md"):
             return 0
         target = Path(fp)
@@ -317,7 +339,19 @@ def main() -> int:
                         "\n" + warn["hookSpecificOutput"]["permissionDecisionReason"]
                     )
         if decision is not None:
-            print(json.dumps(decision))
+            if payload.get("host") == "antigravity":
+                hso = decision["hookSpecificOutput"]
+                print(
+                    json.dumps(
+                        hook_envelope.permission_decision(
+                            hso["permissionDecision"],
+                            hso["permissionDecisionReason"],
+                            host="antigravity",
+                        )
+                    )
+                )
+            else:
+                print(json.dumps(decision))
         return 0
     except Exception as exc:
         hook_envelope.fail_open_log("load-cost-guard", "pretooluse-decide", exc)

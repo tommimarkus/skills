@@ -196,6 +196,7 @@ class PublicationCheckCliTest(unittest.TestCase):
         for rel, version in (
             (".claude-plugin/plugin.json", "2026.10.15"),
             (".codex-plugin/plugin.json", "2026.10.15"),
+            (".antigravity-plugin/plugin.json", "2026.10.15"),
         ):
             target = plugin / rel
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -210,7 +211,11 @@ class PublicationCheckCliTest(unittest.TestCase):
         self.candidate = self.git("rev-parse", "HEAD").stdout.strip()
         self.record()
 
-        for rel in (".claude-plugin/plugin.json", ".codex-plugin/plugin.json"):
+        for rel in (
+            ".claude-plugin/plugin.json",
+            ".codex-plugin/plugin.json",
+            ".antigravity-plugin/plugin.json",
+        ):
             target = plugin / rel
             payload = json.loads(target.read_text(encoding="utf-8"))
             payload["version"] = "2026.10.16"

@@ -93,6 +93,9 @@ def add_mcp_packaging(repo: Path) -> None:
     )
 
     codex_version = codex["version"]
+    antigravity_manifest = plugin / ".antigravity-plugin" / "plugin.json"
+    if antigravity_manifest.exists():
+        antigravity_manifest.unlink()
     write_manifest(
         plugin / "plugin.json",
         {
@@ -105,6 +108,18 @@ def add_mcp_packaging(repo: Path) -> None:
         },
     )
     write_agent_plugins_mcp(plugin, {"example": agent_plugins_server()})
+    write_mcp_config(
+        plugin,
+        {
+            "mcpServers": {
+                "example": {
+                    "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                    "env": {"EXAMPLE_CACHE_DIR": "${PLUGIN_DATA}/example"},
+                }
+            }
+        },
+        "mcp_config.json",
+    )
     write_mcp_config(
         plugin,
         {
@@ -776,6 +791,78 @@ class RuntimeMetadataParityTest(unittest.TestCase):
             "renamed",
         )
 
+    def test_antigravity_manifest_is_required_when_no_root_manifest_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp) / "repo"
+            self.make_clean_fixture(repo)
+            (repo / EXAMPLE_PLUGIN / ".antigravity-plugin" / "plugin.json").unlink()
+            result = run_checker(repo)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn(f"{EXAMPLE_PLUGIN}/.antigravity-plugin/plugin.json", result.stdout)
+        self.assertIn("missing", result.stdout)
+
+    def test_antigravity_manifest_requires_strict_semver_and_matching_description(self) -> None:
+        self._assert_broken_fixture_flags(
+            f"{EXAMPLE_PLUGIN}/.antigravity-plugin/plugin.json",
+            """
+            {
+              "name": "souroldgeezer-example",
+              "version": "0.01.0",
+              "description": "Drifted Antigravity description."
+            }
+            """,
+            f"{EXAMPLE_PLUGIN}/.antigravity-plugin/plugin.json",
+            "strict SemVer",
+            "description",
+        )
+
+    def test_antigravity_manifest_conflicts_with_root_plugin_json(self) -> None:
+        def restore_conflicting_antigravity_manifest(repo: Path) -> None:
+            write_manifest(
+                repo / EXAMPLE_PLUGIN / ".antigravity-plugin" / "plugin.json",
+                {
+                    "name": EXAMPLE_PLUGIN,
+                    "version": "0.1.0",
+                    "description": "Example plugin for runtime metadata parity tests.",
+                },
+            )
+
+        self._assert_mcp_fixture_flags(
+            restore_conflicting_antigravity_manifest,
+            f"{EXAMPLE_PLUGIN}/.antigravity-plugin/plugin.json",
+            "absent when root plugin.json is present",
+        )
+
+    def test_antigravity_mcp_config_is_required_and_checked_for_mcp_plugin(self) -> None:
+        def drop_antigravity_mcp_config(repo: Path) -> None:
+            (repo / EXAMPLE_PLUGIN / "mcp_config.json").unlink()
+
+        self._assert_mcp_fixture_flags(
+            drop_antigravity_mcp_config,
+            f"{EXAMPLE_PLUGIN}/mcp_config.json",
+            "missing",
+        )
+
+        def use_foreign_token_in_antigravity_mcp_config(repo: Path) -> None:
+            write_mcp_config(
+                repo / EXAMPLE_PLUGIN,
+                {
+                    "mcpServers": {
+                        "example": {
+                            "command": f"${{PLUGIN_ROOT}}/{EXAMPLE_LAUNCHER}",
+                            "env": {"EXAMPLE_CACHE_DIR": "${CLAUDE_PLUGIN_DATA}/example"},
+                        }
+                    }
+                },
+                "mcp_config.json",
+            )
+
+        self._assert_mcp_fixture_flags(
+            use_foreign_token_in_antigravity_mcp_config,
+            f"{EXAMPLE_PLUGIN}/mcp_config.json",
+            "${CLAUDE_PLUGIN_DATA}",
+        )
+
     def make_clean_fixture(self, repo: Path, plugin_name: str = EXAMPLE_PLUGIN) -> None:
         plugin_description = "Example plugin for runtime metadata parity tests."
         skill_description = "Use when checking runtime metadata parity for an example skill."
@@ -831,6 +918,16 @@ class RuntimeMetadataParityTest(unittest.TestCase):
               "version": "0.1.0",
               "description": "{plugin_description}",
               "skills": "./skills/"
+            }}
+            """,
+        )
+        write(
+            repo / plugin_name / ".antigravity-plugin/plugin.json",
+            f"""
+            {{
+              "name": "{plugin_name}",
+              "version": "0.1.0",
+              "description": "{plugin_description}"
             }}
             """,
         )

@@ -330,13 +330,15 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                     self.assertNotIn("CODEX_HOME", child_env, argv)
                     self.assertNotIn("CLAUDE_CONFIG_DIR", child_env, argv)
 
-            self.assertEqual([call[4] for call in mcp_calls], ["Codex", "Claude", "Copilot"])
+            self.assertEqual([call[4] for call in mcp_calls], ["Codex", "Claude", "Copilot", "Antigravity"])
             self.assertTrue(mcp_calls[0][0][0].endswith("/dediren-mcp.sh"))
             self.assertTrue(mcp_calls[1][0][0].endswith("/dediren-mcp.sh"))
             self.assertTrue(mcp_calls[2][0][0].endswith("/dediren-mcp.sh"))
+            self.assertTrue(mcp_calls[3][0][0].endswith("/dediren-mcp.sh"))
             self.assertEqual(mcp_calls[0][1], fake.codex_installs["souroldgeezer-architecture"])
             self.assertEqual(mcp_calls[1][1], fake.claude_installs["souroldgeezer-architecture"])
             self.assertEqual(mcp_calls[2][1], fake.copilot_installs["souroldgeezer-architecture"])
+            self.assertEqual(mcp_calls[3][1], state / "agy-plugins" / "souroldgeezer-architecture")
             for _, cwd, workspace_root, _, _ in mcp_calls:
                 self.assertEqual(workspace_root, REPO_ROOT)
                 self.assertNotEqual(cwd.resolve(), workspace_root.resolve())
@@ -350,9 +352,12 @@ class RuntimeHostSmokeTest(unittest.TestCase):
                 elif label == "Claude":
                     self.assertEqual(child_env["DEDIREN_HOME"], str(state / "runtime-data" / "dediren"))
                     self.assertNotIn("PLUGIN_DATA", child_env)
-                else:
+                elif label == "Copilot":
                     self.assertEqual(child_env["DEDIREN_HOME"], str(state / "runtime-data" / "copilot" / "souroldgeezer-architecture" / "dediren"))
                     self.assertNotIn("COPILOT_PLUGIN_DATA", child_env)
+                    self.assertNotIn("PLUGIN_DATA", child_env)
+                else:
+                    self.assertEqual(child_env["DEDIREN_HOME"], str(state / "runtime-data" / "agy" / "souroldgeezer-architecture" / "dediren"))
                     self.assertNotIn("PLUGIN_DATA", child_env)
 
     def test_native_copilot_runtime_home_stays_inside_isolated_host_state(self) -> None:
@@ -770,6 +775,11 @@ class ChangedSinceSelectorTest(unittest.TestCase):
             expected += [
                 f"{plugin}/.claude-plugin/plugin.json",
                 f"{plugin}/.codex-plugin/plugin.json",
+                *(
+                    [f"{plugin}/plugin.json", f"{plugin}/mcp_config.json"]
+                    if (REPO_ROOT / plugin / "plugin.json").is_file()
+                    else [f"{plugin}/.antigravity-plugin/plugin.json"]
+                ),
                 *(f"{plugin}/skills/{skill}/SKILL.md" for skill in expectation.skills),
                 *(f"{plugin}/agents/{agent}.md" for agent in expectation.agents),
             ]

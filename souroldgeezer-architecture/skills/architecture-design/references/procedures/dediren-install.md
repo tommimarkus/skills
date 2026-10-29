@@ -69,7 +69,8 @@ order:
 | `COPILOT_PLUGIN_DATA` | `<value>/dediren` |
 | `PLUGIN_DATA` | `<value>/dediren` |
 
-Claude’s adapter sets `DEDIREN_HOME` from its plugin-data token. The current
+Claude’s adapter sets `DEDIREN_HOME` from its plugin-data token, and Antigravity’s
+`mcp_config.json` sets `DEDIREN_HOME` from `${PLUGIN_DATA}/dediren`. The current
 Codex and Copilot root `mcp.json` deliberately declares no environment: those
 hosts export plugin-data variables for the resolver instead. There is
 deliberately **no invented fallback**: a guessed location is worse than none,

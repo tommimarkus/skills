@@ -24,7 +24,12 @@ __all__ = ["evaluate", "main"]
 
 
 # Which tool_input key holds the added text for the single-payload tools.
-_ADDED_TEXT_KEY = {"Write": "content", "Edit": "new_string"}
+_ADDED_TEXT_KEY = {
+    "Write": "content",
+    "Edit": "new_string",
+    "write_file": "Content",
+    "edit_file": "Replacement",
+}
 
 
 def _added_content(tool_name: str, tool_input: dict[str, Any]) -> str | None:
@@ -142,9 +147,9 @@ def evaluate(payload: HookPayload) -> str | None:
                 return reason
         return None
 
-    if tool_name not in ("Edit", "Write", "MultiEdit"):
+    if tool_name not in ("Edit", "Write", "MultiEdit", "edit_file", "write_file"):
         return None
-    file_path = tool_input.get("file_path")
+    file_path = tool_input.get("file_path") or tool_input.get("Path")
     if not isinstance(file_path, str) or not file_path:
         return None
     content = _added_content(tool_name, tool_input)
@@ -164,4 +169,5 @@ def main() -> None:
         hook_envelope.fail_open_log("lean-guard", "main-backstop", exc)
         reason = None  # backstop fail-open
     if reason:
-        print(json.dumps(hook_envelope.permission_decision("deny", reason)))
+        host = payload.get("host") if isinstance(payload, dict) else None
+        print(json.dumps(hook_envelope.permission_decision("deny", reason, host=host)))

@@ -287,6 +287,7 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
         claude_path = plugin_dir / ".claude-plugin" / "plugin.json"
         codex_path = plugin_dir / ".codex-plugin" / "plugin.json"
         copilot_path = plugin_dir / "plugin.json"
+        antigravity_path = plugin_dir / ".antigravity-plugin" / "plugin.json"
         claude = read_json(claude_path)
         codex = read_json(codex_path)
 
@@ -308,32 +309,54 @@ def check_plugin_metadata(repo: Path, findings: list[Finding]) -> list[Path]:
 
         compare(findings, repo, codex_path, "skills", "./skills/", codex.get("skills"))
 
-        # Copilot support is additive per plugin. When a native root manifest is
-        # present, it must describe the same shared plugin and use strict SemVer.
-        if copilot_path.is_file():
-            copilot = read_json(copilot_path)
+        if copilot_path.is_file() and antigravity_path.is_file():
+            findings.append(
+                Finding(
+                    repo_relative(repo, antigravity_path),
+                    "exists",
+                    "absent when root plugin.json is present",
+                    "present",
+                )
+            )
+        elif not copilot_path.is_file() and not antigravity_path.is_file():
+            findings.append(
+                Finding(
+                    repo_relative(repo, antigravity_path),
+                    "exists",
+                    "present (or root plugin.json)",
+                    "missing",
+                )
+            )
+
+        # Native root plugin.json (Copilot/Agent Plugins) and .antigravity-plugin/plugin.json
+        # must describe the same shared plugin and use strict SemVer.
+        for native_path, require_skills in ((copilot_path, True), (antigravity_path, False)):
+            if not native_path.is_file():
+                continue
+            native = read_json(native_path)
             for field in ("name", "description"):
-                compare(findings, repo, copilot_path, field, claude.get(field), copilot.get(field))
-            copilot_version = version_core(copilot.get("version"), codex=True)
-            if copilot_version is None:
+                compare(findings, repo, native_path, field, claude.get(field), native.get(field))
+            native_version = version_core(native.get("version"), codex=True)
+            if native_version is None:
                 findings.append(
                     Finding(
-                        repo_relative(repo, copilot_path),
+                        repo_relative(repo, native_path),
                         "version",
                         "strict SemVer X.Y.Z without leading zeroes",
-                        normalize_text(copilot.get("version")),
+                        normalize_text(native.get("version")),
                     )
                 )
-            elif claude_version is not None and copilot_version != claude_version:
+            elif claude_version is not None and native_version != claude_version:
                 findings.append(
                     Finding(
-                        repo_relative(repo, copilot_path),
+                        repo_relative(repo, native_path),
                         "version",
                         ".".join(map(str, claude_version)),
-                        normalize_text(copilot.get("version")),
+                        normalize_text(native.get("version")),
                     )
                 )
-            compare(findings, repo, copilot_path, "skills", "./skills/", copilot.get("skills"))
+            if require_skills:
+                compare(findings, repo, native_path, "skills", "./skills/", native.get("skills"))
 
         for marketplace_path, marketplace_entry in (
             (claude_marketplace_path, plugin),
@@ -956,6 +979,50 @@ def check_mcp_packaging(repo: Path, plugin_dirs: list[Path], findings: list[Find
                 "mcpServers:names",
                 sorted(claude_servers),
                 sorted(agent_servers),
+            )
+
+        antigravity_mcp_path = plugin_dir / "mcp_config.json"
+        antigravity_servers: dict[str, Any] = {}
+        if not antigravity_mcp_path.is_file():
+            findings.append(
+                Finding(
+                    repo_relative(repo, antigravity_mcp_path),
+                    "exists",
+                    "present (Claude and Codex bundle a server)",
+                    "missing",
+                )
+            )
+        else:
+            ag_config = read_json(antigravity_mcp_path)
+            ag_declared = ag_config.get("mcpServers")
+            if isinstance(ag_declared, dict):
+                antigravity_servers = ag_declared
+                check_claude_mcp_server_block(
+                    repo,
+                    antigravity_mcp_path,
+                    plugin_dir,
+                    antigravity_servers,
+                    "${PLUGIN_ROOT}",
+                    ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PLUGIN_DATA}", "${COPILOT_PLUGIN_DATA}"),
+                    findings,
+                )
+            else:
+                findings.append(
+                    Finding(
+                        repo_relative(repo, antigravity_mcp_path),
+                        "mcpServers",
+                        "server object map",
+                        normalize_text(ag_declared) or "missing",
+                    )
+                )
+        if claude_servers and antigravity_servers:
+            compare(
+                findings,
+                repo,
+                antigravity_mcp_path,
+                "mcpServers:names",
+                sorted(claude_servers),
+                sorted(antigravity_servers),
             )
 
 

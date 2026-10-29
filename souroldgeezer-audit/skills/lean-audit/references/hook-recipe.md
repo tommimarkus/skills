@@ -14,7 +14,7 @@ the payload describes the event, not a filesystem-access boundary.
 
 ## What it does
 
-On Claude `Edit` / `Write` / `MultiEdit` or Codex `apply_patch` to a guarded markdown surface (`CLAUDE.md`,
+On Claude `Edit` / `Write` / `MultiEdit`, Codex `apply_patch`, or Antigravity `edit_file` / `write_file` to a guarded markdown surface (`CLAUDE.md`,
 `AGENTS.md`, `README.md`, `**/SKILL.md`, `**/agents/*.md`, `docs/*-reference/**`,
 `references/**`, `extensions/**`), `lean_guard.py` scores the edit's added text
 against the repo's guarded-markdown corpus. On a `block`-severity hit it returns
@@ -156,8 +156,8 @@ Merge this into a consumer's existing Claude configuration only when requested:
 Use the real installed absolute path. For Claude skill-body commands, resolve it
 from `${CLAUDE_SKILL_DIR}`; Codex resolves `<skill-dir>` from the loaded source
 path. Project-owned hooks use a real installed path rather than assuming plugin
-variable substitution. The edit path handles the named Claude-shaped payloads;
-do not claim `apply_patch` edit coverage from a matcher alias alone. Codex may use
+variable substitution. The edit path handles the named Claude-shaped and Antigravity (`edit_file|write_file` in `.agents/hooks.json`) payloads;
+do not claim `apply_patch` edit coverage from a matcher alias alone. Codex and Antigravity may also use
 the nonblocking Stop form below.
 
 ## Nonblocking Stop notifications

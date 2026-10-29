@@ -37,8 +37,9 @@ disclose uninterruptible host calls. These timings are repository guidance.
   the same plugin set, order, names, descriptions, and source paths. Marketplace
   entries have no version field.
 - Each plugin has Claude and legacy Codex manifests. A root `plugin.json`, when
-  present, is the Agent Plugins manifest and may also support Copilot CLI.
-  Its identity and strict-SemVer version match legacy Codex.
+  present, is the Agent Plugins manifest and may also support Copilot CLI and
+  Antigravity (`agy`); non-MCP plugins carry `.antigravity-plugin/plugin.json`.
+  Their identity and strict-SemVer version match legacy Codex.
 - Shared skills live under `<plugin>/skills/<skill>/SKILL.md`; each has a matching
   Claude router-only `agents/<skill>.md`. Keep descriptions aligned. Do not copy
   workflows for another host. Internal sources live in `internal-skills/**`, with
@@ -49,8 +50,9 @@ disclose uninterruptible host calls. These timings are repository guidance.
   `${PLUGIN_ROOT}` / `${PLUGIN_DATA}`.
 - Codex root Agent Plugins MCP configuration supports root/data interpolation;
   legacy `.codex-plugin` plus `mcp/codex.mcp.json` is literal and has no plugin data
-  root. Keep the separate legacy Copilot adapter. Shared root `mcp.json` declares
-  no `env` or `cwd`, since Codex and Copilot handle those differently.
+  root. Keep the separate legacy Copilot adapter and Antigravity `mcp_config.json`.
+  Shared root `mcp.json` declares no `env` or `cwd`, since Codex and Copilot handle
+  those differently.
 - Architecture's router requires an absolute `workspaceRoot` per operation and
   launches the upstream process there. It preserves explicit runtime overrides,
   checksum-verified provisioning, and host-managed Java 21+. Use the authoritative
@@ -163,8 +165,8 @@ The local receipt is bypassable, not independent approval or artifact provenance
 Feature branches carry content, with no existing version-cell increments. After
 verified local integration, run `uv run python scripts/version_stamp.py guard` and
 `compute --plugin <name>` on `main`. Apply padded CalVer to the Claude manifest and
-README version cell, normalized strict SemVer to legacy Codex and root manifests,
-in one version-only integration commit. Run focused version/parity checks afterward.
+README version cell, normalized strict SemVer to legacy Codex, Antigravity, and root
+manifests, in one version-only integration commit. Run focused version/parity checks afterward.
 Full verification evidence survives that fixed follow-up only under the documented
 ancestry/content proof. New manifests may carry the current normalized version.
 

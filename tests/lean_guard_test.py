@@ -99,6 +99,19 @@ class Evaluate(unittest.TestCase):
             reason = self.guard.evaluate(payload(self.root, "aud/skills/s2/SKILL.md", "## Shared\n" + BIG, tool=tool))
             self.assertIsNotNone(reason, tool)
 
+    def test_antigravity_edit_and_write_shapes_are_handled(self):
+        fp = str(self.root / "aud/skills/s2/SKILL.md")
+        body = "## Shared\n" + BIG
+        for tool_call in (
+            {"name": "edit_file", "args": {"Path": fp, "Target": "", "Replacement": body}},
+            {"name": "write_file", "args": {"Path": fp, "Content": body}},
+        ):
+            ag_payload = self.guard.hook_envelope.read_payload(
+                io.StringIO(json.dumps({"toolCall": tool_call, "workspacePaths": [str(self.root)]}))
+            )
+            reason = self.guard.evaluate(ag_payload)
+            self.assertIsNotNone(reason, tool_call["name"])
+
     def test_codex_apply_patch_shape_is_handled(self):
         patch = (
             "*** Begin Patch\n"
@@ -194,6 +207,26 @@ class MainSubprocess(unittest.TestCase):
             self.assertEqual(hso["hookEventName"], "PreToolUse")
             self.assertEqual(hso["permissionDecision"], "deny")
             self.assertIn("lean-audit", hso["permissionDecisionReason"])
+
+    def test_antigravity_deny_emits_flat_decision_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = corpus(tmp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            ag_input = {
+                "toolCall": {
+                    "name": "write_file",
+                    "args": {
+                        "Path": str(root / "aud/skills/s2/SKILL.md"),
+                        "Content": "## Shared\n" + BIG,
+                    },
+                },
+                "workspacePaths": [str(root)],
+            }
+            r = self._run(json.dumps(ag_input))
+            self.assertEqual(r.returncode, 0)
+            out = json.loads(r.stdout)
+            self.assertEqual(out["decision"], "deny")
+            self.assertIn("lean-audit", out["reason"])
 
 
 class FailOpenLoggingTest(unittest.TestCase):
