@@ -10,6 +10,12 @@ state when a limitation applies.
 
 ## Mutation tool
 
+Reuse readable results first. Execution requires authority covering the configured
+command and target; installation alone never triggers a run. Setup examples are
+opt-in instructions, not actions to perform during a read-only audit. Use the
+shared [mutation procedure](mutation-testing.md) for skipped and failed states.
+
+
 The core skill runs mutation testing conditionally in deep mode (see [SKILL.md § Mutation testing (conditional)](../../SKILL.md)). It uses the subsections below to decide whether Stryker Mutator JS is available, how to run it, and whether the SUT is a shape the tool can handle. Applies under unit and integration rubrics; never run under the E2E rubric.
 
 ### 1. Tool name and link
@@ -109,7 +115,7 @@ Stryker JS cannot mutate every JavaScript / TypeScript SUT shape. Before attempt
 
 - **How to detect:** `package.json` declares `"type": "module"` AND the project's runner config is Jest (Jest's ESM support is behind `--experimental-vm-modules` as of v29). Vitest is native ESM and doesn't hit this. The audit agent reads `package.json` and detects this combination.
 - **Root cause:** Stryker's Jest runner sandboxes mutants using CJS module resolution. An ESM-only SUT — one that uses `import ... from '...'` with no bundler step and expects native Node ESM — trips the runner's module-loader assumptions. Vitest's runner is ESM-native and handles this cleanly.
-- **Workaround:** if the project is Jest + ESM, either (a) migrate the test runner to Vitest (native ESM, often a one-hour migration) and use `@stryker-mutator/vitest-runner`, or (b) transpile-to-CJS via a Stryker `files` / `testRunnerNodeArgs` configuration hook — document the hook in `stryker.conf.mjs`. If neither is possible, skip with state C citing ESM-only + Jest.
+- **Workaround:** if the project is Jest + ESM, either (a) migrate the test runner to Vitest (native ESM, often a one-hour migration) and use `@stryker-mutator/vitest-runner`, or (b) transpile-to-CJS via a Stryker `files` / `testRunnerNodeArgs` configuration hook — document the hook in `stryker.conf.mjs`. If neither is possible, skip with state B citing ESM-only + Jest.
 
 #### TypeScript path aliases (`compilerOptions.paths`)
 
@@ -127,7 +133,7 @@ Stryker JS cannot mutate every JavaScript / TypeScript SUT shape. Before attempt
 
 - **How to detect:** the `nextjs` extension is loaded and the target includes files under `app/`.
 - **Root cause (provisional):** Next.js's App Router files are compiled by the Next SWC pipeline at build time, which applies Server Component / Client Component boundary transforms (`'use client'` / `'use server'` splits, RSC payload generation, server-only module stripping). Stryker's runner compiles mutants through the Jest / Vitest runner's transformer, which does not apply these Next transforms. Mutants of files under `app/` may compile but fail at runtime, or fail compilation entirely.
-- **This is probable, not officially documented.** Stryker JS's docs do not currently call out Next.js App Router as an unsupported target (as of the reference audit — 2026-04). First-audit workaround: attempt the run. If it succeeds, remove this caveat and report the success; if it fails with RSC-related errors, treat as state C and recommend the extract-to-library workaround below.
+- **This is probable, not officially documented.** Stryker JS's docs do not currently call out Next.js App Router as an unsupported target (as of the reference audit — 2026-04). First-audit workaround: attempt the run. If it succeeds, report success for this target and recommend separate source maintenance; if it fails with RSC-related errors, treat as state C and recommend the extract-to-library workaround below.
 - **Workaround (if confirmed unsupported):** extract server-side logic (pure services, validators, formatters) from `app/` into a plain TS library (e.g. `lib/` or a separate workspace package). Reference the library from `app/` — your Server Components / Route Handlers / Server Actions become thin adapters. Mutate the library, not `app/`. Matches the Blazor WASM workaround in [`../extensions/dotnet/core.md`](../extensions/dotnet/core.md).
 
 #### Files the project intentionally excludes from tests

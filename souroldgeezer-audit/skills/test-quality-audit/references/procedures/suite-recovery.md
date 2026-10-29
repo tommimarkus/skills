@@ -41,8 +41,10 @@ when timing coverage is partial), effort, and owner when one is known.
 
 ### 1. Baseline
 
-Record each lane's total, p50, p95, slow-tail share, and timing coverage from
-the snapshot. When timing is partial or absent, say so under program limits:
+Record each lane's elapsed feedback time separately from summed testcase
+durations, p50, p95, slow-tail share, and timing coverage from the snapshot.
+Summed testcase times are work distributions, not wall time in parallel runs.
+When elapsed time is unavailable, mark it unknown rather than derive it from a sum. When timing is partial or absent, say so under program limits:
 item ordering then falls back to static level classification, and the program
 names the configured runner's own report flag as the project command that
 would supply timing on the next run. Never a request for new instrumentation.
@@ -59,14 +61,17 @@ per-test judgment.
 
 ### 3. Ratchet budget
 
-Propose a per-lane budget equal to the measured baseline, a target, and a
-step. The project encodes the value as its declared budget: `tdd-policy`
-`feedback-budget` when that policy is initialized, otherwise runner or CI
-configuration or repository guidance. While a lane is above target, a breach
-means slower than the last recorded run; once at target, the target is the
-budget. This is what makes `SH-HC-1` measurable afterwards and lets the
-prospective policy hold the line. The audit proposes the value, the project
-declares it.
+Use the project-declared tolerance, budgets, targets, and hard ceilings. A
+single last-run duration never creates a new breach or automatically tightens a
+budget. Small increases without a declared tolerance or comparable repeat
+evidence remain informational. No default benchmark runs are required.
+`SH-HC-1` still requires comparable evidence of a declared-budget breach.
+Existing explicit hard ceilings remain authoritative; this rule does not waive them.
+
+Propose a baseline or ratchet change only from accepted, comparable evidence.
+The project encodes an accepted value in `tdd-policy` `feedback-budget`, runner
+or CI configuration, or repository guidance. The audit proposes the value, the
+project declares it. Missing evidence is a limit, not a new numeric tolerance.
 
 ### 4. Slow tail first
 
@@ -102,10 +107,11 @@ items in step 4.
 ### 6. Cadence and exit
 
 Batch items by area or owner. After each batch, re-measure with the snapshot
-helper on the new report, ratchet the budget to the new measured value, and
-re-rank the remaining tail. Stop when every lane meets its target. State when
-to re-run Deep: after the last batch, or when a lane breaches its ratchet
-twice.
+helper on an already authorized new report and re-rank the remaining tail.
+Change a baseline or budget only from accepted evidence under step 3, never
+automatically after each batch. Stop when every lane meets its target. State when
+to re-run Deep: after the last batch, or when comparable evidence shows a declared-budget breach. Do not rerun
+Deep merely because an unqualified duration increased.
 
 ## Output block
 
@@ -116,8 +122,8 @@ Append after the worklist:
 
 ### Baseline
 
-| Lane | Tests | Total | p50 | p95 | Slow-tail share | Timing coverage |
-|---|---:|---:|---:|---:|---:|---|
+| Lane | Tests | Elapsed feedback | Testcase sum | p50 | p95 | Slow-tail share | Timing coverage |
+|---|---:|---:|---:|---:|---:|---:|---|
 
 ### Lane proposal
 

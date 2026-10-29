@@ -164,7 +164,8 @@ order:
    boundaries, not combinatorial products; count executions × fixture cost
    before extending. Split a rule that needs many examples into smaller rules,
    or cover it with one property-based test when the project has a
-   property-testing tool. Scenario-level (BDD) tests stay declarative; their
+   property-testing tool. Count generated evaluations, filtering and shrinking work,
+   and actual fixture/reset lifetimes rather than test-function count. Scenario-level (BDD) tests stay declarative; their
    edge-case examples move down to the cheapest level through the seam.
 7. **RED evidence.** An existing failing test counts as RED only when its
    failure precisely represents the intended behavior.

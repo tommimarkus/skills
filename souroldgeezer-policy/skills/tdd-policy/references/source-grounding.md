@@ -215,3 +215,20 @@ dependency map in `docs/TESTING.md`; no Fivee tests are changed or pruned by
 this clarification. Handling: idea-only, original guidance and synthetic
 evaluations; no copied report, fixtures, or third-party text. These are
 maintainer policy decisions, not measured improvements in runtime or quality.
+
+## Testing guidance alignment (2026-10-29)
+
+Source: maintainer-approved eight-finding review of conflicting testing advice
+and feedback cost. Handling: original policy prose and synthetic cases; no
+third-party examples or source text copied. Preserve project authority, configured
+execution, observable obligations and uncertainty. No measured runtime savings
+are claimed. Small timing increases without declared tolerance or comparable
+repeat evidence remain informational, with no default benchmark runs.
+
+Technical source pointers: pytest-forked's upstream README
+(https://github.com/pytest-dev/pytest-forked) describes per-test subprocesses;
+Hypothesis settings (https://hypothesis.readthedocs.io/en/latest/settings.html)
+describe generated evaluations and shrinking; Lighthouse variability guidance
+(https://github.com/GoogleChrome/lighthouse/blob/main/docs/variability.md)
+recommends controlled local measurement when stability matters. Links ground
+facts; this repository owns the policy choices.

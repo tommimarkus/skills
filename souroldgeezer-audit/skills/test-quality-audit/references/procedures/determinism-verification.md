@@ -1,6 +1,6 @@
 # Determinism verification
 
-**When this runs:** optional determinism verification in [../../SKILL.md](../../SKILL.md). Deep may compare two non-E2E suite runs. Quick may confirm only its bounded target using a known project command; it does not load the whole Deep extension or establish suite-level stability. A pass/fail divergence is observed flakiness, stronger evidence than a static smell.
+**When this runs:** optional determinism verification in [../../SKILL.md](../../SKILL.md). Deep may compare two non-E2E suite runs. Quick may confirm only its bounded target using a known project command; it does not load the whole Deep extension or establish suite-level stability. A pass/fail divergence under comparable inputs is observed inconsistency, stronger evidence than a static smell; diagnose its cause before attributing it to the product.
 
 ## Why two runs is worth the cost
 
@@ -15,12 +15,13 @@ Static smells `HC-11`, `LC-5`, `I-HC-A5`, `I-HC-A11`, `E-HC-F3` all flag *suspec
 
 1. **Apply the shared execution rule** before either run. Use the configured target command or selected extension's determinism-verification section; if neither is known, skip. Keep a Quick confirmation within its named target without claiming Deep suite coverage.
 2. **Run the test project(s) once** via the extension's cheap-rerun command, within the authorized scope. Capture the pass / fail list — prefer test-result XML (`.trx` for .NET, JUnit XML for most other stacks) for structured parsing.
-3. **Run the same test project(s) again**, isolated from the first run's state (fresh process for xUnit / NUnit, `pytest --forked` for Python). Capture a second pass / fail list.
-4. **Diff the two lists:**
-   - A test that passed both times → stable.
-   - A test that failed both times → deterministic failure (a non-flake bug).
-   - A test that passed once and failed once → **flake**. This is the finding.
-   - A test that errored with a different exception between runs → also a flake.
+3. **Repeat the configured command** in a fresh suite invocation, preserving normal workers, parallelism, target, selection, seeds, and fixture lifecycle. Only output artifact paths differ. Do not introduce per-test forking or substitute a serial runner. Altered isolation is a separately labeled diagnostic requiring authority for that scope.
+4. **Compare executed identities and outcomes**, recording comparable inputs:
+   - Passing twice means **no divergence observed**, not proof of stability or a flake rate.
+   - Failing twice means **failure observed twice**, not proof of determinism.
+   - A pass/fail divergence under comparable conditions is observed inconsistency.
+   - Missing, skipped, or unexecuted tests (including fail-fast omissions) are unknown, not flakes.
+   - Changed selection, seeds, dependencies, or execution modes make the affected comparison **incomparable**. Do not infer normal-run stability from a serial or forked diagnostic.
 5. **Emit a `## Determinism findings` subsection** in the step-5 suite assessment listing each flake, its test name, the failure messages from both runs, and the suspected cause (cross-reference to any static smell that fired on that test).
 
 ## Output (appended to the step-5 suite assessment)
@@ -28,7 +29,7 @@ Static smells `HC-11`, `LC-5`, `I-HC-A5`, `I-HC-A11`, `E-HC-F3` all flag *suspec
 ```markdown
 ### Determinism findings (runtime-proven)
 
-- **`OrderServiceTests.GetOrders_Returns_Seeded_Rows`** — passed run 1, failed run 2 with `assert HaveCount(1), was 2`. Matches static smell `dotnet.I-HC-A1` (shared `WebApplicationFactory` with no per-test data scoping). Root cause: prior test left rows in the container.
+- **`OrderServiceTests.GetOrders_Returns_Seeded_Rows`** — passed run 1, failed run 2 with `assert HaveCount(1), was 2`. Matches static smell `dotnet.I-HC-A1` (shared `WebApplicationFactory` with no per-test data scoping). Suspected cause: prior test left rows in the container; confirm from lifecycle evidence.
 - **`TokenCacheTests.Expires_After_Ttl`** — passed run 1, passed run 2 with different elapsed time (490 ms vs 512 ms). No divergence; not flagged.
 ```
 ```markdown

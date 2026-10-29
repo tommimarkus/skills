@@ -1,6 +1,6 @@
 # Mutation testing (conditional)
 
-**When this runs:** step 4 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md), whenever the loaded extension's declared mutation tool is installed. Skipped gracefully otherwise. Never run in quick mode. Never run against E2E audit targets.
+**When this runs:** step 4 of the deep-mode workflow in [../../SKILL.md](../../SKILL.md), only with authority covering the configured command and target, at project cadence or for an authorized scoped investigation. Tool installation alone never triggers execution. Reuse readable results first; skip with a reason when execution is not covered. Never run in quick mode. Never run against E2E audit targets.
 
 ## Why it is part of deep mode
 
@@ -24,7 +24,7 @@ Running both on the same audit produces a reconciliation: **agreement** where bo
    **E2E rubric targets are excluded from mutation testing.** The SUT for an E2E test is the whole deployed (or locally launched) stack driven through a real browser — there is no single compile unit a source-level mutator can operate on, and even if one existed, the mutation-kill signal would be dominated by browser timing rather than test assertions. If the audit target contains only E2E tests, report state B or state C as appropriate (no applicable tool) and move on. If the target mixes rubrics, run mutation testing against the unit and integration SUTs only and note the E2E exclusion explicitly in the output.
 2. **Detect tool availability** by running the extension's detection command. It should be cheap and side-effect-free (e.g. a tool list query). Parse the result to decide whether the tool is installed.
 3. **Check SUT shape against the extension's known-limitations list.** If the SUT matches a documented unsupported shape (e.g. Blazor WASM for Stryker.NET), skip the run with that reason and the suggested workaround.
-4. **Run the tool** per the extension's run command. Use the extension's default reporters (typically `json` + `cleartext` + `html`).
+4. **Apply [the shared execution rule](../../../../docs/quality-reference/testing-core.md#local-confirmation-and-task-authority)** before running the project-configured command. Preserve existing authorization without asking again. Do not install, restore, configure, or broaden the target merely because tooling is present. Extension commands describe opt-in setup or authorized fallbacks, not audit prerequisites. Run the tool only inside that authority and scope. Use the extension's default reporters (typically `json` + `cleartext` + `html`).
 5. **On run failure**, capture the failure reason from the tool's output. If it matches a documented limitation, treat as "skipped — limitation"; otherwise, treat as "attempted, failed — <reason>". In both cases, continue with static findings.
 6. **On success**, parse the report and extract:
    - Overall mutation score.
@@ -38,7 +38,7 @@ Running both on the same audit produces a reconciliation: **agreement** where bo
 
 ## Output states
 
-In the step-5 suite assessment, the `Mutation testing` subsection must be present in exactly one of these three states:
+In the step-5 suite assessment, the `Mutation testing` subsection must be present in exactly one of these three states (without changing report schemas):
 
 **State A — ran successfully:**
 
@@ -55,17 +55,19 @@ In the step-5 suite assessment, the `Mutation testing` subsection must be presen
 - **Notes:** <any scope caveats, e.g. "Blazor WASM SUT excluded per extension limitation">
 ```
 
-**State B — tool not installed:**
+**State B — skipped with reason:**
 
 ```markdown
 ### Mutation testing
 
-- **Status:** skipped — <tool name> not installed
-- **To enable:** <install command from extension>
+- **Status:** skipped — <missing authority, configuration, tooling, unsupported target, or outside cadence>
+- **To enable:** <required authority or optional project setup; never perform it during the audit>
 - **Why this matters:** <one sentence on what mutation testing adds>
 ```
 
-**State C — attempted, failed (or limitation hit):**
+**State C — attempted, failed:**
+
+An unsupported target identified before execution uses state B. State C records an actual attempted failure.
 
 ```markdown
 ### Mutation testing

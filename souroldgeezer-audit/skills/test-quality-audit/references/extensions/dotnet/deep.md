@@ -91,6 +91,12 @@ When the gap report lists a probable `Gap-API` finding on a SUT shape that Stryk
 
 ## Determinism verification
 
+Preserve the configured runner, normal workers, parallelism, selection, seeds,
+and fixture lifecycle under [the shared comparison rule](../../procedures/determinism-verification.md).
+Commands below are examples only when they match the configured target.
+Missing or unexecuted identities are unknown; matching outcomes do not prove stability.
+
+
 Consumed by [SKILL.md § Determinism verification](../../../SKILL.md) — step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics; not run under the E2E rubric (browser-dominated suites are too expensive to rerun cheaply).
 
 ### Cheap-rerun command

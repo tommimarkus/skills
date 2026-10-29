@@ -33,6 +33,12 @@ For each enumerated keyword, search audited test cases for a call row whose firs
 
 ## Determinism verification
 
+Preserve the configured runner, normal workers, parallelism, selection, seeds,
+and fixture lifecycle under [the shared comparison rule](../../procedures/determinism-verification.md).
+Commands below are examples only when they match the configured target.
+Missing or unexecuted identities are unknown; matching outcomes do not prove stability.
+
+
 Consumed by [SKILL.md § Determinism verification](../../../SKILL.md) - step 4.5 of the deep-mode workflow. Applies under unit and integration rubrics when the suite is cheap to rerun. Do not run against E2E suites.
 
 ### Cheap-rerun command
@@ -57,7 +63,7 @@ Compare the two xUnit files by test case name and outcome. Any test whose status
 - **Project size:** skip and recommend targeted reruns when the target has >= 500 test cases. Approximate by counting non-empty rows in `*** Test Cases ***` sections, excluding settings rows and indented keyword rows.
 - **Total elapsed time from run 1:** if run 1 takes more than 60 seconds, warn before run 2 and ask before continuing in interactive audits.
 - **E2E suites:** never run. Browser / mobile UI suites require target-specific flake investigation instead of a full duplicate run.
-- **Parallel suites:** if `pabot` is the normal runner, run determinism in the same parallel mode only if the user explicitly wants to test parallel determinism. Otherwise run serial `robot` to isolate test-order flake from worker scheduling flake.
+- **Parallel suites:** preserve `pabot` when it is the configured runner. Serial `robot` is a separately authorized diagnostic and does not establish parallel-run stability.
 
 ---
 

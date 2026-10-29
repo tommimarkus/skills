@@ -80,6 +80,11 @@ item enumeration and reconcile returned identities and counts; see the shared
 | `souroldgeezer-policy` | `2026.10.20` | [git-workflow-policy](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release-policy](souroldgeezer-policy/skills/release-policy/SKILL.md), [tdd-policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning-policy](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope-policy](souroldgeezer-policy/skills/scope-policy/SKILL.md) | [git workflow](souroldgeezer-policy/skills/git-workflow-policy/SKILL.md), [release](souroldgeezer-policy/skills/release-policy/SKILL.md), [TDD](souroldgeezer-policy/skills/tdd-policy/SKILL.md), [planning](souroldgeezer-policy/skills/planning-policy/SKILL.md), [scope](souroldgeezer-policy/skills/scope-policy/SKILL.md) |
 | `souroldgeezer-ops` | `2026.10.1` | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) | [issue-ops](souroldgeezer-ops/skills/issue-ops/SKILL.md), [pr-ops](souroldgeezer-ops/skills/pr-ops/SKILL.md) |
 
+Testing guidance judges distinct observable obligations across the suite,
+permits bounded readiness synchronization, and preserves the configured runner
+for repeated-run comparisons. Local performance budgets are valid within their
+declared scope; unqualified timing increases do not create new budget breaches.
+
 ## Install
 
 ### Claude Code

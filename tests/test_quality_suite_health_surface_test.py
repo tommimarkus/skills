@@ -395,8 +395,8 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
             with self.subTest(limit=limit):
                 self.assertIn(limit, recovery_lower)
         for ratchet in (
-            "equal to the measured baseline",
-            "slower than the last recorded run",
+            "project-declared tolerance",
+            "informational",
             "`feedback-budget`",
             "the audit proposes the value, the project declares it",
         ):
@@ -491,6 +491,20 @@ class TestQualitySuiteHealthSurfaceTest(unittest.TestCase):
         self.assertTrue(
             {"delete-from-coverage-alone", "edit-tests", "add-instrumentation"}.issubset(case["forbidden_actions"])
         )
+
+    def test_execution_preserves_authority_and_representative_evidence(self) -> None:
+        procedures = SKILL_ROOT / "references/procedures"
+        determinism = read(procedures / "determinism-verification.md")
+        for phrase in ("normal workers", "executed identities", "no divergence observed", "incomparable"):
+            self.assertIn(phrase, determinism)
+        self.assertNotIn("pytest --forked", determinism)
+        mutation = read(procedures / "mutation-testing.md")
+        self.assertIn("installation alone", mutation)
+        self.assertIn("authority covering", mutation)
+        recovery = read(RECOVERY)
+        self.assertNotIn("slower than the last recorded run", recovery)
+        self.assertIn("elapsed feedback time", recovery)
+        self.assertIn("No default benchmark runs", recovery)
 
     def test_structure_coupled_record_is_verify_then_retire_evidence(self) -> None:
         output = " ".join(read(OUTPUT).split())

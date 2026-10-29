@@ -29,6 +29,12 @@ review confirms them.
 
 ## Determinism Verification
 
+Preserve the configured runner, normal workers, parallelism, selection, seeds,
+and fixture lifecycle under [the shared comparison rule](../../procedures/determinism-verification.md).
+Commands below are examples only when they match the configured target.
+Missing or unexecuted identities are unknown; matching outcomes do not prove stability.
+
+
 Cheap rerun command for non-E2E scopes:
 
 ```bash

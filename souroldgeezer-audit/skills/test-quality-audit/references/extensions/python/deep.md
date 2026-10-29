@@ -68,6 +68,12 @@ gap solely because a traced, asserted function's name is absent from tests.
 
 ## Determinism verification
 
+Preserve the configured runner, normal workers, parallelism, selection, seeds,
+and fixture lifecycle under [the shared comparison rule](../../procedures/determinism-verification.md).
+Commands below are examples only when they match the configured target.
+Missing or unexecuted identities are unknown; matching outcomes do not prove stability.
+
+
 Consumed by [SKILL.md § Determinism verification](../../../SKILL.md) — step 4.5
 of the deep-mode workflow. For a non-E2E scope, use the project's documented
 test runner. When pytest is the project runner, the cheap rerun is:
