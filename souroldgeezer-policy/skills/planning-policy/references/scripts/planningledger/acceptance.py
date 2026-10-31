@@ -15,6 +15,7 @@ from .checkpoint import load_run, validate_events
 from .contract import effective_leaves
 from .core import Error, JsonObject, UsageError, ident, selected_step
 from .returns import read_bounded_input, valid_worker_handoff
+from .store import safe_acceptance_tree
 from .vocabulary import (
     ACCEPTANCE_TAIL_BYTES,
     MAX_ACCEPTANCE_EXCERPT,
@@ -32,6 +33,7 @@ __all__ = [
     "read_tail",
     "summary_line",
     "excerpt_of",
+    "evidence_problem",
     "run_logged",
     "worker_inputs",
     "parent_inputs",
@@ -84,25 +86,48 @@ def file_digest(file: IO[bytes]) -> str:
     return digest.hexdigest()
 
 
-def read_tail(file: IO[bytes], size: int) -> tuple[str, bool]:
-    """Decode the file end (at most the tail window); True when earlier bytes were skipped."""
+def read_tail(file: IO[bytes], size: int) -> tuple[bytes, bool]:
+    """The file end (at most the tail window); True when earlier bytes were skipped."""
     start = max(0, size - ACCEPTANCE_TAIL_BYTES)
     file.seek(start)
-    return file.read(ACCEPTANCE_TAIL_BYTES).decode("utf-8", errors="replace"), start > 0
+    return file.read(ACCEPTANCE_TAIL_BYTES), start > 0
 
 
-def summary_line(tail: str, code: int) -> str:
-    lines = [line.strip() for line in tail.splitlines() if line.strip()]
+def summary_line(tail: bytes, code: int) -> str:
+    text = tail.decode("utf-8", errors="replace")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
     return lines[-1][:MAX_ACCEPTANCE_SUMMARY] if lines else f"exit {code}, no output"
 
 
-def excerpt_of(tail: str, skipped: bool) -> tuple[str, bool]:
-    """The last MAX_ACCEPTANCE_EXCERPT characters, starting on a line boundary once truncated."""
+def excerpt_of(tail: bytes, skipped: bool) -> tuple[str, bool]:
+    """The last MAX_ACCEPTANCE_EXCERPT bytes, starting on a line or character boundary."""
     if not skipped and len(tail) <= MAX_ACCEPTANCE_EXCERPT:
-        return tail, False
-    text = tail[-MAX_ACCEPTANCE_EXCERPT:]
-    cut = text.find("\n")
-    return (text[cut + 1 :] if 0 <= cut < len(text) - 1 else text), True
+        return tail.decode("utf-8", errors="replace"), False
+    chunk = tail[-MAX_ACCEPTANCE_EXCERPT:]
+    cut = chunk.find(b"\n")
+    if 0 <= cut < len(chunk) - 1:
+        chunk = chunk[cut + 1 :]
+    else:
+        # Skip UTF-8 continuation bytes so the text starts on a character boundary.
+        offset = 0
+        while offset < len(chunk) and chunk[offset] & 0xC0 == 0x80:
+            offset += 1
+        chunk = chunk[offset:]
+    text = chunk.decode("utf-8", errors="replace")
+    while len(text.encode("utf-8")) > MAX_ACCEPTANCE_EXCERPT:
+        text = text[1:]
+    return text, True
+
+
+def evidence_problem(log_dir: Path) -> str:
+    """Why the evidence tree is unusable (empty when safe); never follows a symlinked directory."""
+    try:
+        safe_acceptance_tree(log_dir.parents[2] / "acceptance")
+    except Error:
+        return "unexpected acceptance contents; evidence not recorded"
+    if log_dir.is_symlink() or (log_dir.exists() and not log_dir.is_dir()):
+        return "unexpected acceptance contents; evidence not recorded"
+    return ""
 
 
 def run_logged(
@@ -119,6 +144,8 @@ def run_logged(
     problem = "no run directory is derivable from the handoff file" if log_dir is None else ""
     file: IO[bytes] | None = None
     if log_dir is not None:
+        problem = evidence_problem(log_dir)
+    if log_dir is not None and not problem:
         try:
             file, path = evidence_file(log_dir, mode)
         except OSError as exc:

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import shutil
 import unittest
 from pathlib import Path
 
@@ -234,6 +235,124 @@ class AcceptanceEvidenceLoadingTest(AcceptanceHarness):
                 self.assertEqual(3, code, result)
                 self.assertIn("unexpected acceptance contents", result["error"])
                 self.assertEqual(0, self.shown()[0])
+
+
+class LegacyPacketTest(AcceptanceHarness):
+    """Packets stored before extra_read keep working, and tampered schemas stay refused."""
+
+    def legacy(self, registered, note_types=None):
+        self.prepared("echo ok")
+        packet = json.loads(Path(self.stored).read_text())
+        packet["return_schema"] = ledger.bounded_return_schema(
+            registered, ledger.LEGACY_NOTE_TYPES if note_types is None else note_types)
+        packet["handoff_sha256"] = ledger.worker_handoff_digest(packet)
+        Path(self.stored).write_text(json.dumps(packet))
+        self.packet = packet
+
+    def tearDown_repo(self):
+        """Fresh repo for the next variant: the same harness repo cannot dispatch alpha twice."""
+        shutil.rmtree(self.repo)
+        shutil.copytree(self.base_repo, self.repo, symlinks=True)
+
+    def validate(self, **fields):
+        path = self.return_file(self.packet, acceptance={
+            "command": "echo ok", "exit_code": 0, "summary": "ok"}, **fields)
+        return self.call("validate-return", "--handoff-file", self.stored,
+                         "--return-file", str(path))
+
+    def test_legacy_variants_still_validate_check_and_run(self):
+        for registered in (False, True):
+            with self.subTest(registered=registered):
+                self.legacy(registered)
+                self.assertEqual(0, self.validate()[0])
+                self.assertEqual(0, self.validate(
+                    notes=[{"type": "extra_read", "message": "docs/x.md"}])[0])
+                code, checked = self.call("check-changeset", "--handoff-file", self.stored,
+                                          "--worktree", str(self.worktree))
+                self.assertEqual(0, code, checked)
+                code, ran = self.worker()
+                self.assertEqual(0, code, ran)
+                self.assertIn("evidence_path", ran["acceptance"])
+                self.tearDown_repo()
+
+    def test_a_legacy_registered_packet_still_rejects_unregistered_codes(self):
+        self.legacy(True)
+        bogus = [{"code": "bogus:code", "summary": "x"}]
+        code, result = self.validate(status="failed", blockers=bogus)
+        self.assertEqual(3, code, result)
+
+    def test_a_legacy_unregistered_packet_accepts_unregistered_codes(self):
+        self.legacy(False)
+        bogus = [{"code": "bogus:code", "summary": "x"}]
+        acceptance = {"command": "echo ok", "exit_code": 1, "summary": "x"}
+        path = self.return_file(self.packet, "failed", bogus, acceptance=acceptance)
+        code, result = self.call("validate-return", "--handoff-file", self.stored,
+                                 "--return-file", str(path))
+        self.assertEqual(0, code, result)
+
+    def test_unknown_or_tampered_schemas_are_refused(self):
+        self.legacy(False, ledger.NOTE_TYPES | {"mystery"})
+        for code, result in (self.validate(), self.worker()):
+            self.assertEqual(3, code, result)
+            self.assertEqual("invalid worker handoff return schema", result["error"])
+
+
+class ExcerptBytesTest(AcceptanceHarness):
+    def test_multibyte_output_stays_within_the_byte_cap_on_a_line_boundary(self):
+        self.prepared('for i in $(seq 1 3000); do echo "\u20ac\u20ac\u20ac\u20ac\u20ac\u20ac $i"; '
+                      "done; exit 1")
+        code, result = self.worker()
+        self.assertEqual(1, code, result)
+        excerpt = result["excerpt"]
+        self.assertLessEqual(len(excerpt.encode()), ledger.MAX_ACCEPTANCE_EXCERPT)
+        self.assertTrue(result["excerpt_truncated"])
+        self.assertTrue(excerpt.endswith("3000\n"))
+        self.assertTrue(all(line.startswith("\u20ac" * 6 + " ") for line in excerpt.splitlines()))
+
+    def test_long_unbroken_multibyte_output_starts_on_a_character(self):
+        self.prepared("printf '\u20ac%.0s' $(seq 1 8000); exit 1")
+        code, result = self.worker()
+        self.assertEqual(1, code, result)
+        excerpt = result["excerpt"]
+        self.assertLessEqual(len(excerpt.encode()), ledger.MAX_ACCEPTANCE_EXCERPT)
+        self.assertEqual("", excerpt.strip("\u20ac"))
+        self.assertTrue(excerpt)
+        self.assertTrue(result["excerpt_truncated"])
+
+
+class EvidenceDirectorySafetyTest(AcceptanceHarness):
+    def test_a_symlinked_acceptance_directory_is_never_written_through(self):
+        self.prepared("echo hi; exit 4")
+        outside = self.scratch / "outside"
+        outside.mkdir()
+        (self.run_dir() / "acceptance").symlink_to(outside)
+        code, result = self.worker()
+        self.assertEqual(4, code, result)
+        self.assertIn("unexpected acceptance contents", result["evidence_error"])
+        self.assertNotIn("evidence_path", result["acceptance"])
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_a_symlinked_attempt_directory_is_never_written_through(self):
+        self.prepared("echo hi")
+        outside = self.scratch / "outside"
+        outside.mkdir()
+        attempt = self.run_dir() / "acceptance" / "alpha" / self.packet["attempt_id"]
+        attempt.parent.mkdir(parents=True)
+        attempt.symlink_to(outside)
+        code, result = self.worker()
+        self.assertEqual(0, code, result)
+        self.assertIn("evidence_error", result)
+        self.assertEqual([], list(outside.iterdir()))
+
+    def test_a_pending_step_writes_parent_evidence_under_no_attempt(self):
+        step = leaf("alpha", "leaf-alpha")
+        step["acceptance_command"] = "echo ok"
+        self.init([step])
+        code, result = self.parent(self.scratch)
+        self.assertEqual(0, code, result)
+        self.assertEqual("acceptance/alpha/no-attempt/parent-1.log",
+                         result["acceptance"]["evidence_path"])
+        self.assertEqual(0, self.call("show", "--run-id", self.run_id)[0])
 
 
 class PromptAndNoteTypeTest(AcceptanceHarness):

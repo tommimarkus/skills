@@ -25,6 +25,7 @@ __all__ = [
     "COMMIT",
     "PROXY_TOKEN_RE",
     "NOTE_TYPES",
+    "LEGACY_NOTE_TYPES",
     "RETURN_STATUSES",
     "MAX_CHANGED_PATHS",
     "MAX_BLOCKERS",
@@ -191,6 +192,11 @@ NOTE_TYPES = {
 }
 
 
+# Worker packets dispatched before extra_read existed store a return schema built from this
+# note set. They must keep validating; returns are still checked against the current NOTE_TYPES.
+LEGACY_NOTE_TYPES = NOTE_TYPES - {"extra_read"}
+
+
 # Single source for the bounded-step-return-v1 contract. Every prose restatement
 # of these facts is checked against them by tests/planning_return_contract_parity_test.py.
 RETURN_STATUSES = {"completed", "blocked", "failed", "oversized"}
@@ -214,6 +220,7 @@ MAX_BLOCKER_CODE = 120
 MAX_ACCEPTANCE_SUMMARY = 480
 
 
+# Bytes (UTF-8) of failing output a run-acceptance result may carry as its excerpt.
 MAX_ACCEPTANCE_EXCERPT = 4 * 1024
 
 

@@ -51,6 +51,7 @@ from .vocabulary import (
     DISPATCH_ENTRY_FIELDS,
     FORWARD_SCHEMA,
     ID,
+    LEGACY_NOTE_TYPES,
     MAX_ACCEPTANCE_SUMMARY,
     MAX_AMENDED_ATTEMPTS,
     MAX_AMENDED_COMMAND,
@@ -89,6 +90,7 @@ __all__ = [
     "needs_higher_tier",
     "valid_return",
     "bounded_return_schema",
+    "packet_schema_registered",
     "worker_handoff_digest",
     "worker_handoff_context",
     "valid_worker_handoff",
@@ -300,7 +302,9 @@ def valid_return(
     return value
 
 
-def bounded_return_schema(registered: bool = False) -> JsonObject:
+def bounded_return_schema(
+    registered: bool = False, note_types: set[str] = NOTE_TYPES
+) -> JsonObject:
     """Return structural output guidance; valid_return owns semantic checks."""
     evidence = {
         "evidence_path": {"type": "string", "minLength": 1, "maxLength": MAX_PATH},
@@ -370,7 +374,7 @@ def bounded_return_schema(registered: bool = False) -> JsonObject:
                     "additionalProperties": False,
                     "required": ["type", "message"],
                     "properties": {
-                        "type": {"type": "string", "enum": sorted(NOTE_TYPES)},
+                        "type": {"type": "string", "enum": sorted(note_types)},
                         "message": {"type": "string", "maxLength": MAX_NOTE_MESSAGE},
                     },
                 },
@@ -387,6 +391,18 @@ def bounded_return_schema(registered: bool = False) -> JsonObject:
         codes = sorted(set().union(*RETURN_CODES.values()) - VERIFIER_ONLY_CODES)
         schema["properties"]["blockers"]["items"]["properties"]["code"]["enum"] = codes
     return schema
+
+
+def packet_schema_registered(schema: JsonValue) -> bool:
+    """The registered flag of a stored packet return_schema; only the four issued variants pass.
+
+    Current and legacy (pre-extra_read) note sets, each unregistered or registered.
+    """
+    for note_types in (NOTE_TYPES, LEGACY_NOTE_TYPES):
+        for registered in (False, True):
+            if schema == bounded_return_schema(registered, note_types):
+                return registered
+    raise Error("invalid worker handoff return schema")
 
 
 def worker_handoff_digest(value: JsonObject) -> str:
@@ -508,8 +524,7 @@ def valid_worker_handoff(value: JsonValue) -> JsonObject:
             or remediation["target_portable_tier"] != value["portable_tier"]
         ):
             raise Error("invalid worker handoff retry remediation")
-    if value.get("return_schema") not in (bounded_return_schema(), bounded_return_schema(True)):
-        raise Error("invalid worker handoff return schema")
+    packet_schema_registered(value.get("return_schema"))
     return value
 
 
@@ -542,7 +557,7 @@ def validate_return(args: argparse.Namespace) -> JsonObject:
         {},
         step,
         handoff_value["leaf"],
-        registered=handoff_value["return_schema"] == bounded_return_schema(True),
+        registered=packet_schema_registered(handoff_value["return_schema"]),
         standard=handoff_value.get("precision") == "standard",
     )
     return {
