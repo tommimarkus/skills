@@ -1,5 +1,21 @@
 # Planning Policy Source Grounding
 
+## 2026-10-31 rule-index plan expansion
+
+Planner cost grows with leaf count for large normalized rule sets, and nothing
+generated homogeneous leaves. The owner settled: the index is JSONL; each rule
+gets its own leaf, with same-type mechanical/standard leaves grouped into
+existing `batch` groups; the expander partitions once, deterministically in
+dependency order, and emits one slice at a time, filling `predecessor`
+read-only from the closed previous run; one exemplar per mechanic type lands
+first at `standard` or `analytical`, its followers run at `mechanical` with the
+exemplar's files in their `read_set`, using existing fields only. It is an
+authoring aid: no validator, ledger, approval, or series change, and each slice
+is still approved separately. Inherited approval is a separate pending proposal.
+Regression evidence: `tests/planning_policy_expansion_test.py`, including the
+end-to-end `matched` cross-check. Original repository code and prose; no
+third-party text copied.
+
 ## 2026-10-31 bounded worker intake
 
 Worker output was already bounded, but intake was not: raw acceptance output and

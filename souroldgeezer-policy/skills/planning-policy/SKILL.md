@@ -51,6 +51,8 @@ An unresolved domain-design choice invokes its owning design skill before approv
   authoring/audit load [ledger contract](references/ledger-contract.md).
   Legacy runs/packets load [compatibility](references/ledger-compatibility.md).
   Successive managed plans load [plan series](references/plan-series.md).
+  Index-driven series authoring loads [plan expansion](references/plan-expansion.md)
+  (`references/scripts/expand_plan.py`, `references/templates/expansion-template-v1.json`).
 - **Bounded unresolved audit question:** load [selective audit](references/selective-audit.md)
   only when targeted inspection cannot settle a question that changes approach or acceptance.
 - **Tracing:** only on explicit trace/measure/calibrate requests load

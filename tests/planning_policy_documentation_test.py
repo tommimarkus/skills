@@ -470,6 +470,58 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "## 2026-10-31 bounded worker intake",
         ))
 
+    def test_rule_index_expansion_is_routed_and_documented(self) -> None:
+        base = "souroldgeezer-policy/skills/planning-policy/"
+        link = "[plan expansion]"
+        assert_phrases(self, self.text(base + "SKILL.md"), (
+            "Index-driven series authoring loads [plan expansion](references/plan-expansion.md)",
+        ))
+        assert_phrases(self, self.text(base + "references/plan-series.md"), (
+            link + "(plan-expansion.md)",
+            "fills `predecessor`",
+        ), heading="## Grooming a successor plan")
+        assert_phrases(self, self.text(base + "references/strict-workflow.md"), (
+            link + "(plan-expansion.md)",
+        ), heading="## Enforcement")
+        doc = self.text(base + "references/plan-expansion.md")
+        assert_phrases(self, doc, (
+            "Load only when authoring a plan series from a rule index",
+            "planning-expansion-template-v1",
+            "templates/expansion-template-v1.json",
+            "JSONL",
+            "{id}",
+            "{{",
+            "generator_sha256",
+        ))
+        assert_phrases(self, doc, (
+            'python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/expand_plan.py" partition --template',
+            'python3 -B "<skill-dir>/references/scripts/expand_plan.py" partition --template',
+            'python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/expand_plan.py" slice --template',
+            'python3 -B "<skill-dir>/references/scripts/expand_plan.py" slice --template',
+            "Claude substitutes `${CLAUDE_SKILL_DIR}`; Codex resolves `<skill-dir>` to the",
+        ), heading="## Commands")
+        assert_phrases(self, doc, (
+            "`portable_tier: \"mechanical\"`",
+            "ordered before its exemplar",
+            "lack the `Skill` tool",
+            "stop and report",
+        ), heading="## Exemplars")
+        assert_phrases(self, doc, (
+            "read-only",
+            "closed run",
+            "validate --pin-roots",
+        ), heading="## Workflow per slice")
+        assert_phrases(self, doc, (
+            "no inherited approval",
+            "never writes the ledger",
+            "byte-identical",
+            "64 KiB",
+        ), heading="## Reproducibility and limits")
+        assert_phrases(self, self.text(base + "references/source-grounding.md"), (
+            "planning_policy_expansion_test.py",
+            "no third-party text",
+        ), heading="## 2026-10-31 rule-index plan expansion")
+
 
 if __name__ == "__main__":
     unittest.main()

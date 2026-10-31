@@ -21,6 +21,9 @@ explicit user or repository guidance overrides them.
 4. Groom outcomes before leaves. Enumerate shared call sites, guidance,
    reads/writes, scoped acceptance, and bounded worker judgment once; settle
    material choices with their owner. Required unknowns remain missing input.
+   Homogeneous rule-index work can be expanded from a template by
+   [plan expansion](plan-expansion.md) instead of hand-authored leaves; the
+   output passes the same validation and approval.
    Default to one leaf per outcome; merge file-per-leaf, code-vs-test,
    preparatory-helper, tier-gaming, and plan-size-gaming splits. Record each
    unit's `cohesive_outcome` and permitted `decomposition` evidence; neither
