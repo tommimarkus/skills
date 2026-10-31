@@ -8,7 +8,7 @@ import unittest
 
 from tests.surface_test_lib import LEAN_AUDIT_SCRIPTS, REPO_ROOT, load_leanaudit_module
 
-TESTS_CEILING = 156
+TESTS_CEILING = 153
 SOURCE_CEILING = 3
 
 

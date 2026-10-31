@@ -1,4 +1,5 @@
 """Shared helpers for the repo's surface tests (paths, file reads, per-stack packs)."""
+import hashlib
 import importlib.util
 import json
 import re
@@ -360,3 +361,44 @@ def ip_defined_criteria() -> set[str]:
     }
     assert codes, "no criterion definitions parsed — the bullet form has changed"
     return codes
+
+
+def capability_binding_document(plan, evidence):
+    """The planning-capability-binding-v1 document for `plan`: one codex binding per leaf."""
+    return {
+        "schema": "planning-capability-binding-v1",
+        "plan_sha256": hashlib.sha256(
+            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest(),
+        "bindings": [
+            {
+                "step_id": leaf["id"],
+                "host": "codex",
+                "executor": "gpt-5.6-terra",
+                "requirements": leaf["capability_requirements"],
+                "evidence": [evidence],
+            }
+            for leaf in plan["leaves"]
+        ],
+    }
+
+
+def worktree_result(action, repo_root, branch, worktree):
+    """The planning-worktree-result-v1 document of an integrate or cleanup, fixed commits."""
+    integrated = "b" * 40
+    value = {
+        "schema": "planning-worktree-result-v1",
+        "ok": True,
+        "action": action,
+        "repo_root": str(repo_root),
+        "target": "main",
+        "branch": branch,
+        "worktree": str(worktree),
+        "source_commit": "a" * 40,
+        "rebased_commit": integrated,
+        "parent_before": "c" * 40,
+        "parent_after": integrated,
+    }
+    if action == "cleanup":
+        value["parent_commit"] = integrated
+    return value

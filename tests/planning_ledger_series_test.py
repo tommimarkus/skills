@@ -1,5 +1,4 @@
 import contextlib
-import hashlib
 import importlib.util
 import io
 import json
@@ -17,6 +16,7 @@ ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
 from planningledger import core  # noqa: E402
+from tests.surface_test_lib import capability_binding_document, worktree_result  # noqa: E402
 
 
 class PlanningLedgerSeriesTest(unittest.TestCase):
@@ -87,27 +87,9 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
 
     def capability_binding(self, plan_path):
         plan = json.loads(Path(plan_path).read_text())
-        plan_sha256 = hashlib.sha256(
-            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
         path = self.root / f"{plan_path.stem}-capability-binding.json"
         path.write_text(
-            json.dumps(
-                {
-                    "schema": "planning-capability-binding-v1",
-                    "plan_sha256": plan_sha256,
-                    "bindings": [
-                        {
-                            "step_id": leaf["id"],
-                            "host": "codex",
-                            "executor": "gpt-5.6-terra",
-                            "requirements": leaf["capability_requirements"],
-                            "evidence": ["test fixture capability inventory"],
-                        }
-                        for leaf in plan["leaves"]
-                    ],
-                }
-            )
+            json.dumps(capability_binding_document(plan, "test fixture capability inventory"))
         )
         return path
 
@@ -451,23 +433,10 @@ class PlanningLedgerSeriesTest(unittest.TestCase):
                 str(return_path),
             )[0],
         )
-        integrated = "b" * 40
         for target, action in (("integrated", "integrate"), ("cleaned", "cleanup")):
-            value = {
-                "schema": "planning-worktree-result-v1",
-                "ok": True,
-                "action": action,
-                "repo_root": str(self.root),
-                "target": "main",
-                "branch": "owner",
-                "worktree": str(self.root / f".worktrees/{plan_id}-0"),
-                "source_commit": "a" * 40,
-                "rebased_commit": integrated,
-                "parent_before": "c" * 40,
-                "parent_after": integrated,
-            }
-            if action == "cleanup":
-                value["parent_commit"] = integrated
+            value = worktree_result(
+                action, self.root, "owner", self.root / f".worktrees/{plan_id}-0"
+            )
             path = self.root / f"{plan_id}-{step_id}-{action}.json"
             path.write_text(json.dumps(value))
             self.assertEqual(

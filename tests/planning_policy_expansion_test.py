@@ -2,7 +2,6 @@
 
 import contextlib
 import copy
-import hashlib
 import io
 import json
 import subprocess
@@ -11,7 +10,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT, load_script_module
+from tests.surface_test_lib import (
+    REPO_ROOT,
+    capability_binding_document,
+    load_script_module,
+    worktree_result,
+)
 
 SCRIPTS = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts"
 EXPAND = SCRIPTS / "expand_plan.py"
@@ -264,19 +268,8 @@ class LedgerSeriesTest(ExpansionCase):
 
     def init(self, plan_id, path):
         plan = json.loads(path.read_text())
-        plan_sha256 = hashlib.sha256(
-            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
         binding = self.root / f"{plan_id}-binding.json"
-        binding.write_text(json.dumps({
-            "schema": "planning-capability-binding-v1",
-            "plan_sha256": plan_sha256,
-            "bindings": [
-                {"step_id": leaf["id"], "host": "codex", "executor": "gpt-5.6-terra",
-                 "requirements": leaf["capability_requirements"], "evidence": ["fixture"]}
-                for leaf in plan["leaves"]
-            ],
-        }))
+        binding.write_text(json.dumps(capability_binding_document(plan, "fixture")))
         assignments = self.root / f"{plan_id}-assignments.json"
         assignments.write_text(json.dumps([
             {"id": leaf["id"], "harness": "codex", "model_or_alias": "gpt-5.6-terra",
@@ -319,18 +312,10 @@ class LedgerSeriesTest(ExpansionCase):
             }))
             self.ledger("--plan-id", plan_id, "record-return", "--actor", "parent",
                         "--run-id", run_id, "--return-file", returned)
-            integrated = "b" * 40
             for target, action in (("integrated", "integrate"), ("cleaned", "cleanup")):
-                value = {
-                    "schema": "planning-worktree-result-v1", "ok": True, "action": action,
-                    "repo_root": str(self.root), "target": "main",
-                    "branch": leaf["worktree_owner"],
-                    "worktree": str(self.root / self.worktree(leaf)),
-                    "source_commit": "a" * 40, "rebased_commit": integrated,
-                    "parent_before": "c" * 40, "parent_after": integrated,
-                }
-                if action == "cleanup":
-                    value["parent_commit"] = integrated
+                value = worktree_result(
+                    action, self.root, leaf["worktree_owner"], self.root / self.worktree(leaf)
+                )
                 result = self.root / f"{plan_id}-{step_id}-{action}.json"
                 result.write_text(json.dumps(value))
                 self.ledger("--plan-id", plan_id, "transition", "--actor", "parent",
@@ -368,6 +353,12 @@ class LedgerSeriesTest(ExpansionCase):
     def predecessor_flags(self, plan_id, run_id):
         return ("--predecessor-plan-id", plan_id, "--predecessor-run-id", run_id)
 
+    def refuse_successor(self, number, plan_id, run_id, fragment, **variant):
+        result, _ = self.emit(
+            number, f"refused-{number}", *self.predecessor_flags(plan_id, run_id), **variant
+        )
+        self.refused(result, 1, fragment)
+
     def test_a_three_slice_series_chains_through_completed_predecessors(self):
         first = self.emit_ok(1, "slice-1")
         run_one = self.run_slice("rule-plan-1", first)
@@ -394,9 +385,12 @@ class LedgerSeriesTest(ExpansionCase):
 
     def test_a_blocked_predecessor_is_refused_with_the_hand_groom_pointer(self):
         run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"), "blocked")
-        result, _ = self.emit(2, "slice-2", *self.predecessor_flags("rule-plan-1", run_one))
-        self.refused(result, 1, "predecessor slice 1 closed blocked, not completed")
-        self.assertIn("Successor on a blocked predecessor", json.loads(result.stdout)["errors"][0])
+        self.refuse_successor(
+            2, "rule-plan-1", run_one,
+            "predecessor slice 1 closed blocked, not completed; later slices assume its rules "
+            "landed, so hand-groom the successor per plan-series.md "
+            "'Successor on a blocked predecessor'",
+        )
 
     def test_an_ancestor_that_is_not_completed_is_refused(self):
         first = self.emit_ok(1, "slice-1")
@@ -407,41 +401,46 @@ class LedgerSeriesTest(ExpansionCase):
                  "handoff_sha256": checkpoint["series_handoff_sha256"]}
         second = self.api_slice(2, "slice-2", block)
         run_two = self.run_slice("rule-plan-2", second)
-        result, _ = self.emit(3, "slice-3", *self.predecessor_flags("rule-plan-2", run_two))
-        self.refused(result, 1, "predecessor slice 1 closed blocked, not completed")
+        self.refuse_successor(
+            3, "rule-plan-2", run_two, "predecessor slice 1 closed blocked, not completed"
+        )
 
     def test_a_predecessor_of_another_series_or_slice_is_refused(self):
         run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
         flags = self.predecessor_flags("rule-plan-1", run_one)
         other = copy.deepcopy(self.template)
         other["series"]["series_id"] = "other-series"
-        result, _ = self.emit(2, "other", *flags, template=other)
-        self.refused(result, 1, "predecessor slice 1 belongs to series rule-series, not other-series")
+        self.refuse_successor(
+            2, "rule-plan-1", run_one,
+            "predecessor slice 1 belongs to series rule-series, not other-series", template=other,
+        )
         second = self.emit_ok(2, "slice-2", *flags)
         run_two = self.run_slice("rule-plan-2", second)
-        result, _ = self.emit(2, "again", *self.predecessor_flags("rule-plan-2", run_two))
-        self.refused(result, 1, "predecessor slice 1 is recorded as slice 2")
+        self.refuse_successor(2, "rule-plan-2", run_two, "predecessor slice 1 is recorded as slice 2")
 
     def test_a_grown_index_or_a_final_predecessor_is_refused(self):
         run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
         flags = self.predecessor_flags("rule-plan-1", run_one)
         grown = [{"id": "d0", "type": "doc", "deps": [], "spec": "specs/d0.md", "refs": []},
                  *self.rows]
-        result, _ = self.emit(2, "grown", *flags, rows=grown)
-        self.refused(result, 1, "predecessor slice 1 does not match this partition (index changed?)")
+        self.refuse_successor(
+            2, "rule-plan-1", run_one,
+            "predecessor slice 1 does not match this partition (index changed?)", rows=grown,
+        )
         short = [row for row in self.rows if row["id"] in {"d1", "d2", "u1", "u2"}]
         final_run = self.run_slice("rule-plan-9", self.emit_ok(1, "short", rows=short), final=True)
-        result, _ = self.emit(2, "after-final", *self.predecessor_flags("rule-plan-9", final_run))
-        self.refused(result, 1, "predecessor slice 1 is final; the series has ended")
+        self.refuse_successor(
+            2, "rule-plan-9", final_run, "predecessor slice 1 is final; the series has ended"
+        )
 
     def test_a_missing_or_unclosed_predecessor_is_refused(self):
         run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
         missing = "22222222-2222-4222-8222-222222222222"
-        result, _ = self.emit(2, "gone", *self.predecessor_flags("rule-plan-1", missing))
-        self.refused(result, 1, "cannot load predecessor run: unresolvable predecessor run")
+        self.refuse_successor(
+            2, "rule-plan-1", missing, "cannot load predecessor run: unresolvable predecessor run"
+        )
         open_run = self.init("rule-plan-3", self.emit_ok(1, "open"))["run_id"]
-        result, _ = self.emit(2, "open-successor", *self.predecessor_flags("rule-plan-3", open_run))
-        self.refused(result, 1, "predecessor slice 1 is not closed")
+        self.refuse_successor(2, "rule-plan-3", open_run, "predecessor slice 1 is not closed")
         self.assertTrue(run_one)
 
 
@@ -453,6 +452,11 @@ class BatchingTest(ExpansionCase):
                 groups.setdefault(leaf["batch"], []).append(leaf["id"])
         return groups
 
+    def unit_batches(self, *specs):
+        """Batches of a slice of unit rules after a non-batching doc type."""
+        template = self.plain_template(doc={"batch": False}, unit={})
+        return self.batches(self.plain_slice(template, self.plain_rows(*specs)))
+
     def test_a_run_of_nine_splits_into_five_and_four(self):
         ids = [f"a{n}" for n in range(1, 10)]
         plan = self.plain_slice(self.plain_template(), self.plain_rows(*[(i, "unit") for i in ids]))
@@ -463,16 +467,13 @@ class BatchingTest(ExpansionCase):
         )
 
     def test_a_leaf_with_an_extra_external_dependency_starts_a_new_run(self):
-        rows = self.plain_rows(
-            ("z", "doc"), ("p1", "unit"), ("p2", "unit"), ("p3", "unit", ["z"]), ("p4", "unit", ["z"])
+        grouped = self.unit_batches(
+            ("z", "doc"), ("p1", "unit"), ("p2", "unit"), ("p3", "unit", ["z"]),
+            ("p4", "unit", ["z"]),
         )
-        template = self.plain_template(doc={"batch": False}, unit={})
-        plan = self.plain_slice(template, rows)
-        self.assertEqual({"unit-batch-p1": ["p1", "p2"], "unit-batch-p3": ["p3", "p4"]},
-                         self.batches(plan))
-        solo = self.plain_slice(template, self.plain_rows(("z", "doc"), ("p1", "unit"),
-                                                          ("p2", "unit", ["z"])))
-        self.assertEqual({}, self.batches(solo))
+        self.assertEqual({"unit-batch-p1": ["p1", "p2"], "unit-batch-p3": ["p3", "p4"]}, grouped)
+        solo = self.unit_batches(("z", "doc"), ("p1", "unit"), ("p2", "unit", ["z"]))
+        self.assertEqual({}, solo)
 
     def test_a_member_may_depend_on_an_earlier_member_of_its_run(self):
         plan = self.plain_slice(self.plain_template(), self.plain_rows(
@@ -486,10 +487,9 @@ class BatchingTest(ExpansionCase):
         plan = self.plain_slice(template, rows)
         self.assertEqual({"x-batch-y-batch-z": ["y-batch-z", "xa"],
                           "x-batch-y-batch-2": ["z", "zb"]}, self.batches(plan))
+        taken = self.unit_batches(("unit-batch-p1", "doc"), ("p1", "unit"), ("p2", "unit"))
+        self.assertEqual({"unit-batch-1": ["p1", "p2"]}, taken)
         template = self.plain_template(doc={"batch": False}, unit={})
-        taken = self.plain_rows(("unit-batch-p1", "doc"), ("p1", "unit"), ("p2", "unit"))
-        plan = self.plain_slice(template, taken)
-        self.assertEqual({"unit-batch-1": ["p1", "p2"]}, self.batches(plan))
         both = self.plain_rows(("unit-batch-p1", "doc"), ("unit-batch-1", "doc"),
                                ("p1", "unit"), ("p2", "unit"))
         self.refused(self.expand("partition", template=template, rows=both), 1,

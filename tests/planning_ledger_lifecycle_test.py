@@ -8,6 +8,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tests.surface_test_lib import capability_binding_document
+
 SCRIPT = (
     Path(__file__).parents[1]
     / "souroldgeezer-policy/skills/planning-policy/references/scripts/planning_ledger.py"
@@ -101,27 +103,9 @@ class PlanningLedgerLifecycleTest(unittest.TestCase):
 
     def capability_binding(self, plan_path):
         plan = json.loads(Path(plan_path).read_text())
-        plan_sha256 = hashlib.sha256(
-            json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
         path = self.root / f"{plan_path.stem}-capability-binding.json"
         path.write_text(
-            json.dumps(
-                {
-                    "schema": "planning-capability-binding-v1",
-                    "plan_sha256": plan_sha256,
-                    "bindings": [
-                        {
-                            "step_id": leaf["id"],
-                            "host": "codex",
-                            "executor": "gpt-5.6-terra",
-                            "requirements": leaf["capability_requirements"],
-                            "evidence": ["test fixture capability inventory"],
-                        }
-                        for leaf in plan["leaves"]
-                    ],
-                }
-            )
+            json.dumps(capability_binding_document(plan, "test fixture capability inventory"))
         )
         return path
 
@@ -1070,24 +1054,7 @@ class PlanningLedgerBatchTest(unittest.TestCase):
         plan = json.loads(Path(plan_path).read_text())
         path = self.root / f"{plan_path.stem}-binding.json"
         path.write_text(
-            json.dumps(
-                {
-                    "schema": "planning-capability-binding-v1",
-                    "plan_sha256": hashlib.sha256(
-                        json.dumps(plan, sort_keys=True, separators=(",", ":")).encode()
-                    ).hexdigest(),
-                    "bindings": [
-                        {
-                            "step_id": leaf["id"],
-                            "host": "codex",
-                            "executor": "gpt-5.6-terra",
-                            "requirements": leaf["capability_requirements"],
-                            "evidence": ["test fixture capability inventory"],
-                        }
-                        for leaf in plan["leaves"]
-                    ],
-                }
-            )
+            json.dumps(capability_binding_document(plan, "test fixture capability inventory"))
         )
         return path
 
