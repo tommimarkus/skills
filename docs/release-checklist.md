@@ -25,7 +25,8 @@ operational changes.
 ### Verify the candidate
 
 - From the exact clean candidate commit, run `python3 -B
-  scripts/publication_check.py --repo-root . record`. It runs the complete
+  scripts/publication_check.py --repo-root . record` as part of the integration
+  that stamps the version, not later at push time. It runs the complete
   ordered [contributor validation](contributing.md#validate-the-change) with
   the host smoke unconditionally, without `--changed-since`, and records the
   commit/tree-bound result. Require all five Claude/Codex isolated installs,

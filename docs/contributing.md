@@ -139,15 +139,18 @@ full-suite run covered a newer tree. Exact fast-forward integration preserves th
 checks run on that candidate; if integration changes behavior, rerun affected
 checks and broaden when the effects cannot be bounded.
 
-Before an explicitly authorized push of `main`, run:
+A push of `main` needs a receipt, and recording is local and needs no push
+authority. So every integration that ends in a version stamp records one: from a
+clean worktree on the integrated content tip, run the full candidate sequence as
 
 ```text
 python3 -B scripts/publication_check.py --repo-root . record
 ```
 
-Publication retains the complete ordered gates and an unconditional host smoke
-with both safety flags. The receipt binds commit and tree. After exactly one
-allowed atomic version-cell follow-up, use `record --version-followup`; any other
+then run `record --version-followup` after the version-only commit. Do not also run
+the sequence by hand. Publication retains the complete ordered gates and an
+unconditional host smoke with both safety flags. The receipt binds commit and tree;
+the follow-up accepts exactly one allowed atomic version-cell commit, and any other
 publication-source drift needs a fresh full receipt. Only the documented Claude,
 normalized Codex/Antigravity/root-manifest and README version cells qualify. Proportionate
 local verification never substitutes for publication evidence or authority.

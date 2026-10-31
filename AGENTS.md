@@ -153,10 +153,13 @@ clears inherited provisioning roots, and fingerprints normal host control planes
 Never provision into a user's normal plugin-data root during a smoke. A missing
 standalone Codex validator is a disclosed skip.
 
-A push of `main` is publication. Before an explicitly authorized push, run
-`python3 -B scripts/publication_check.py --repo-root . record` from the exact clean
-candidate. It retains the full ordered gates and unconditional isolated smoke.
-The existing `record --version-followup` accepts only the documented single atomic
+A push of `main` is publication and needs a receipt from the exact clean candidate.
+Recording is local and needs no push authority, so every integration that ends in a
+version stamp records one: run the full candidate sequence as
+`python3 -B scripts/publication_check.py --repo-root . record` on the integrated
+content tip (its ordered gates and unconditional isolated smoke replace a manual run),
+then `record --version-followup` after the version-only commit. Run both from a clean
+worktree at that commit. The follow-up accepts only the documented single atomic
 version-only descendant. Other publication-source drift needs a new receipt;
 proportionate local checks cannot authorize a push. Installing the pre-push hook,
 pushing, and changing external security settings need explicit task authority.

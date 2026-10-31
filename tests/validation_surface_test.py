@@ -98,6 +98,28 @@ class ValidationSurfaceTest(unittest.TestCase):
             with self.subTest(fact=fact):
                 self.assertIn(fact, maintenance)
 
+    def test_every_version_stamp_records_its_publication_receipt(self) -> None:
+        # A stamp marks a publishable candidate; without this rule sessions verified by hand
+        # and left no receipt, so a later authorized push was refused.
+        for guide in ("CLAUDE.md", "AGENTS.md", "docs/contributing.md"):
+            text = " ".join(read(guide).split())
+            with self.subTest(guide=guide):
+                for fact in (
+                    "every integration that ends in a version stamp",
+                    "on the integrated content tip",
+                    "record --version-followup` after the version-only commit",
+                    "needs no push authority",
+                ):
+                    self.assertIn(fact, text)
+        self.assertEqual(
+            " ".join(read("CLAUDE.md").split()).count("version stamp"),
+            " ".join(read("AGENTS.md").split()).count("version stamp"),
+        )
+        self.assertIn(
+            "as part of the integration that stamps the version, not later at push time",
+            " ".join(read("docs/release-checklist.md").split()),
+        )
+
     def test_readme_and_usage_link_every_shipped_skill(self) -> None:
         marketplace = json.loads(read(".claude-plugin/marketplace.json"))
         skill_paths = {
