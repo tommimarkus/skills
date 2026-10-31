@@ -4,6 +4,7 @@
   "scope_summary": "",
   "approved_decisions": [],
   "precision": "strict",
+  "verification": "per-leaf",
   "series": {
     "series_id": "",
     "end_verification_commands": [],

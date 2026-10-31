@@ -29,8 +29,8 @@ IMPORT_ORDER = (
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}
 # Every module of the package, per the module map in planningledger/__init__.py.
 EXTRACTED = set(GROUP)
-# plancontract is the validator implementation: the validate_plan_contract.py shim re-exports it,
-# so the ledger shim does not (its main and validate would collide with the ledger's).
+# plancontract and expand each have their own shim (validate_plan_contract.py, expand_plan.py)
+# that re-exports them, so the ledger shim does not (their main would collide with the ledger's).
 NOT_LEDGER_REEXPORTED = {"plancontract", "expand"}
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {

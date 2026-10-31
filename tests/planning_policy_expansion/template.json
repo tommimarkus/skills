@@ -19,7 +19,7 @@
       "read_set_extra": ["docs/style.md"],
       "acceptance_command": "uv run python -m unittest tests.rules_{id}_test",
       "size": "medium",
-      "portable_tier": "standard",
+      "portable_tier": "mechanical",
       "max_attempts": 2,
       "settled_decisions": {"format": "markdown page with a heading and a summary"},
       "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
@@ -36,7 +36,7 @@
       "read_set_extra": [],
       "acceptance_command": "uv run python -m unittest tests.unit_{id}_test",
       "size": "small",
-      "portable_tier": "standard",
+      "portable_tier": "mechanical",
       "max_attempts": 2,
       "settled_decisions": {"language": "python 3.11, stdlib only"},
       "capability_requirements": {

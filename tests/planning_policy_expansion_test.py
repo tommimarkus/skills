@@ -267,7 +267,7 @@ class LedgerSeriesTest(ExpansionCase):
         self.assertEqual("matched", self.init("rule-plan-2", second_path)["series_predecessor"])
 
     def test_a_predecessor_of_another_series_or_the_wrong_slice_is_refused(self):
-        first_result, first_path = self.emit(1, "slice-1")
+        _, first_path = self.emit(1, "slice-1")
         run_one = self.init("rule-plan-1", first_path)["run_id"]
         self.close("rule-plan-1", run_one)
         predecessor = ("--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id", run_one)
@@ -275,7 +275,7 @@ class LedgerSeriesTest(ExpansionCase):
         other["series"]["series_id"] = "other-series"
         result, _ = self.emit(2, "other", *predecessor, template=other)
         self.refused(result, 1, "series")
-        second_result, second_path = self.emit(2, "slice-2", *predecessor)
+        _, second_path = self.emit(2, "slice-2", *predecessor)
         run_two = self.init("rule-plan-2", second_path)["run_id"]
         self.close("rule-plan-2", run_two)
         result, _ = self.emit(
@@ -287,7 +287,7 @@ class LedgerSeriesTest(ExpansionCase):
             2, "gone", "--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id", missing
         )
         self.refused(result, 1, "predecessor")
-        open_result, open_path = self.emit(1, "open")
+        _, open_path = self.emit(1, "open")
         open_run = self.init("rule-plan-3", open_path)["run_id"]
         result, _ = self.emit(
             2, "open-successor", "--predecessor-plan-id", "rule-plan-3",
@@ -314,13 +314,11 @@ class RefusalTest(ExpansionCase):
             "unknown type": (edit(2, type="widget"), "line 3: unknown type widget"),
             "duplicate id": (edit(3, id="u1"), "line 4: duplicate id u1"),
             "self dependency": (edit(3, deps=["u2"]), "depends on itself"),
-            "two exemplars": (edit(4, exemplar=True) + [], "more than one exemplar"),
             "exemplar flag value": (edit(4, exemplar=False), "exemplar must be true"),
             "unknown key": (edit(4, extra=1), "unknown keys"),
             "empty spec": (edit(4, spec=""), "spec"),
         }
         rows_two = edit(2, exemplar=True)
-        rows_two = [dict(row) for row in rows_two]
         rows_two[3]["exemplar"] = True
         cases["two exemplars"] = (rows_two, "more than one exemplar")
         for name, (rows, fragment) in cases.items():
@@ -366,6 +364,8 @@ class RefusalTest(ExpansionCase):
                 "baseline": "plan-step-base-v1",
                 "additional": [{"kind": "skill", "name": "x", "reason": "y"}]}),
                                "Skill tool"),
+            "exemplar type tier": (self.type_edit("doc", portable_tier="standard"),
+                                   "followers of an exemplar run at mechanical"),
             "exemplar tier": (self.type_edit("doc", exemplar={"portable_tier": "deep"}),
                               "types.doc.exemplar.portable_tier"),
             "unrequired risk": (self.type_edit("unit", irreducible_unknown_or_risk="why"),
@@ -389,19 +389,24 @@ class RefusalTest(ExpansionCase):
         base = ("--template", TEMPLATE, "--index", INDEX)
         predecessor = ("--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id",
                        STUB_PREDECESSOR["run_id"])
-        for name, arguments in {
-            "zero": ("--slice", 0),
-            "past the end": ("--slice", 3),
-            "no predecessor": ("--slice", 2),
-            "slice one with predecessor": ("--slice", 1, *predecessor),
-            "plan id only": ("--slice", 2, "--predecessor-plan-id", "rule-plan-1"),
-            "run id only": ("--slice", 2, "--predecessor-run-id", STUB_PREDECESSOR["run_id"]),
-            "unstable plan id": ("--slice", 2, "--predecessor-plan-id", "Bad Id",
-                                 "--predecessor-run-id", STUB_PREDECESSOR["run_id"]),
-        }.items():
+        run_id = STUB_PREDECESSOR["run_id"]
+        for name, arguments, fragment in (
+            ("zero", ("--slice", 0), "at least 1"),
+            ("past the end", ("--slice", 3, *predecessor), "from 1 to 2"),
+            ("no predecessor", ("--slice", 2), "requires --predecessor-plan-id"),
+            ("slice one with predecessor", ("--slice", 1, *predecessor), "takes no predecessor"),
+            ("plan id only", ("--slice", 2, "--predecessor-plan-id", "rule-plan-1"),
+             "requires --predecessor-plan-id"),
+            ("run id only", ("--slice", 2, "--predecessor-run-id", run_id),
+             "requires --predecessor-plan-id"),
+            ("unstable plan id", ("--slice", 2, "--predecessor-plan-id", "Bad Id",
+                                  "--predecessor-run-id", run_id), "must be a stable id"),
+            ("bad run id", ("--slice", 2, "--predecessor-plan-id", "rule-plan-1",
+                            "--predecessor-run-id", "nope"), "UUID4"),
+        ):
             with self.subTest(name):
                 result = run(EXPAND, "slice", *base, *arguments)
-                self.refused(result, 2, "")
+                self.refused(result, 2, fragment)
 
     def test_a_validator_invalid_template_is_refused_with_the_validator_errors(self):
         noop = self.type_edit("doc", acceptance_command="true")
@@ -412,7 +417,8 @@ class RefusalTest(ExpansionCase):
                 for name in ("p1", "p2")]
         self.refused(self.expand("slice", "--slice", 1, template=shared, rows=rows), 1,
                      "overlapping write")
-        self.assertEqual(0, self.expand("partition", template=noop).returncode)
+        self.refused(self.expand("partition", template=noop), 1, "slice 1: leaves[0]")
+        self.refused(self.expand("partition", template=noop), 1, "known no-op")
 
     def test_an_oversize_slice_shrinks_and_every_slice_fits_the_cap(self):
         template = self.type_edit("doc", task="x" * 6000 + " {id}")

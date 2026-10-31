@@ -227,7 +227,7 @@ def _type_errors(name: str, spec: JsonValue) -> list[str]:
     requirements = spec["capability_requirements"]
     if not plancontract.capability_requirements_valid(requirements):
         errors.append(f"{path}.capability_requirements is not a valid requirements object")
-    elif (spec["portable_tier"] == "mechanical" or "exemplar" in spec) and any(
+    elif spec["portable_tier"] == "mechanical" and any(
         item["kind"] == "skill" for item in requirements["additional"]
     ):
         errors.append(
@@ -236,6 +236,11 @@ def _type_errors(name: str, spec: JsonValue) -> list[str]:
         )
     if "exemplar" in spec:
         errors += _exemplar_errors(spec["exemplar"], f"{path}.exemplar")
+        if spec["portable_tier"] != "mechanical":
+            errors.append(
+                f"{path}.portable_tier must be mechanical: followers of an exemplar run at "
+                "mechanical"
+            )
     if spec["portable_tier"] in plancontract.TIERS:
         errors += _risk_errors(spec, spec["portable_tier"] in {"analytical", "deep"}, path)
     return errors
@@ -477,7 +482,22 @@ def build(template: JsonObject, raw_rules: list[JsonObject]) -> Expansion:
     if errors:
         raise InputErrors(errors)
     expansion.slices = _partition(expansion)
+    errors = _slice_errors(expansion)
+    if errors:
+        raise InputErrors(errors)
     return expansion
+
+
+def _slice_errors(expansion: Expansion) -> list[str]:
+    """Validator errors of every slice, so a partition never approves a refusable slice."""
+    errors: list[str] = []
+    count = len(expansion.slices)
+    for number, (start, end) in enumerate(expansion.slices, 1):
+        stub = STUB_PREDECESSOR if number > 1 else None
+        plan = _build_plan(expansion, start, end - start, number, number == count, stub)
+        result = plancontract.validate(plan, admission=True)
+        errors += [f"slice {number}: {error}" for error in result["errors"]]
+    return errors
 
 
 # -- rendering ----------------------------------------------------------------------------
