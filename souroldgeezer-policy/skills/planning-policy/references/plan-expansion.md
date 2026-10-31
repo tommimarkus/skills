@@ -30,8 +30,9 @@ optional `precision` (default `strict`) and `verification`.
 JSONL, one rule per line: `id`, `type`, `deps` (rule ids), `spec` and `refs`
 (repository-relative paths); `exemplar: true` is optional. An `id` is a stable
 identifier (lowercase, digits, `-`/`_`, at most 64 characters). Blank lines,
-duplicate ids, unknown types or dependencies, self-dependencies, and cycles are
-refused with the line number.
+duplicate ids, unknown types or dependencies, self-dependencies, a second
+`exemplar: true` for one type, and `exemplar: true` on a type without `exemplar`
+are refused with the line number; a cycle is refused naming its rules.
 
 ## Partition
 
@@ -48,15 +49,18 @@ so an approved summary never hides a refusable slice; errors are prefixed
 
 Each rule is one work unit and one leaf. `read_set` is `spec`, `refs`, then
 `read_set_extra`. `dependencies` keep only same-slice rules; earlier-slice
-dependencies are already landed. Adjacent same-type `mechanical`/`standard`
-leaves with `batch: true` are grouped into `batch` groups of at most 8. The
+dependencies are already landed. Each leaf's `worktree_owner` is `owner_prefix`
+plus its id. Adjacent same-type `mechanical`/`standard` leaves with
+`batch: true`, never an exemplar, form `batch` groups of 2 to 8 that share
+`owner_prefix` plus the batch id. The
 `series` block carries `slice`, `final`, and `end_verification_commands`; past
 slice 1 `predecessor` is filled read-only from the closed previous run. The
 plan is validated again before it is emitted.
 
 ## Exemplars
 
-A type with `exemplar` lands one rule first at the exemplar's own tier
+A type with `exemplar` lands one rule first — the rule marked `exemplar: true`,
+otherwise its type's first rule in dependency order — at the exemplar's own tier
 (`standard`, or `analytical` with `irreducible_unknown_or_risk`). The type's
 own `portable_tier: "mechanical"` is the follower tier; followers get the
 exemplar's landed `write_set` in `read_set`, an `exemplar_pattern` settled
@@ -88,9 +92,9 @@ to stdout. Exit 0 succeeds, 1 is an input or validation refusal printing
 
 Emit, then `validate --pin-roots`, the approval handoff, `init-v5` with its
 predecessor cross-check, and execution; close with a series handoff, then emit
-the next slice with the closed run's plan id and run id, read-only (an unclosed run, another
-series, or a wrong slice number is refused). The aid changes no validator,
-ledger, approval, or series semantics.
+the next slice with the closed run's plan id and run id, read-only (an unclosed
+run, another series, or a wrong slice number is refused). The aid changes no
+validator, ledger, approval, or series semantics.
 
 ## Reproducibility and limits
 
