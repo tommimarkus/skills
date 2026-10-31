@@ -12,9 +12,12 @@ first at `standard` or `analytical`, its followers run at `mechanical` with the
 exemplar's files in their `read_set`, using existing fields only. It is an
 authoring aid: no validator, ledger, approval, or series change, and each slice
 is still approved separately. Inherited approval is a separate pending proposal.
-Regression evidence: `tests/planning_policy_expansion_test.py`, including the
-end-to-end `matched` cross-check. Original repository code and prose; no
-third-party text copied.
+An independent review showed that dropping earlier-slice dependencies is sound
+only once they have landed, so the expander accepts only a completed predecessor
+chain that matches its partition; a blocked slice is hand-groomed. It also showed
+that batches must stay dispatchable from their leader. Regression evidence:
+`tests/planning_policy_expansion_test.py`, including the end-to-end `matched`
+cross-check. Original repository code and prose; no third-party text copied.
 
 ## 2026-10-31 bounded worker intake
 

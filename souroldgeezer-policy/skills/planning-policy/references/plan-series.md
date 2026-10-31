@@ -48,7 +48,7 @@ one:
 4. When a predecessor closed anything other than `completed`, see "Successor
    on a blocked predecessor" below before assuming the chain is broken.
 5. A series generated from a rule index follows [plan expansion](plan-expansion.md),
-   which fills `predecessor` from the closed run.
+   which fills `predecessor` from the completed previous run.
 
 ## Close and handoff mechanics (parent's point of view)
 

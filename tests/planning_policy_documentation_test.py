@@ -478,7 +478,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         ))
         assert_phrases(self, self.text(base + "references/plan-series.md"), (
             link + "(plan-expansion.md)",
-            "fills `predecessor`",
+            "fills `predecessor` from the completed previous run",
         ), heading="## Grooming a successor plan")
         assert_phrases(self, self.text(base + "references/strict-workflow.md"), (
             link + "(plan-expansion.md)",
@@ -507,9 +507,22 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "stop and report",
         ), heading="## Exemplars")
         assert_phrases(self, doc, (
+            "copied literally",
+            "starts with a lowercase letter",
+        ))
+        assert_phrases(self, doc, (
+            "pin scan",
+        ), heading="## Partition")
+        assert_phrases(self, doc, (
+            "completed predecessor chain",
+            "leader's dependencies",
+        ), heading="## Slices")
+        assert_phrases(self, doc, (
             "read-only",
-            "closed run",
+            "completed run",
             "validate --pin-roots",
+            "matches this partition",
+            "[Successor on a blocked predecessor](plan-series.md#successor-on-a-blocked-predecessor)",
         ), heading="## Workflow per slice")
         assert_phrases(self, doc, (
             "no inherited approval",
@@ -519,6 +532,7 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
         ), heading="## Reproducibility and limits")
         assert_phrases(self, self.text(base + "references/source-grounding.md"), (
             "planning_policy_expansion_test.py",
+            "completed predecessor chain",
             "no third-party text",
         ), heading="## 2026-10-31 rule-index plan expansion")
 
