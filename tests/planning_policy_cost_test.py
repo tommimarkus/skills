@@ -110,7 +110,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
     def test_approval_handoff_route_is_bounded_and_conditional(self):
         result = self.measure("planning-policy-approval-handoff")
         # Strict approval still transports exact JSON; standard never loads it.
-        self.assertLessEqual(result["load_total"], 10600)  # bounded-intake guidance replaces unbounded acceptance output in worker context
+        # The planner-facing read-budget and run-acceptance pointers (plan contract, Codex
+        # adapter) tell planners to supply read_set; the worker-side text is charged to "worker".
+        self.assertLessEqual(result["load_total"], 10500)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

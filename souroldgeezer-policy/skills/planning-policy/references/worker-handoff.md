@@ -16,9 +16,9 @@ python3 -B "<skill-dir>/references/scripts/planning_ledger.py" --repo-root REPO 
 Claude substitutes `${CLAUDE_SKILL_DIR}`. Codex resolves `<skill-dir>` to the
 absolute source directory of the loaded skill. Pass the returned `handoff`
 object unchanged, inline or in an explicitly supplied persistent file, together
-with the host dispatch instructions. A batch carries one packet per member, and each member's acceptance runs
-through `run-acceptance` with its own packet. A
-member whose acceptance fails only for an environmental reason commits its work,
+with the host dispatch instructions. A batch carries one packet per member,
+and each member's acceptance runs through `run-acceptance` with its own packet.
+A member whose acceptance fails only for an environmental reason commits its work,
 returns `blocked:environment`, and the worker continues to the next member; any
 other stop halts the batch. The parent repairs that member per the
 [ledger contract](ledger-contract.md) batch rule.

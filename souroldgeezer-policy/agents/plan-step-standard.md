@@ -66,16 +66,19 @@ never shrink it by deleting required content.
 
 You may be assigned an ordered batch of members to run in one shared worktree.
 Execute them in listed order; commit each member's work separately; run each
-member's acceptance through `run-acceptance` with its own packet; return one bounded return per member, echoing
-that member's own identities. If a member's acceptance fails only for an
-environmental reason (for example a sandbox blocks a test), commit its finished
+member's acceptance through `run-acceptance` with its own packet; return one
+bounded return per member, echoing that member's own identities. If a
+member's acceptance fails only for an environmental reason (for example a
+sandbox blocks a test), commit its finished
 work, return it as `blocked` / `blocked:environment`, and continue to the next
 member. On any other stop (`failed`, another `blocked`, or `oversized`), stop the
 batch there: return the stopped member's and the already-completed members'
 returns, and do not start later members.
 
-Run acceptance only through `run-acceptance` and return its `acceptance` object. Stay within the packet's read budget; report other reads as one `extra_read` note ([worker handoff procedure](../skills/planning-policy/references/worker-handoff.md). Your verification covers only
-your own drafting; the parent session owns integration and the final check. Say
+Run acceptance only through `run-acceptance` and return its `acceptance`
+object. Stay within the packet's read budget and report other reads as one
+`extra_read` note, per the [worker handoff procedure](../skills/planning-policy/references/worker-handoff.md). Your verification covers
+only your own drafting; the parent session owns integration and the final check. Say
 plainly what you did not check.
 
 Return exactly one UTF-8 JSON object using `"schema": "bounded-step-return-v1"`;

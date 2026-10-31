@@ -165,8 +165,9 @@ move is legal right now.
 
 For any step, single or batch member, the parent repairs a `blocked:environment`
 return before recording it: it re-runs the step's identical acceptance command
-at the returned commit, through `run-acceptance --run-id R --step-id S --worktree DIR` so raw output stays out of the orchestrator context, wherever the environment allows (for example outside a
-sandbox, in a detached checkout under the primary checkout's `.worktrees/`).
+at the returned commit, through `run-acceptance --run-id R --step-id S
+--worktree DIR` so raw output stays out of the orchestrator context, wherever
+the environment allows (for example outside a sandbox, in a detached checkout under the primary checkout's `.worktrees/`).
 Exit 0 records the step `completed` with the parent's acceptance evidence and a
 `verification_limit` note disclosing the stop; a non-environmental failure
 records `failed:acceptance`; if the parent cannot run it either, it records the
@@ -188,8 +189,8 @@ carrying `batch_source_commits` for a batch — validate every member this way,
 so the closeout order is: integrate every member, then clean every member. The
 artifact's optional `rebased_tree_changed` flag states whether the rebase
 changed the tree: `false` means a leaf's already-recorded acceptance evidence
-stands; `true` means the parent re-runs only that leaf's own scoped acceptance (through `run-acceptance --run-id R --step-id S --worktree DIR`)
-— never the plan's full final verification, which still runs exactly once, at
+stands; `true` means the parent re-runs only that leaf's own scoped acceptance
+(through parent-mode `run-acceptance`) — never the plan's full final verification, which still runs exactly once, at
 closeout.
 
 For a version-5 run, successful transitions add bounded live guidance: `ready`

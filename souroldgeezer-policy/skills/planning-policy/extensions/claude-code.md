@@ -96,8 +96,8 @@ same turn (several `Agent` calls in one message).
 A declared `batch` dispatches once: call `Agent` a single time with the
 ordered member handoffs, not once per member. `dispatch` on the first member
 starts every member in listed order and returns one packet per member; the
-worker commits each member, runs its own acceptance through `run-acceptance`, and returns one
-`bounded-step-return-v1` per member. A member whose acceptance fails only for an environmental reason
+worker commits each member, runs its own acceptance through `run-acceptance`,
+and returns one `bounded-step-return-v1` per member. A member whose acceptance fails only for an environmental reason
 (for example a sandbox blocks a test) commits its work, returns `blocked` /
 `blocked:environment`, and the worker continues to the next member; any other
 stop halts the batch. The parent unwinds un-run followers with

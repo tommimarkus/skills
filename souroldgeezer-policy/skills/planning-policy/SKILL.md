@@ -41,7 +41,7 @@ An unresolved domain-design choice invokes its owning design skill before approv
   resolve before approval and dispatch. The [binding scaffold](references/templates/capability-binding-v1.json)
   binds plan, requirements, and executor; [host tiers](references/host-tiers.json)
   selects managed models and effort. Only managed workers use
-  [worker handoff](references/worker-handoff.md) `check-changeset`, and `run-acceptance`;
+  [worker handoff](references/worker-handoff.md), `check-changeset`, and `run-acceptance`;
   managed verifiers use [verify handoff](references/verify-handoff.md).
 - **Managed lifecycle:** the parent uses [planning_ledger.py](references/scripts/planning_ledger.py),
   the stable shim over [planningledger/](references/scripts/planningledger/),
