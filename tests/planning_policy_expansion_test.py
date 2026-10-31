@@ -1,7 +1,9 @@
 """Behavior of the deterministic plan expander behind expand_plan.py."""
 
+import contextlib
 import copy
 import hashlib
+import io
 import json
 import subprocess
 import sys
@@ -9,7 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.surface_test_lib import REPO_ROOT
+from tests.surface_test_lib import REPO_ROOT, load_script_module
 
 SCRIPTS = REPO_ROOT / "souroldgeezer-policy/skills/planning-policy/references/scripts"
 EXPAND = SCRIPTS / "expand_plan.py"
@@ -28,6 +30,8 @@ STUB_PREDECESSOR = {
 
 sys.path.insert(0, str(SCRIPTS))
 from planningledger import core, expand, plancontract  # noqa: E402
+
+LEDGER_MODULE = load_script_module("planning_ledger_expansion_shim", LEDGER)
 
 
 def run(script, *arguments):
@@ -52,7 +56,9 @@ class ExpansionCase(unittest.TestCase):
         template_path = self.root / "template.json"
         index_path = self.root / "index.jsonl"
         template_path.write_text(json.dumps(self.template if template is None else template))
-        index_path.write_text(jsonl(self.rows if rows is None else rows) if index_text is None else index_text)
+        if index_text is None:
+            index_text = jsonl(self.rows if rows is None else rows)
+        index_path.write_text(index_text)
         return ["--template", template_path, "--index", index_path]
 
     def expand(self, command, *extra, **variant):
@@ -65,6 +71,41 @@ class ExpansionCase(unittest.TestCase):
         self.assertIn(fragment, "\n".join(report["errors"]))
         self.assertEqual(b"", result.stderr)
 
+    def plain_template(self, max_leaves=12, **types):
+        def simple(**fields):
+            return {
+                "task": "Make {id}", "boundary": "Only touch out/{id}.txt.",
+                "write_set": ["out/{id}.txt"], "read_set_extra": [],
+                "acceptance_command": "uv run python -m unittest tests.check_{id}",
+                "size": "small", "portable_tier": "mechanical", "max_attempts": 2,
+                "settled_decisions": {"mode": "plain"},
+                "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
+                "batch": True, **fields,
+            }
+
+        return {
+            "schema": "planning-expansion-template-v1", "objective": "Plain objective",
+            "scope_summary": "Plain scope", "approved_decisions": ["Plain decision."],
+            "series": {"series_id": "plain-series", "max_leaves": max_leaves,
+                       "end_verification_commands": ["uv run python -m unittest tests.plain"]},
+            "owner_prefix": "p/",
+            "types": {name: simple(**fields) for name, fields in (types or {"unit": {}}).items()},
+        }
+
+    @staticmethod
+    def plain_rows(*specs):
+        """Rules from (id, type[, deps]) triples, each with a unique spec path."""
+        return [{"id": i, "type": t, "deps": list(rest[0]) if rest else [],
+                 "spec": f"specs/{i}.md", "refs": []} for i, t, *rest in specs]
+
+    def plain_slice(self, template, rows, number=1):
+        template_path, index_path = self.root / "t.json", self.root / "i.jsonl"
+        template_path.write_text(json.dumps(template))
+        index_path.write_text(jsonl(rows))
+        parsed = expand.load_template(template_path)
+        expansion = expand.build(parsed, expand.load_index(index_path, parsed))
+        return expand.emit_slice(expansion, number, None if number == 1 else STUB_PREDECESSOR)
+
     def partition(self):
         result = run(EXPAND, "partition", "--template", TEMPLATE, "--index", INDEX)
         self.assertEqual(0, result.returncode, result.stderr)
@@ -72,11 +113,16 @@ class ExpansionCase(unittest.TestCase):
 
     def validate_files(self, *plans):
         repository = self.root / "repository"
-        repository.mkdir(exist_ok=True)
+        (repository / "tests").mkdir(parents=True, exist_ok=True)
+        (repository / "tests" / "notes.txt").write_text("nothing here pins a written path\n")
         for plan in plans:
-            result = run(VALIDATE, "validate", plan, "--pin-roots", "tests", "--repo-root", repository)
+            result = run(
+                VALIDATE, "validate", plan, "--pin-roots", "tests", "--repo-root", repository
+            )
             report = json.loads(result.stdout)
             self.assertEqual((0, True, []), (result.returncode, report["valid"], report["errors"]))
+            scan = report["pin_scan"]
+            self.assertEqual((["tests"], [], {}), (scan["roots"], scan["roots_missing"], scan["leaves"]))
 
 
 class FixturePartitionAndGoldenTest(ExpansionCase):
@@ -128,7 +174,7 @@ class FixturePartitionAndGoldenTest(ExpansionCase):
         self.assertIn("u1", leaves["u3"]["dependencies"])
         self.assertTrue(plancontract.validate(golden, admission=True)["valid"])
 
-    def test_slice_two_matches_its_golden_with_a_real_predecessor_replaced_by_the_stub(self):
+    def test_slice_two_emitted_with_the_stub_predecessor_matches_its_golden(self):
         plan = expand_slice_two(self, STUB_PREDECESSOR)
         golden = json.loads((FIXTURES / "expected-slice-2.json").read_text())
         self.assertEqual(STUB_PREDECESSOR, golden["series"]["predecessor"])
@@ -142,8 +188,8 @@ class FixturePartitionAndGoldenTest(ExpansionCase):
             "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
             followers["u7"]["settled_decisions"]["exemplar_pattern"],
         )
-        self.assertEqual(followers["u6"]["batch"], followers["u7"]["batch"])
-        self.assertNotIn("batch", followers["u5"])
+        # u7 has an in-slice dependency (d3) its predecessor u6 lacks, so no batch forms.
+        self.assertEqual([], [i for i, leaf in followers.items() if "batch" in leaf])
 
     def test_every_emitted_and_golden_slice_passes_the_validator_with_pin_roots(self):
         emitted = self.root / "slice-1.json"
@@ -173,21 +219,48 @@ def expand_slice_two(case, predecessor):
 
 
 class LedgerSeriesTest(ExpansionCase):
+    """Slices chained through the real ledger: only a completed, matching chain is followed."""
+
+    def setUp(self):
+        super().setUp()
+        self.template["verification"] = "closeout-only"
+        self.template["types"]["unit"]["batch"] = False
+        self.template["series"]["max_leaves"] = 4
+
     def common(self):
-        return ["--ledger-root", self.root, "--repo-root", self.root]
+        return ["--ledger-root", str(self.root), "--repo-root", str(self.root)]
+
+    def ledger_call(self, *arguments):
+        with contextlib.redirect_stdout(io.StringIO()) as stream:
+            code = LEDGER_MODULE.main([*self.common(), *map(str, arguments)])
+        return code, json.loads(stream.getvalue())
 
     def ledger(self, *arguments):
-        result = run(LEDGER, *self.common(), *arguments)
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        return json.loads(result.stdout)
+        code, result = self.ledger_call(*arguments)
+        self.assertEqual(0, code, result)
+        return result
 
-    def emit(self, number, name, *extra, template=None):
+    def emit(self, number, name, *extra, template=None, rows=None):
         path = self.root / f"{name}.json"
         result = run(
-            EXPAND, "slice", *self.files(template=template), "--slice", number, "--out", path,
-            *self.common(), *extra,
+            EXPAND, "slice", *self.files(template=template, rows=rows), "--slice", number,
+            "--out", path, *self.common(), *extra,
         )
         return result, path
+
+    def emit_ok(self, number, name, *extra, **variant):
+        result, path = self.emit(number, name, *extra, **variant)
+        self.assertEqual(0, result.returncode, result.stdout)
+        return path
+
+    def api_slice(self, number, name, predecessor):
+        """A slice built through the API, for a predecessor the CLI would refuse."""
+        _, template_path, _, index_path = self.files()
+        template = expand.load_template(template_path)
+        expansion = expand.build(template, expand.load_index(index_path, template))
+        path = self.root / f"{name}.json"
+        path.write_bytes(core.canon(expand.emit_slice(expansion, number, predecessor)))
+        return path
 
     def init(self, plan_id, path):
         plan = json.loads(path.read_text())
@@ -207,8 +280,7 @@ class LedgerSeriesTest(ExpansionCase):
         assignments = self.root / f"{plan_id}-assignments.json"
         assignments.write_text(json.dumps([
             {"id": leaf["id"], "harness": "codex", "model_or_alias": "gpt-5.6-terra",
-             "effort": "medium",
-             "worktree": f".worktrees/{leaf['worktree_owner'].replace('/', '-')}"}
+             "effort": "medium", "worktree": self.worktree(leaf)}
             for leaf in plan["leaves"]
         ]))
         return self.ledger(
@@ -217,12 +289,74 @@ class LedgerSeriesTest(ExpansionCase):
             "--capability-binding-file", binding, "--pin-roots", "tests",
         )
 
-    def close(self, plan_id, run_id, handoff=None):
+    @staticmethod
+    def worktree(leaf):
+        return f".worktrees/{leaf['worktree_owner'].replace('/', '-')}"
+
+    def checkpoint(self, plan_id, run_id):
+        path = self.root / "planning-policy/ledgers" / plan_id / run_id / "checkpoint.json"
+        return json.loads(path.read_text())
+
+    def drive(self, plan_id, run_id, plan):
+        """Move every leaf, in plan order, to cleaned so a completed close is admissible."""
+        for leaf in plan["leaves"]:
+            step_id = leaf["id"]
+            for target in ("ready", "in_progress"):
+                arguments = ["transition", "--actor", "parent", "--run-id", run_id,
+                             "--step-id", step_id, "--to", target]
+                if target == "ready":
+                    arguments += ["--agent-id", f"agent-{step_id}"]
+                self.ledger("--plan-id", plan_id, *arguments)
+            step = self.checkpoint(plan_id, run_id)["steps"][step_id]
+            returned = self.root / f"{plan_id}-{step_id}-return.json"
+            returned.write_text(json.dumps({
+                "schema": "bounded-step-return-v1", "step_id": step_id,
+                "attempt_id": step["attempt_id"], "agent_id": step["agent_id"],
+                "status": "completed", "changed_paths": [],
+                "acceptance": {"command": leaf["acceptance_command"], "exit_code": 0,
+                               "summary": "ok"},
+                "blockers": [], "notes": [], "unstarted_remainder": [], "commit_hash": "",
+            }))
+            self.ledger("--plan-id", plan_id, "record-return", "--actor", "parent",
+                        "--run-id", run_id, "--return-file", returned)
+            integrated = "b" * 40
+            for target, action in (("integrated", "integrate"), ("cleaned", "cleanup")):
+                value = {
+                    "schema": "planning-worktree-result-v1", "ok": True, "action": action,
+                    "repo_root": str(self.root), "target": "main",
+                    "branch": leaf["worktree_owner"],
+                    "worktree": str(self.root / self.worktree(leaf)),
+                    "source_commit": "a" * 40, "rebased_commit": integrated,
+                    "parent_before": "c" * 40, "parent_after": integrated,
+                }
+                if action == "cleanup":
+                    value["parent_commit"] = integrated
+                result = self.root / f"{plan_id}-{step_id}-{action}.json"
+                result.write_text(json.dumps(value))
+                self.ledger("--plan-id", plan_id, "transition", "--actor", "parent",
+                            "--run-id", run_id, "--step-id", step_id, "--to", target,
+                            "--worktree-result", result)
+
+    def close(self, plan_id, run_id, outcome, final=False):
         arguments = ["--plan-id", plan_id, "close", "--actor", "parent", "--run-id", run_id,
-                     "--outcome", "blocked", "--reason", "fixture"]
-        if handoff:
-            arguments += ["--series-handoff-file", handoff]
+                     "--outcome", outcome, "--reason", "fixture"]
+        if not final:
+            content = self.root / f"{plan_id}-handoff.json"
+            content.write_bytes(core.canon({
+                "landed": ["the slice landed"], "decisions": ["exemplars landed first"],
+                "assumptions_to_revalidate": ["style guide is stable"],
+                "remaining_scope": ["the next slice"],
+            }))
+            arguments += ["--series-handoff-file", content]
         return self.ledger(*arguments)
+
+    def run_slice(self, plan_id, path, outcome="completed", final=False):
+        """Init a slice, drive it to cleaned when completing, and close it."""
+        run_id = self.init(plan_id, path)["run_id"]
+        if outcome == "completed":
+            self.drive(plan_id, run_id, json.loads(path.read_text()))
+        self.close(plan_id, run_id, outcome, final)
+        return run_id
 
     def ledger_bytes(self):
         return {
@@ -231,69 +365,140 @@ class LedgerSeriesTest(ExpansionCase):
             if path.is_file() and "planning-policy" in path.parts
         }
 
-    def test_the_series_runs_end_to_end_without_the_expander_touching_the_ledger(self):
-        first_result, first_path = self.emit(1, "slice-1")
-        self.assertEqual(0, first_result.returncode, first_result.stdout)
-        run_one = self.init("rule-plan-1", first_path)["run_id"]
-        content = self.root / "handoff.json"
-        content.write_bytes(core.canon({
-            "landed": ["slice 1 pages and units"],
-            "decisions": ["exemplars landed first"],
-            "assumptions_to_revalidate": ["style guide is stable"],
-            "remaining_scope": ["slice 2 units"],
-        }))
-        self.close("rule-plan-1", run_one, content)
-        checkpoint = json.loads(
-            (self.root / "planning-policy/ledgers/rule-plan-1" / run_one / "checkpoint.json")
-            .read_text()
-        )
+    def predecessor_flags(self, plan_id, run_id):
+        return ("--predecessor-plan-id", plan_id, "--predecessor-run-id", run_id)
+
+    def test_a_three_slice_series_chains_through_completed_predecessors(self):
+        first = self.emit_ok(1, "slice-1")
+        run_one = self.run_slice("rule-plan-1", first)
         before = self.ledger_bytes()
-        second_result, second_path = self.emit(
-            2, "slice-2", "--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id", run_one
-        )
-        self.assertEqual(0, second_result.returncode, second_result.stdout)
+        second = self.emit_ok(2, "slice-2", *self.predecessor_flags("rule-plan-1", run_one))
         self.assertEqual(before, self.ledger_bytes())
-        plan = json.loads(second_path.read_text())
+        checkpoint = self.checkpoint("rule-plan-1", run_one)
         self.assertEqual(
             {"plan_id": "rule-plan-1", "run_id": run_one, "plan_sha256": checkpoint["plan_hash"],
-             "outcome": "blocked", "handoff_sha256": checkpoint["series_handoff_sha256"]},
-            plan["series"]["predecessor"],
+             "outcome": "completed", "handoff_sha256": checkpoint["series_handoff_sha256"]},
+            json.loads(second.read_text())["series"]["predecessor"],
         )
-        self.assertEqual(checkpoint["plan_hash"], core.digest(json.loads(first_path.read_text())))
-        replaced = copy.deepcopy(plan)
-        replaced["series"]["predecessor"] = STUB_PREDECESSOR
-        self.assertEqual(json.loads((FIXTURES / "expected-slice-2.json").read_text()), replaced)
-        self.validate_files(first_path, second_path)
-        self.assertEqual("matched", self.init("rule-plan-2", second_path)["series_predecessor"])
+        self.assertEqual(checkpoint["plan_hash"], core.digest(json.loads(first.read_text())))
+        run_two = self.run_slice("rule-plan-2", second)
+        third = self.emit_ok(3, "slice-3", *self.predecessor_flags("rule-plan-2", run_two))
+        plan = json.loads(third.read_text())
+        self.assertEqual(
+            (run_two, ["u6", "u7"], True),
+            (plan["series"]["predecessor"]["run_id"], [x["id"] for x in plan["leaves"]],
+             plan["series"]["final"]),
+        )
+        self.assertEqual("matched", self.init("rule-plan-3", third)["series_predecessor"])
+        self.validate_files(first, second, third)
 
-    def test_a_predecessor_of_another_series_or_the_wrong_slice_is_refused(self):
-        _, first_path = self.emit(1, "slice-1")
-        run_one = self.init("rule-plan-1", first_path)["run_id"]
-        self.close("rule-plan-1", run_one)
-        predecessor = ("--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id", run_one)
+    def test_a_blocked_predecessor_is_refused_with_the_hand_groom_pointer(self):
+        run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"), "blocked")
+        result, _ = self.emit(2, "slice-2", *self.predecessor_flags("rule-plan-1", run_one))
+        self.refused(result, 1, "predecessor slice 1 closed blocked, not completed")
+        self.assertIn("Successor on a blocked predecessor", json.loads(result.stdout)["errors"][0])
+
+    def test_an_ancestor_that_is_not_completed_is_refused(self):
+        first = self.emit_ok(1, "slice-1")
+        run_one = self.run_slice("rule-plan-1", first, "blocked")
+        checkpoint = self.checkpoint("rule-plan-1", run_one)
+        block = {"plan_id": "rule-plan-1", "run_id": run_one,
+                 "plan_sha256": checkpoint["plan_hash"], "outcome": "blocked",
+                 "handoff_sha256": checkpoint["series_handoff_sha256"]}
+        second = self.api_slice(2, "slice-2", block)
+        run_two = self.run_slice("rule-plan-2", second)
+        result, _ = self.emit(3, "slice-3", *self.predecessor_flags("rule-plan-2", run_two))
+        self.refused(result, 1, "predecessor slice 1 closed blocked, not completed")
+
+    def test_a_predecessor_of_another_series_or_slice_is_refused(self):
+        run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
+        flags = self.predecessor_flags("rule-plan-1", run_one)
         other = copy.deepcopy(self.template)
         other["series"]["series_id"] = "other-series"
-        result, _ = self.emit(2, "other", *predecessor, template=other)
-        self.refused(result, 1, "series")
-        _, second_path = self.emit(2, "slice-2", *predecessor)
-        run_two = self.init("rule-plan-2", second_path)["run_id"]
-        self.close("rule-plan-2", run_two)
-        result, _ = self.emit(
-            2, "again", "--predecessor-plan-id", "rule-plan-2", "--predecessor-run-id", run_two
-        )
-        self.refused(result, 1, "slice")
+        result, _ = self.emit(2, "other", *flags, template=other)
+        self.refused(result, 1, "predecessor slice 1 belongs to series rule-series, not other-series")
+        second = self.emit_ok(2, "slice-2", *flags)
+        run_two = self.run_slice("rule-plan-2", second)
+        result, _ = self.emit(2, "again", *self.predecessor_flags("rule-plan-2", run_two))
+        self.refused(result, 1, "predecessor slice 1 is recorded as slice 2")
+
+    def test_a_grown_index_or_a_final_predecessor_is_refused(self):
+        run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
+        flags = self.predecessor_flags("rule-plan-1", run_one)
+        grown = [{"id": "d0", "type": "doc", "deps": [], "spec": "specs/d0.md", "refs": []},
+                 *self.rows]
+        result, _ = self.emit(2, "grown", *flags, rows=grown)
+        self.refused(result, 1, "predecessor slice 1 does not match this partition (index changed?)")
+        short = [row for row in self.rows if row["id"] in {"d1", "d2", "u1", "u2"}]
+        final_run = self.run_slice("rule-plan-9", self.emit_ok(1, "short", rows=short), final=True)
+        result, _ = self.emit(2, "after-final", *self.predecessor_flags("rule-plan-9", final_run))
+        self.refused(result, 1, "predecessor slice 1 is final; the series has ended")
+
+    def test_a_missing_or_unclosed_predecessor_is_refused(self):
+        run_one = self.run_slice("rule-plan-1", self.emit_ok(1, "slice-1"))
         missing = "22222222-2222-4222-8222-222222222222"
-        result, _ = self.emit(
-            2, "gone", "--predecessor-plan-id", "rule-plan-1", "--predecessor-run-id", missing
+        result, _ = self.emit(2, "gone", *self.predecessor_flags("rule-plan-1", missing))
+        self.refused(result, 1, "cannot load predecessor run: unresolvable predecessor run")
+        open_run = self.init("rule-plan-3", self.emit_ok(1, "open"))["run_id"]
+        result, _ = self.emit(2, "open-successor", *self.predecessor_flags("rule-plan-3", open_run))
+        self.refused(result, 1, "predecessor slice 1 is not closed")
+        self.assertTrue(run_one)
+
+
+class BatchingTest(ExpansionCase):
+    def batches(self, plan):
+        groups = {}
+        for leaf in plan["leaves"]:
+            if "batch" in leaf:
+                groups.setdefault(leaf["batch"], []).append(leaf["id"])
+        return groups
+
+    def test_a_run_of_nine_splits_into_five_and_four(self):
+        ids = [f"a{n}" for n in range(1, 10)]
+        plan = self.plain_slice(self.plain_template(), self.plain_rows(*[(i, "unit") for i in ids]))
+        groups = list(self.batches(plan).values())
+        self.assertEqual([ids[:5], ids[5:]], groups)
+        self.assertEqual(
+            {"p/unit-batch-a1", "p/unit-batch-a6"}, {x["worktree_owner"] for x in plan["leaves"]}
         )
-        self.refused(result, 1, "predecessor")
-        _, open_path = self.emit(1, "open")
-        open_run = self.init("rule-plan-3", open_path)["run_id"]
-        result, _ = self.emit(
-            2, "open-successor", "--predecessor-plan-id", "rule-plan-3",
-            "--predecessor-run-id", open_run,
+
+    def test_a_leaf_with_an_extra_external_dependency_starts_a_new_run(self):
+        rows = self.plain_rows(
+            ("z", "doc"), ("p1", "unit"), ("p2", "unit"), ("p3", "unit", ["z"]), ("p4", "unit", ["z"])
         )
-        self.refused(result, 1, "closed")
+        template = self.plain_template(doc={"batch": False}, unit={})
+        plan = self.plain_slice(template, rows)
+        self.assertEqual({"unit-batch-p1": ["p1", "p2"], "unit-batch-p3": ["p3", "p4"]},
+                         self.batches(plan))
+        solo = self.plain_slice(template, self.plain_rows(("z", "doc"), ("p1", "unit"),
+                                                          ("p2", "unit", ["z"])))
+        self.assertEqual({}, self.batches(solo))
+
+    def test_a_member_may_depend_on_an_earlier_member_of_its_run(self):
+        plan = self.plain_slice(self.plain_template(), self.plain_rows(
+            ("p1", "unit"), ("p2", "unit", ["p1"]), ("p3", "unit", ["p2"])))
+        self.assertEqual({"unit-batch-p1": ["p1", "p2", "p3"]}, self.batches(plan))
+
+    def test_colliding_batch_names_fall_back_to_numbers_or_are_refused(self):
+        template = self.plain_template(**{"x": {}, "x-batch-y": {}})
+        rows = self.plain_rows(("y-batch-z", "x"), ("xa", "x"), ("z", "x-batch-y"),
+                               ("zb", "x-batch-y"))
+        plan = self.plain_slice(template, rows)
+        self.assertEqual({"x-batch-y-batch-z": ["y-batch-z", "xa"],
+                          "x-batch-y-batch-2": ["z", "zb"]}, self.batches(plan))
+        template = self.plain_template(doc={"batch": False}, unit={})
+        taken = self.plain_rows(("unit-batch-p1", "doc"), ("p1", "unit"), ("p2", "unit"))
+        plan = self.plain_slice(template, taken)
+        self.assertEqual({"unit-batch-1": ["p1", "p2"]}, self.batches(plan))
+        both = self.plain_rows(("unit-batch-p1", "doc"), ("unit-batch-1", "doc"),
+                               ("p1", "unit"), ("p2", "unit"))
+        self.refused(self.expand("partition", template=template, rows=both), 1,
+                     "cannot name a batch for type unit")
+
+    def test_literal_braces_render_and_placeholders_fill(self):
+        template = self.plain_template(unit={"task": "Keep {{id}} literal for {id} ({type})"})
+        plan = self.plain_slice(template, self.plain_rows(("p1", "unit")))
+        self.assertEqual("Keep {id} literal for p1 (unit)", plan["leaves"][0]["task"])
 
 
 class RefusalTest(ExpansionCase):
@@ -309,18 +514,18 @@ class RefusalTest(ExpansionCase):
             return rows
 
         cases = {
-            "cycle": (edit(1, deps=["u7"]), "dependency cycle"),
+            "cycle": (edit(1, deps=["u7"]), "dependency cycle: d2 -> "),
             "unknown dependency": (edit(2, deps=["nope"]), "line 3: unknown dependency nope"),
             "unknown type": (edit(2, type="widget"), "line 3: unknown type widget"),
             "duplicate id": (edit(3, id="u1"), "line 4: duplicate id u1"),
-            "self dependency": (edit(3, deps=["u2"]), "depends on itself"),
-            "exemplar flag value": (edit(4, exemplar=False), "exemplar must be true"),
-            "unknown key": (edit(4, extra=1), "unknown keys"),
-            "empty spec": (edit(4, spec=""), "spec"),
+            "self dependency": (edit(3, deps=["u2"]), "line 4: u2 depends on itself"),
+            "exemplar flag value": (edit(4, exemplar=False), "line 5: exemplar must be true"),
+            "unknown key": (edit(4, extra=1), "line 5: rule has unknown keys ['extra']"),
+            "empty spec": (edit(4, spec=""), "line 5: spec and refs must be repository-relative"),
         }
         rows_two = edit(2, exemplar=True)
         rows_two[3]["exemplar"] = True
-        cases["two exemplars"] = (rows_two, "more than one exemplar")
+        cases["two exemplars"] = (rows_two, "line 4: more than one exemplar for type unit")
         for name, (rows, fragment) in cases.items():
             with self.subTest(name):
                 self.refused(self.expand("partition", rows=rows), 1, fragment)
@@ -330,13 +535,13 @@ class RefusalTest(ExpansionCase):
         rows = copy.deepcopy(self.rows)
         rows[2]["exemplar"] = True
         self.refused(self.expand("partition", template=no_declaration, rows=rows), 1,
-                     "declares no exemplar")
+                     "line 3: type unit declares no exemplar")
 
     def test_index_file_shape_errors(self):
         text = INDEX.read_text()
         cases = {
             "blank line": (text.replace("\n", "\n\n", 1), "line 2: blank line"),
-            "not json": (text + "{oops\n", "line 11"),
+            "not json": (text + "{oops\n", "line 11: not valid JSON"),
             "not an object": ("[1]\n", "line 1: rule must be an object"),
             "empty": ("", "no rules"),
         }
@@ -355,15 +560,15 @@ class RefusalTest(ExpansionCase):
             "format spec": (self.type_edit("doc", boundary="Do {id:>4}"), "types.doc.boundary"),
             "positional": (self.type_edit("doc", acceptance_command="run {}"),
                            "types.doc.acceptance_command"),
-            "empty rendering": (self.type_edit("doc", task="   "), "renders empty"),
-            "unknown top key": ({**template, "extra": 1}, "unknown keys"),
-            "bad schema": ({**template, "schema": "other"}, "schema"),
+            "empty rendering": (self.type_edit("doc", task="   "), "types.doc.task renders empty or whitespace-only for rule"),
+            "unknown top key": ({**template, "extra": 1}, "template has unknown keys ['extra']"),
+            "bad schema": ({**template, "schema": "other"}, "schema must be planning-expansion-template-v1"),
             "too many leaves": ({**template, "series": {**template["series"], "max_leaves": 13}},
-                                "max_leaves"),
+                                "series.max_leaves must be an integer from 1 to 12"),
             "skill follower": (self.type_edit("unit", capability_requirements={
                 "baseline": "plan-step-base-v1",
                 "additional": [{"kind": "skill", "name": "x", "reason": "y"}]}),
-                               "Skill tool"),
+                               "mechanical wrappers that lack the Skill tool"),
             "exemplar type tier": (self.type_edit("doc", portable_tier="standard"),
                                    "followers of an exemplar run at mechanical"),
             "exemplar tier": (self.type_edit("doc", exemplar={"portable_tier": "deep"}),
@@ -371,8 +576,8 @@ class RefusalTest(ExpansionCase):
             "unrequired risk": (self.type_edit("unit", irreducible_unknown_or_risk="why"),
                                 "types.unit.irreducible_unknown_or_risk"),
             "reserved decision": (self.type_edit("doc", settled_decisions={
-                "exemplar_pattern": "mine"}), "exemplar_pattern"),
-            "bad branch": ({**template, "owner_prefix": "rules~"}, "branch name"),
+                "exemplar_pattern": "mine"}), "must not contain exemplar_pattern"),
+            "bad branch": ({**template, "owner_prefix": "rules~"}, "owner_prefix does not form a valid git branch name"),
         }
         for name, (variant, fragment) in cases.items():
             with self.subTest(name):
@@ -383,7 +588,78 @@ class RefusalTest(ExpansionCase):
         for row in rows:
             row.pop("exemplar", None)
         rows[7]["exemplar"] = True
-        self.refused(self.expand("partition", rows=rows), 1, "before its exemplar")
+        self.refused(self.expand("partition", rows=rows), 1, "is a dependency of exemplar d3")
+
+    def test_the_ordering_hint_depends_on_why_the_follower_comes_first(self):
+        rows = self.plain_rows(("x1", "doc"), ("x2", "doc"), ("y1", "unit", ["x1"]))
+        rows[1]["exemplar"] = True
+        template = self.plain_template(doc={"exemplar": {"portable_tier": "standard"}},
+                                       unit={"exemplar": {"portable_tier": "standard"}})
+        self.refused(self.expand("partition", template=template, rows=rows), 1,
+                     "rule x1 (type doc) is ordered before its exemplar x2; add x2 to its deps")
+        chained = self.plain_rows(("x1", "doc"), ("x2", "doc", ["x1"]))
+        chained[1]["exemplar"] = True
+        result = self.expand("partition", template=template, rows=chained)
+        self.refused(result, 1, "rule x1 (type doc) is a dependency of exemplar x2; "
+                     "choose another exemplar")
+        self.assertNotIn("add x2", result.stdout.decode())
+
+    def test_untrusted_values_never_raise(self):
+        def with_type(**fields):
+            return self.type_edit("doc", **fields)
+
+        cases = {
+            "size list": (with_type(size=["small"]), None,
+                          "types.doc.size must be small, medium, or large"),
+            "tier list": (with_type(portable_tier=["mechanical"]), None,
+                          "types.doc.portable_tier is not a known tier"),
+            "exemplar tier list": (with_type(exemplar={"portable_tier": ["standard"]}), None,
+                                   "types.doc.exemplar.portable_tier must be standard or analytical"),
+            "size object": (with_type(size={"a": 1}), None,
+                            "types.doc.size must be small, medium, or large"),
+            "precision list": ({**self.template, "precision": ["strict"]}, None,
+                               "precision must be standard or strict"),
+            "verification list": ({**self.template, "verification": ["per-leaf"]}, None,
+                                  "verification must be per-leaf or closeout-only"),
+            "decision list": ({**self.template, "approved_decisions": [["x"]]}, None,
+                              "approved_decisions entries must be non-empty strings"),
+            "rule type list": (None, {"type": ["doc"]}, "line 3: type must be a string"),
+            "rule deps nested": (None, {"deps": [["d2"]]}, "line 3: deps must be an array of rule ids"),
+            "rule id list": (None, {"id": ["u1"]}, "line 3: id must be a stable bounded identifier"),
+            "rule refs scalar": (None, {"refs": 5}, "line 3: spec and refs must be repository-relative"),
+        }
+        for name, (template, edit, fragment) in cases.items():
+            with self.subTest(name):
+                rows = None
+                if edit:
+                    rows = copy.deepcopy(self.rows)
+                    rows[2].update(edit)
+                self.refused(self.expand("partition", template=template, rows=rows), 1, fragment)
+
+    def test_deeply_nested_json_is_refused_cleanly(self):
+        nested = "[" * 100000 + "]" * 100000
+        template_path = self.root / "deep-template.json"
+        template_path.write_text(nested)
+        result = run(EXPAND, "partition", "--template", template_path, "--index", INDEX)
+        self.refused(result, 1, "template is nested too deeply")
+        result = self.expand("partition", index_text=nested + "\n")
+        self.refused(result, 1, "line 1: nested too deeply")
+
+    def test_the_input_size_limits_are_enforced(self):
+        big = self.root / "big"
+        big.write_bytes(b" " * (256 * 1024 + 1))
+        result = run(EXPAND, "partition", "--template", big, "--index", INDEX)
+        self.refused(result, 1, "template exceeds 262144 bytes")
+        index = self.root / "big-index"
+        index.write_bytes(b" " * (8 * 1024 * 1024 + 1))
+        result = run(EXPAND, "partition", "--template", TEMPLATE, "--index", index)
+        self.refused(result, 1, "index exceeds 8388608 bytes")
+
+    def test_a_partition_summary_over_the_cap_is_refused(self):
+        template = self.plain_template(max_leaves=1)
+        rows = self.plain_rows(*[(f"p{n:04d}", "unit") for n in range(1500)])
+        result = self.expand("partition", template=template, rows=rows)
+        self.refused(result, 1, "partition summary exceeds 64 KiB")
 
     def test_usage_errors_exit_two(self):
         base = ("--template", TEMPLATE, "--index", INDEX)
@@ -410,13 +686,13 @@ class RefusalTest(ExpansionCase):
 
     def test_a_validator_invalid_template_is_refused_with_the_validator_errors(self):
         noop = self.type_edit("doc", acceptance_command="true")
-        self.refused(self.expand("slice", "--slice", 1, template=noop), 1, "known no-op")
+        self.refused(self.expand("slice", "--slice", 1, template=noop), 1, "leaves[0].acceptance_command cannot be a known no-op command")
         shared = self.type_edit("doc", write_set=["docs/shared.md"])
         shared["types"]["doc"].pop("exemplar")
         rows = [{"id": name, "type": "doc", "deps": [], "spec": f"specs/{name}.md", "refs": []}
                 for name in ("p1", "p2")]
         self.refused(self.expand("slice", "--slice", 1, template=shared, rows=rows), 1,
-                     "overlapping write")
+                     "have overlapping write coverage")
         self.refused(self.expand("partition", template=noop), 1, "slice 1: leaves[0]")
         self.refused(self.expand("partition", template=noop), 1, "known no-op")
 
@@ -440,7 +716,7 @@ class RefusalTest(ExpansionCase):
             self.assertLessEqual(len(core.canon(plan)), plancontract.HANDOFF_PLAN_MAX)
         one = [{**rows[0], "id": "huge"}]
         template["types"]["doc"]["task"] = "x" * 70000
-        self.refused(self.expand("partition", template=template, rows=one), 1, "exceeds")
+        self.refused(self.expand("partition", template=template, rows=one), 1, "alone exceeds the 65536-byte plan cap")
 
 
 if __name__ == "__main__":

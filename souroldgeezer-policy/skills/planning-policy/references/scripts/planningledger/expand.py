@@ -125,6 +125,8 @@ def load_template(path: str | Path) -> JsonObject:
     raw = _read(path, MAX_TEMPLATE_BYTES, "template")
     try:
         value: JsonValue = json.loads(raw)
+    except RecursionError as exc:
+        raise InputErrors(["template is nested too deeply"]) from exc
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InputErrors([f"template is not valid JSON: {exc}"]) from exc
     errors = _template_errors(value)
@@ -174,7 +176,7 @@ def _exemplar_errors(exemplar: JsonValue, path: str) -> list[str]:
     unknown = set(exemplar) - {"portable_tier", "irreducible_unknown_or_risk"}
     errors = [f"{path} has unknown keys {sorted(unknown)}"] if unknown else []
     tier = exemplar.get("portable_tier")
-    if tier not in EXEMPLAR_TIERS:
+    if plancontract.hashable(tier) not in EXEMPLAR_TIERS:
         return [*errors, f"{path}.portable_tier must be standard or analytical"]
     return [*errors, *_risk_errors(exemplar, tier == "analytical", path)]
 
@@ -205,9 +207,10 @@ def _type_errors(name: str, spec: JsonValue) -> list[str]:
         errors += _template_text_errors(spec[key], f"{path}.{key}")
     errors += _text_list_errors(spec["write_set"], f"{path}.write_set", False)
     errors += _text_list_errors(spec["read_set_extra"], f"{path}.read_set_extra", True)
-    if spec["size"] not in plancontract.SIZES:
+    if plancontract.hashable(spec["size"]) not in plancontract.SIZES:
         errors.append(f"{path}.size must be small, medium, or large")
-    if spec["portable_tier"] not in plancontract.TIERS:
+    tier = plancontract.hashable(spec["portable_tier"])
+    if tier not in plancontract.TIERS:
         errors.append(f"{path}.portable_tier is not a known tier")
     if not _is_int(spec["max_attempts"]):
         errors.append(f"{path}.max_attempts must be an integer")
@@ -241,8 +244,8 @@ def _type_errors(name: str, spec: JsonValue) -> list[str]:
                 f"{path}.portable_tier must be mechanical: followers of an exemplar run at "
                 "mechanical"
             )
-    if spec["portable_tier"] in plancontract.TIERS:
-        errors += _risk_errors(spec, spec["portable_tier"] in {"analytical", "deep"}, path)
+    if tier in plancontract.TIERS:
+        errors += _risk_errors(spec, tier in {"analytical", "deep"}, path)
     return errors
 
 
@@ -309,6 +312,9 @@ def load_index(path: str | Path, template: JsonObject) -> list[JsonObject]:
             continue
         try:
             value: JsonValue = json.loads(line)
+        except RecursionError:
+            errors.append(f"line {number}: nested too deeply")
+            continue
         except json.JSONDecodeError as exc:
             errors.append(f"line {number}: not valid JSON: {exc.msg}")
             continue
@@ -428,6 +434,22 @@ def _rules(raw_rules: list[JsonObject], template: JsonObject) -> list[Rule]:
     return rules
 
 
+def _before_exemplar_error(by_id: dict[str, Rule], rule: Rule, exemplar: Rule) -> str:
+    head = f"rule {rule.id} (type {rule.type})"
+    pending, seen = list(exemplar.deps), set()
+    while pending:
+        current = pending.pop()
+        if current not in seen:
+            seen.add(current)
+            pending.extend(by_id[current].deps)
+    if rule.id in seen:
+        return f"{head} is a dependency of exemplar {exemplar.id}; choose another exemplar"
+    return (
+        f"{head} is ordered before its exemplar {exemplar.id}; add {exemplar.id} to its deps "
+        "or choose another exemplar"
+    )
+
+
 def build(template: JsonObject, raw_rules: list[JsonObject]) -> Expansion:
     """Order, choose exemplars, check renderings, and partition; a pure function of its input."""
     rules = _rules(raw_rules, template)
@@ -449,13 +471,11 @@ def build(template: JsonObject, raw_rules: list[JsonObject]) -> Expansion:
             pending.extend(by_id[current].deps)
     order = [r for r in base if r.id in front] + [r for r in base if r.id not in front]
     position = {rule.id: index for index, rule in enumerate(order)}
-    errors = [
-        f"rule {rule.id} (type {rule.type}) is ordered before its exemplar {ex.id}; add {ex.id} "
-        "to its deps or choose another exemplar"
-        for rule in order
-        for ex in [exemplars.get(rule.type)]
-        if ex is not None and ex is not rule and position[rule.id] < position[ex.id]
-    ]
+    errors = []
+    for rule in order:
+        ex = exemplars.get(rule.type)
+        if ex is not None and ex is not rule and position[rule.id] < position[ex.id]:
+            errors.append(_before_exemplar_error(by_id, rule, ex))
     limit = template["series"].get("max_leaves", plancontract.PLAN_SCALE_LEAF_LIMIT)
     expansion = Expansion(
         template,
@@ -598,45 +618,78 @@ def _leaf(expansion: Expansion, rule: Rule, start: int, end: int) -> JsonObject:
     return leaf
 
 
-def _assign_batches(expansion: Expansion, members: list[Rule], leaves: list[JsonObject]) -> None:
-    template = expansion.template
+def _leader_runs(indices: list[int], leaves: list[JsonObject]) -> list[list[int]]:
+    """Split consecutive leaves so no member waits on anything its run's first member does not.
+
+    Ledger readiness checks only a batch leader's own dependencies, yet dispatch readies every
+    member, so a member's dependencies outside the run must be a subset of the leader's.
+    """
     runs: list[list[int]] = []
+    for index in indices:
+        dependencies = set(leaves[index]["dependencies"])
+        if runs:
+            members = {leaves[member]["id"] for member in runs[-1]}
+            if dependencies - members <= set(leaves[runs[-1][0]]["dependencies"]):
+                runs[-1].append(index)
+                continue
+        runs.append([index])
+    return runs
+
+
+def _batch_groups(
+    expansion: Expansion, members: list[Rule], leaves: list[JsonObject]
+) -> list[list[int]]:
+    """Index groups of 2 to 8 same-type batchable leaves that may share one batch."""
+    stretches: list[list[int]] = []
     previous = None
     for index, rule in enumerate(members):
         batchable = (
-            template["types"][rule.type]["batch"]
+            expansion.template["types"][rule.type]["batch"]
             and leaves[index]["portable_tier"] in plancontract.BATCHABLE_TIERS
             and rule is not expansion.exemplars.get(rule.type)
         )
         if not batchable:
             previous = None
         elif previous == rule.type:
-            runs[-1].append(index)
+            stretches[-1].append(index)
         else:
-            runs.append([index])
+            stretches.append([index])
             previous = rule.type
-    number = 0
-    for run in runs:
-        if len(run) < 2:
-            continue
-        groups = -(-len(run) // BATCH_MAX)
-        size, extra = divmod(len(run), groups)
-        cursor = 0
-        for group in range(groups):
-            take = size + (1 if group < extra else 0)
-            chosen = run[cursor : cursor + take]
-            cursor += take
-            number += 1
-            kind = members[chosen[0]].type
-            batch = f"{kind}-batch-{members[chosen[0]].id}"
-            if not plancontract.stable_id(batch):
-                batch = f"{kind}-batch-{number}"
-            owner = template["owner_prefix"] + batch
-            if not plancontract.stable_id(batch) or not plancontract.valid_branch_name(owner):
-                raise InputErrors([f"cannot name a batch for type {kind} in this slice"])
-            for index in chosen:
-                leaves[index]["batch"] = batch
-                leaves[index]["worktree_owner"] = owner
+    groups: list[list[int]] = []
+    for stretch in stretches:
+        for run in _leader_runs(stretch, leaves):
+            count = -(-len(run) // BATCH_MAX)
+            size, extra = divmod(len(run), count)
+            cursor = 0
+            for group in range(count):
+                take = size + (1 if group < extra else 0)
+                for piece in _leader_runs(run[cursor : cursor + take], leaves):
+                    groups.append(piece)
+                cursor += take
+    return [group for group in groups if len(group) > 1]
+
+
+def _assign_batches(expansion: Expansion, members: list[Rule], leaves: list[JsonObject]) -> None:
+    prefix = expansion.template["owner_prefix"]
+    names = {leaf["id"] for leaf in leaves}
+    owners = {leaf["worktree_owner"] for leaf in leaves}
+    for number, group in enumerate(_batch_groups(expansion, members, leaves), 1):
+        kind = members[group[0]].type
+        for name in (f"{kind}-batch-{members[group[0]].id}", f"{kind}-batch-{number}"):
+            if (
+                plancontract.stable_id(name)
+                and name not in names
+                and prefix + name not in owners
+                and plancontract.valid_branch_name(prefix + name)
+            ):
+                break
+        else:
+            raise InputErrors([f"cannot name a batch for type {kind} in this slice"])
+        names.add(name)
+        owners.add(prefix + name)
+        for index in group:
+            leaves[index]["batch"] = name
+            leaves[index]["worktree_owner"] = prefix + name
 
 
 def _build_plan(
@@ -742,31 +795,64 @@ def partition_summary(expansion: Expansion) -> JsonObject:
 # -- command line -------------------------------------------------------------------------
 
 
-def _predecessor(args: argparse.Namespace, expansion: Expansion) -> JsonObject:
-    number = args.slice
-    ledger_root = store.root(args)
+def _load_run(ledger_root: Path, plan_id: str, run_id: str) -> tuple[JsonObject, JsonObject]:
     try:
-        checkpoint, plan = series.load_predecessor_run(
-            ledger_root, args.predecessor_plan_id, args.predecessor_run_id
-        )
+        return series.load_predecessor_run(ledger_root, plan_id, run_id)
     except (Error, OSError, json.JSONDecodeError) as exc:
         raise InputErrors([f"cannot load predecessor run: {exc}"]) from exc
-    if checkpoint.get("outcome") not in plancontract.SERIES_OUTCOMES:
-        raise InputErrors(["predecessor run is not closed; close it before the next slice"])
+
+
+def _chain_errors(
+    expansion: Expansion, checkpoint: JsonObject, plan: JsonObject, number: int
+) -> str | None:
+    """Why run `number` of the predecessor chain cannot be followed, or None."""
+    label = f"predecessor slice {number}"
     block = plan.get("series") or {}
-    if block.get("series_id") != expansion.template["series"]["series_id"]:
-        raise InputErrors(["predecessor plan belongs to a different series"])
-    if block.get("slice") != number - 1:
-        raise InputErrors(
-            [f"predecessor plan is slice {block.get('slice')}, not slice {number - 1}"]
+    if checkpoint.get("outcome") not in plancontract.SERIES_OUTCOMES:
+        return f"{label} is not closed; close it before the next slice"
+    wanted = expansion.template["series"]["series_id"]
+    if block.get("series_id") != wanted:
+        return f"{label} belongs to series {block.get('series_id')}, not {wanted}"
+    if block.get("slice") != number:
+        return f"{label} is recorded as slice {block.get('slice')}"
+    if checkpoint["outcome"] != "completed":
+        return (
+            f"{label} closed {checkpoint['outcome']}, not completed; later slices assume its "
+            "rules landed, so hand-groom the successor per plan-series.md "
+            "'Successor on a blocked predecessor'"
         )
-    return {
-        "plan_id": args.predecessor_plan_id,
-        "run_id": args.predecessor_run_id,
-        "plan_sha256": checkpoint["plan_hash"],
-        "outcome": checkpoint["outcome"],
-        "handoff_sha256": checkpoint.get("series_handoff_sha256") or "",
-    }
+    if block.get("final"):
+        return f"{label} is final; the series has ended"
+    start, end = expansion.slices[number - 1]
+    if [leaf["id"] for leaf in plan["leaves"]] != [r.id for r in expansion.order[start:end]]:
+        return f"{label} does not match this partition (index changed?)"
+    if number == 1 and "predecessor" in block:
+        return f"{label} must have no predecessor"
+    return None
+
+
+def _predecessor(args: argparse.Namespace, expansion: Expansion) -> JsonObject:
+    """The predecessor block for run k-1, after walking the whole chain back to slice 1."""
+    ledger_root = store.root(args)
+    plan_id, run_id = args.predecessor_plan_id, args.predecessor_run_id
+    first: JsonObject | None = None
+    for number in range(args.slice - 1, 0, -1):
+        checkpoint, plan = _load_run(ledger_root, plan_id, run_id)
+        problem = _chain_errors(expansion, checkpoint, plan, number)
+        if problem:
+            raise InputErrors([problem])
+        if first is None:
+            first = {
+                "plan_id": args.predecessor_plan_id,
+                "run_id": args.predecessor_run_id,
+                "plan_sha256": checkpoint["plan_hash"],
+                "outcome": checkpoint["outcome"],
+                "handoff_sha256": checkpoint.get("series_handoff_sha256") or "",
+            }
+        link = plan["series"].get("predecessor") or {}
+        plan_id, run_id = link.get("plan_id"), link.get("run_id")
+    assert first is not None
+    return first
 
 
 def _usage(args: argparse.Namespace) -> None:

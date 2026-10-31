@@ -76,7 +76,6 @@
     },
     {
       "acceptance_command": "uv run python -m unittest tests.unit_u6_test",
-      "batch": "unit-batch-u6",
       "boundary": "Only touch src/u6.py.",
       "capability_requirements": {
         "additional": [
@@ -107,14 +106,13 @@
       ],
       "task": "Implement unit u6 from specs/u6.md",
       "work_unit_id": "u6",
-      "worktree_owner": "rules/unit-batch-u6",
+      "worktree_owner": "rules/u6",
       "write_set": [
         "src/u6.py"
       ]
     },
     {
       "acceptance_command": "uv run python -m unittest tests.unit_u7_test",
-      "batch": "unit-batch-u6",
       "boundary": "Only touch src/u7.py.",
       "capability_requirements": {
         "additional": [
@@ -147,7 +145,7 @@
       ],
       "task": "Implement unit u7 from specs/u7.md",
       "work_unit_id": "u7",
-      "worktree_owner": "rules/unit-batch-u6",
+      "worktree_owner": "rules/u7",
       "write_set": [
         "src/u7.py"
       ]
