@@ -77,7 +77,8 @@ class PlanningPolicyCostTest(unittest.TestCase):
     def test_worker_and_verifier_routes_charge_their_agent_and_handoff(self):
         for name, agent, handoff, budget in (
             # Managed-only guard text remains charged to each managed agent.
-            ("worker", "step", "worker", 2540), ("verifier", "verify", "verify", 1260),
+            # Bounded-intake guidance replaces unbounded acceptance output in worker context.
+            ("worker", "step", "worker", 2980), ("verifier", "verify", "verify", 1260),
         ):
             with self.subTest(route=name):
                 result = self.measure(f"planning-policy-{name}")
@@ -109,7 +110,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
     def test_approval_handoff_route_is_bounded_and_conditional(self):
         result = self.measure("planning-policy-approval-handoff")
         # Strict approval still transports exact JSON; standard never loads it.
-        self.assertLessEqual(result["load_total"], 10300)
+        self.assertLessEqual(result["load_total"], 10600)  # bounded-intake guidance replaces unbounded acceptance output in worker context
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

@@ -427,6 +427,49 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
                 "`record-verify --parent-review` lane.",
             ), heading=heading)
 
+    def test_bounded_worker_intake_is_routed_through_run_acceptance(self) -> None:
+        base = "souroldgeezer-policy/"
+        handoff = self.text(base + "skills/planning-policy/references/worker-handoff.md")
+        assert_phrases(self, handoff, (
+            "run-acceptance --handoff-file HANDOFF",
+            "<skill-dir>/references/scripts/planning_ledger.py\" run-acceptance",
+            "read budget",
+            "`read_set` and `write_set`",
+            "one `extra_read` note",
+            "`+N more`",
+            "both `standard` and `strict`",
+            "`acceptance` object into the return unchanged",
+            "`evidence_error`",
+            "never a stop on its own",
+        ), heading="## Read budget and acceptance")
+        for tier in ("mechanical", "standard", "analytical", "deep"):
+            with self.subTest(agent=tier):
+                assert_phrases(self, self.text(base + f"agents/plan-step-{tier}.md"), (
+                    "`run-acceptance`",
+                    "read budget",
+                    "`extra_read`",
+                ))
+        for tier in ("mechanical", "standard"):
+            assert_phrases(self, self.text(base + f"agents/plan-step-{tier}.md"), (
+                "through `run-acceptance` with its own packet",
+            ))
+        ext = base + "skills/planning-policy/extensions/"
+        assert_phrases(self, self.text(ext + "codex.md"), ("`run-acceptance`", "read budget"))
+        assert_phrases(self, self.text(ext + "claude-code.md"), ("`run-acceptance`",))
+        assert_phrases(self, self.text(base + "skills/planning-policy/references/ledger-contract.md"), (
+            "`run-acceptance`",
+            "--worktree",
+            "never mutates the checkpoint",
+            "`acceptance/<step>/<attempt>/<worker|parent>-<n>.log`",
+        ))
+        assert_phrases(self, self.text(base + "skills/planning-policy/SKILL.md"), ("`run-acceptance`",))
+        assert_phrases(self, self.text(base + "skills/planning-policy/references/plan-contract.md"), (
+            "read budget",
+        ))
+        assert_phrases(self, self.text(base + "skills/planning-policy/references/source-grounding.md"), (
+            "## 2026-10-31 bounded worker intake",
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

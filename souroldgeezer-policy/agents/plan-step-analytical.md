@@ -70,7 +70,7 @@ Run `check-changeset` (see the
 before returning `completed`. If the work cannot fit, stop `oversized:changeset`;
 never shrink it by deleting required content.
 
-Run the acceptance check and report its bounded exit code and summary. Your verification covers only
+Run acceptance only through `run-acceptance` and return its `acceptance` object. Stay within the packet's read budget; report other reads as one `extra_read` note ([worker handoff procedure](../skills/planning-policy/references/worker-handoff.md). Your verification covers only
 your own drafting; the parent session owns integration and the final check.
 
 Return exactly one UTF-8 JSON object using `"schema": "bounded-step-return-v1"`;

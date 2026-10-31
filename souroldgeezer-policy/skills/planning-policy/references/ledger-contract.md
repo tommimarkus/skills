@@ -165,7 +165,7 @@ move is legal right now.
 
 For any step, single or batch member, the parent repairs a `blocked:environment`
 return before recording it: it re-runs the step's identical acceptance command
-at the returned commit wherever the environment allows (for example outside a
+at the returned commit, through `run-acceptance --run-id R --step-id S --worktree DIR` so raw output stays out of the orchestrator context, wherever the environment allows (for example outside a
 sandbox, in a detached checkout under the primary checkout's `.worktrees/`).
 Exit 0 records the step `completed` with the parent's acceptance evidence and a
 `verification_limit` note disclosing the stop; a non-environmental failure
@@ -188,7 +188,7 @@ carrying `batch_source_commits` for a batch — validate every member this way,
 so the closeout order is: integrate every member, then clean every member. The
 artifact's optional `rebased_tree_changed` flag states whether the rebase
 changed the tree: `false` means a leaf's already-recorded acceptance evidence
-stands; `true` means the parent re-runs only that leaf's own scoped acceptance
+stands; `true` means the parent re-runs only that leaf's own scoped acceptance (through `run-acceptance --run-id R --step-id S --worktree DIR`)
 — never the plan's full final verification, which still runs exactly once, at
 closeout.
 
@@ -297,6 +297,16 @@ needs no ledger access. It checks the packet and applies the same return rules
 as `record-return`; it does not normalize fields, execute acceptance or replace
 the parent's current-attempt check. See [worker handoff](worker-handoff.md)
 for both runtime command forms, bounds and authority limits.
+
+`run-acceptance` runs an acceptance command and never mutates the checkpoint.
+Worker mode (`--handoff-file`) runs the packet's command in its worktree; parent
+mode (`--run-id R --step-id S --worktree DIR`) runs the step's effective
+(amended) command in that explicit worktree or checkout. Merged output streams
+to `acceptance/<step>/<attempt>/<worker|parent>-<n>.log` under the run
+directory, never overwriting earlier logs. It prints a paste-ready `acceptance`
+object (with `evidence_path` and `sha256`, and on non-zero exit a 4 KiB
+`excerpt`); its exit status is the command's real status, and `ok: false` means
+the command did not run. Worker usage is in [worker handoff](worker-handoff.md).
 
 ### Bounded step return
 

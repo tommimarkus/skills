@@ -88,7 +88,7 @@ only. Launch the steps a `next` block lists in `concurrent` together
 A `batch` dispatches once: one `spawn_agent` call with ordered member handoffs.
 `dispatch` on the first member starts every member in listed order and returns
 one packet per member. The worker commits
-each, runs its acceptance command, and returns one `bounded-step-return-v1` per member. A member
+each, runs its acceptance through `run-acceptance`, and returns one `bounded-step-return-v1` per member. A member
 whose acceptance fails only for an environmental reason (for example a sandbox
 blocks a test) commits its work, returns `blocked` / `blocked:environment`, and
 the worker continues to the next member; any other stop halts the batch at the
@@ -141,11 +141,11 @@ Call the host mechanism with a prompt containing all of the following:
 - for v5, the assigned work unit's cohesive outcome and `decomposition` context:
   `shape: single` only, or the required `basis` and `rationale` for
   `parallel`/`checkpointed`;
-- named reads and writes;
+- named reads and writes, which with the packet form the worker's read budget;
 - settled decisions and constraints;
 - `size: <small|medium|large>` and portable tier;
 - worktree owner and its persistent worktree path;
-- one acceptance command;
+- one acceptance command, run only through `run-acceptance` (see [worker handoff](../references/worker-handoff.md));
 - the `bounded-step-return-v1` profile below; and
 - any ledger-supplied bounded `retry-remediation-v1` material, without raw
   history; and

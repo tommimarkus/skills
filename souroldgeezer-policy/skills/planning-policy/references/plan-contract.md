@@ -38,6 +38,9 @@ value is invalid. Standard: v5 `read_set` may be absent, and `write_set` and any
 present `read_set` may name areas. Strict: every `write_set` is non-empty and
 exact (no glob characters) and `read_set` is a non-empty exact array. Both
 modes keep exact disjoint parallel write sets and the overlap ordering rule.
+A leaf's `read_set` with `write_set` forms the worker's read budget (see
+[worker handoff](worker-handoff.md)), so supply `read_set` under standard
+precision too, to avoid `extra_read` misses.
 
 `validate PLAN --pin-roots ROOT [ROOT ...] [--repo-root DIR]` adds a read-only
 pin scan: files under the repository-relative roots (hidden directories,

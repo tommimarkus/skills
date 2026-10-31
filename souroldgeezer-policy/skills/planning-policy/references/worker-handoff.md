@@ -16,7 +16,8 @@ python3 -B "<skill-dir>/references/scripts/planning_ledger.py" --repo-root REPO 
 Claude substitutes `${CLAUDE_SKILL_DIR}`. Codex resolves `<skill-dir>` to the
 absolute source directory of the loaded skill. Pass the returned `handoff`
 object unchanged, inline or in an explicitly supplied persistent file, together
-with the host dispatch instructions. A batch carries one packet per member. A
+with the host dispatch instructions. A batch carries one packet per member, and each member's acceptance runs
+through `run-acceptance` with its own packet. A
 member whose acceptance fails only for an environmental reason commits its work,
 returns `blocked:environment`, and the worker continues to the next member; any
 other stop halts the batch. The parent repairs that member per the
@@ -83,3 +84,28 @@ establish live freshness. Acceptance, retry, integration and cleanup remain owne
 by the existing ledger and Git-policy procedures. Parent review, including
 each target the `task` names, precedes that `record-return`; a later deviation
 uses the [ledger contract](ledger-contract.md) `--parent-review` lane.
+
+## Read budget and acceptance
+
+Your read budget is the leaf's `read_set` and `write_set` (an area covers its
+contents), the packet, paths its `task`, `boundary`, or `amendments` name,
+`run-acceptance` evidence logs, and guidance your agent and invoked skills load.
+Read outside it only when the task needs it; report each such repository path
+once in one `extra_read` note (at most 480 characters; truncate as `+N more`).
+This holds under both `standard` and `strict` precision and is never a stop on
+its own.
+
+Run the packet's acceptance command only through:
+
+```text
+python3 -B "${CLAUDE_SKILL_DIR}/references/scripts/planning_ledger.py" run-acceptance --handoff-file HANDOFF
+python3 -B "<skill-dir>/references/scripts/planning_ledger.py" run-acceptance --handoff-file HANDOFF
+```
+
+Output goes to an evidence log under the run's `acceptance/` directory. Paste
+the returned `acceptance` object into the return unchanged. On a non-zero exit,
+use `excerpt` first and `rg` the log rather than reading it whole. The process
+exit status is the command's real status (signal: 128+signal); `ok: false`
+means it did not run, so read `ok` and `exit_code` from the JSON. If evidence
+cannot be written the command still runs, `evidence_path` and `sha256` are
+omitted, and `evidence_error` is added.

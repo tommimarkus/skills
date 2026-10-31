@@ -96,7 +96,7 @@ same turn (several `Agent` calls in one message).
 A declared `batch` dispatches once: call `Agent` a single time with the
 ordered member handoffs, not once per member. `dispatch` on the first member
 starts every member in listed order and returns one packet per member; the
-worker commits each member, runs its own acceptance command, and returns one
+worker commits each member, runs its own acceptance through `run-acceptance`, and returns one
 `bounded-step-return-v1` per member. A member whose acceptance fails only for an environmental reason
 (for example a sandbox blocks a test) commits its work, returns `blocked` /
 `blocked:environment`, and the worker continues to the next member; any other
@@ -129,7 +129,7 @@ plan digest, matching step requirements, and selected executor; task and
 boundary; its assigned work unit's `cohesive_outcome` and `decomposition`
 context (`shape: single` only, or the required `basis` and `rationale` for
 `parallel`/`checkpointed`); named inputs and prior decisions; one scoped
-acceptance check; size band; return contract;
+acceptance check (via `run-acceptance`); size band; return contract;
 and the requested tier, alias, and effort. The parent
 keeps integration and the plan's final verification; an agent verifies only its
 own drafting. If the work exceeds its size band, the agent stops and asks the

@@ -1,5 +1,18 @@
 # Planning Policy Source Grounding
 
+## 2026-10-31 bounded worker intake
+
+Worker output was already bounded, but intake was not: raw acceptance output and
+unbudgeted reads entered worker context. The maintainer settled a read budget
+(the leaf's `read_set` and `write_set` plus named packet sources, with
+out-of-budget reads reported once in an `extra_read` note, under both `standard`
+and `strict`, never a stop on its own) and a 4 KiB failure excerpt. `run-acceptance`
+runs the command for a worker (from its packet) or the parent (from run, step,
+and worktree), streams output to `acceptance/<step>/<attempt>/` evidence logs
+under the run directory, and returns a paste-ready `acceptance` object without
+mutating the checkpoint. Verifiers are unchanged. An opt-in read guard is
+deferred until host hook inputs are verified.
+
 ## 2026-10-24 judgment-led defaults
 
 The maintainer approved proportionate planning and delegation: a clear settled
