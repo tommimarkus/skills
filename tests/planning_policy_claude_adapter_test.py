@@ -77,6 +77,8 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
 
             self.assertRegex(content, rf"(?m)^model: {model}$")
             self.assertRegex(content, rf"(?m)^effort: {effort}$")
+            self.assertIn("references/managed-worker.md", content)
+            content += (ADAPTER.parent.parent / "references/managed-worker.md").read_text()
             self.assertIn("`blocked:missing_input`", content)
             self.assertIn("ask the parent to re-cut", content)
             self.assertIn("Return exactly one UTF-8 JSON object", content)
@@ -130,7 +132,8 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         adapter = ADAPTER.read_text(encoding="utf-8")
         agents = [(tier, (AGENTS / f"{tier}.md").read_text(encoding="utf-8")) for tier in EXPECTED_TIERS]
         documents = [("adapter", adapter, "## Bounded step return")]
-        documents.extend((tier, text, None) for tier, text in agents)
+        managed = (ADAPTER.parent.parent / "references/managed-worker.md").read_text()
+        documents.append(("managed worker", managed, None))
 
         for name, text, heading in documents:
             with self.subTest(document=name):
@@ -154,7 +157,8 @@ class PlanningPolicyClaudeAdapterTest(unittest.TestCase):
         self.assertNotIn("attempt_id` is a positive integer", adapter)
         for tier, content in agents:
             with self.subTest(agent=tier):
-                assert_phrases(self, content, ("do not return it", "helper-generated `attempt_id`"))
+                self.assertIn("references/managed-worker.md", content)
+                assert_phrases(self, managed, ("do not return it", "helper-generated `attempt_id`"))
                 self.assertNotIn("positive integer `attempt_id`", content)
 
 

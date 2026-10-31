@@ -28,7 +28,9 @@ An unresolved domain-design choice invokes its owning design skill before approv
 - **Standard host:** read exactly the selected section:
   [Claude Code standard](extensions/claude-code.md#standard-workflow) or
   [Codex standard](extensions/codex.md#standard-workflow). Do not load managed
-  contracts or tier wrappers for an ordinary assignment.
+  contracts for an ordinary assignment. Select a worker role through the shared
+  [role selection](references/core-workflow.md#role-selection); the four existing
+  `plan-step-*` profiles accept standard briefs and managed assignments.
 - **Strict or existing managed execution:** also read
   [strict workflow](references/strict-workflow.md), [plan contract](references/plan-contract.md),
   and the full selected [Claude Code](extensions/claude-code.md) or [Codex](extensions/codex.md)
@@ -42,6 +44,7 @@ An unresolved domain-design choice invokes its owning design skill before approv
   binds plan, requirements, and executor; [host tiers](references/host-tiers.json)
   selects managed models and effort. Only managed workers use
   [worker handoff](references/worker-handoff.md), `check-changeset`, and `run-acceptance`;
+  managed workers load [managed execution](references/managed-worker.md);
   managed verifiers use [verify handoff](references/verify-handoff.md).
 - **Managed lifecycle:** the parent uses [planning_ledger.py](references/scripts/planning_ledger.py),
   the stable shim over [planningledger/](references/scripts/planningledger/),

@@ -195,12 +195,17 @@
   },
   {
     "id": "planning-policy-worker",
-    "provenance": "Execution exposure: a dispatched standard builder loads its tier agent definition and the worker handoff reference, not SKILL.md.",
+    "provenance": "Managed builder loads its role entry, common managed execution and worker handoff; no managed obligations are hidden from cost.",
     "load_routes": [
       {
         "entry": "plan-step-standard",
         "target": "souroldgeezer-policy/agents/plan-step-standard.md",
         "predicate": "always"
+      },
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/managed-worker.md",
+        "predicate": "conditional:managed-worker"
       },
       {
         "entry": "plan-step-standard",
@@ -331,8 +336,13 @@
   },
   {
     "id": "planning-policy-standard-worker",
-    "provenance": "Native worker receives its self-contained assignment and only the portable standard assignment/return procedure, not managed wrappers.",
+    "provenance": "Standard worker loads its selected role entry and complete lightweight assignment/return procedure without managed machinery.",
     "load_routes": [
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/agents/plan-step-standard.md",
+        "predicate": "always"
+      },
       {
         "entry": "native-worker",
         "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
@@ -348,6 +358,162 @@
         "entry": "native-reviewer",
         "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#independent-review",
         "predicate": "conditional:risk-trigger"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-worker-mechanical",
+    "skill": "planning-policy",
+    "provenance": "Standard mechanical worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-mechanical",
+        "target": "souroldgeezer-policy/agents/plan-step-mechanical.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-mechanical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
+        "predicate": "conditional:standard-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-managed-worker-mechanical",
+    "skill": "planning-policy",
+    "provenance": "Managed mechanical worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-mechanical",
+        "target": "souroldgeezer-policy/agents/plan-step-mechanical.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-mechanical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/managed-worker.md",
+        "predicate": "conditional:managed-worker"
+      },
+      {
+        "entry": "plan-step-mechanical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md",
+        "predicate": "conditional:managed-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-worker-standard",
+    "skill": "planning-policy",
+    "provenance": "Standard standard worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/agents/plan-step-standard.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
+        "predicate": "conditional:standard-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-managed-worker-standard",
+    "skill": "planning-policy",
+    "provenance": "Managed standard worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/agents/plan-step-standard.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/managed-worker.md",
+        "predicate": "conditional:managed-worker"
+      },
+      {
+        "entry": "plan-step-standard",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md",
+        "predicate": "conditional:managed-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-worker-analytical",
+    "skill": "planning-policy",
+    "provenance": "Standard analytical worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-analytical",
+        "target": "souroldgeezer-policy/agents/plan-step-analytical.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-analytical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
+        "predicate": "conditional:standard-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-managed-worker-analytical",
+    "skill": "planning-policy",
+    "provenance": "Managed analytical worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-analytical",
+        "target": "souroldgeezer-policy/agents/plan-step-analytical.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-analytical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/managed-worker.md",
+        "predicate": "conditional:managed-worker"
+      },
+      {
+        "entry": "plan-step-analytical",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md",
+        "predicate": "conditional:managed-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-standard-worker-deep",
+    "skill": "planning-policy",
+    "provenance": "Standard deep worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-deep",
+        "target": "souroldgeezer-policy/agents/plan-step-deep.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-deep",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/core-workflow.md#standard-assignment-and-return",
+        "predicate": "conditional:standard-worker"
+      }
+    ]
+  },
+  {
+    "id": "planning-policy-managed-worker-deep",
+    "skill": "planning-policy",
+    "provenance": "Managed deep worker charges its complete selected route; no runtime quality claim.",
+    "load_routes": [
+      {
+        "entry": "plan-step-deep",
+        "target": "souroldgeezer-policy/agents/plan-step-deep.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "plan-step-deep",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/managed-worker.md",
+        "predicate": "conditional:managed-worker"
+      },
+      {
+        "entry": "plan-step-deep",
+        "target": "souroldgeezer-policy/skills/planning-policy/references/worker-handoff.md",
+        "predicate": "conditional:managed-worker"
       }
     ]
   }

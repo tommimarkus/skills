@@ -24,8 +24,13 @@ work uses a proportionate approach: settled authorized implementation may procee
 inline, explicit plan-first requests retain approval, and delegation is selected
 when parallelism, isolation, or independent analysis warrants it. Necessary
 adjacent work stays within the approved outcome under parent review. Material
-scope/authority changes and risk-based independent review remain explicit. See
-the [shared workflow](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md).
+scope/authority changes and risk-based independent review remain explicit.
+Select the simplest suitable existing `plan-step-mechanical`, `plan-step-standard`,
+`plan-step-analytical` or `plan-step-deep` role independently of workflow, with no
+quota. Claude uses scoped policy Agents; Codex gives the same role instructions
+to a fresh native worker. Standard briefs name their workflow and retain concise
+returns; checked native fallback preserves capabilities and explicit pins.
+Record the role and actual executor once. See the [shared workflow](souroldgeezer-policy/skills/planning-policy/references/core-workflow.md).
 
 Explicit `workflow: strict` retains validated v5 plans, exact capability
 bindings, managed workers, ledger recovery, changeset budgets, pin scans, and

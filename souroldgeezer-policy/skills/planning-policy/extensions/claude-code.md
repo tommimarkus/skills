@@ -7,9 +7,15 @@ its authorized outcome. When approval is required, use `EnterPlanMode` when
 needed and `ExitPlanMode` for the readable plan.
 A rejected or withheld approval is not permission: retain the proposal and
 resolve the host's approval state before dependent dispatch. Delegate when its
-benefit earns the cost, using the native `Agent` with a self-contained general-purpose assignment, not a managed
-`plan-step-*` wrapper. Use supported host defaults unless the task requires a
-particular capability. Concurrent writers get separate persistent worktrees.
+benefit earns the cost. Follow shared [role selection](../references/core-workflow.md#role-selection):
+select the scoped `souroldgeezer-policy:plan-step-*` Agent matching the assignment,
+with explicit `workflow: standard` and its complete bounded brief. Keep existing
+profile defaults and explicit pins. Check required capabilities before dispatch;
+mechanical has no `Skill`. If the profile is unavailable, an equivalent native
+`Agent` fallback may carry the same role instructions when checked capabilities,
+settings and explicit pins are preserved; otherwise report the model/capability
+blocker. Record role and actual executor/fallback once.
+Concurrent writers get separate persistent worktrees.
 A required independent reviewer gets a fresh read-only assignment without
 builder reasoning. Use host notifications instead of busy-polling.
 

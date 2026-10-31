@@ -35,14 +35,15 @@ class PlanningPolicyCostTest(unittest.TestCase):
             self.assertLessEqual(measured, budget)
 
     def test_declared_load_budgets_and_routes(self):
-        # Standard gets a distinct 3k proxy ceiling; managed budgets charge its
-        # selection/readability slices, strict workflow and native-route guard.
+        # Reviewed role-selection guidance adds about 0.6k proxy tokens to parent
+        # standard routes; workers now charge their actual compact entry too.
+        # These are declared source-cost ceilings, not provider-token claims.
         budgets = {
-            "lookup": 1120, "claude-agent-lookup": 1130,
-            "active-claude": 9500, "active-codex": 9400,
+            "lookup": 1180, "claude-agent-lookup": 1190,
+            "active-claude": 9650, "active-codex": 9600,
             "approved-v5-live-next": 2800, "ledger-diagnostic-fallback": 3300,
-            "standard-claude": 3000, "standard-codex": 3000,
-            "standard-worker": 400, "standard-reviewer": 200,
+            "standard-claude": 3650, "standard-codex": 3650,
+            "standard-worker": 1100, "standard-reviewer": 200,
         }
         for name, budget in budgets.items():
             self.assert_within_budget(name, self.measure(f"planning-policy-{name}")["total"], budget)
@@ -66,9 +67,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
                 self.assertEqual(1, sum(file.endswith(adapter) for file in files))
         for name, anchor in (("worker", "standard-assignment-and-return"), ("reviewer", "independent-review")):
             result = self.measure(f"planning-policy-standard-{name}")
-            self.assertEqual(1, len(result["rows"]))
-            self.assertEqual(anchor, result["rows"][0]["anchor"])
-            self.assertEqual("heading-subtree", result["rows"][0]["resolution"])
+            self.assertEqual(2 if name == "worker" else 1, len(result["rows"]))
+            self.assertEqual(anchor, result["rows"][-1]["anchor"])
+            self.assertEqual("heading-subtree", result["rows"][-1]["resolution"])
         live = self.measure("planning-policy-approved-v5-live-next")
         self.assertEqual([None, "approval-and-output", "parent-ledger-helper", None],
                          [row["anchor"] for row in live["rows"]])
@@ -76,16 +77,35 @@ class PlanningPolicyCostTest(unittest.TestCase):
 
     def test_worker_and_verifier_routes_charge_their_agent_and_handoff(self):
         for name, agent, handoff, budget in (
-            # Managed-only guard text remains charged to each managed agent.
-            # Bounded-intake guidance replaces unbounded acceptance output in worker context.
-            ("worker", "step", "worker", 2980), ("verifier", "verify", "verify", 1260),
+            # Managed workers now charge compact entry + common managed contract + handoff.
+            ("worker", "step", "worker", 3500), ("verifier", "verify", "verify", 1260),
         ):
             with self.subTest(route=name):
                 result = self.measure(f"planning-policy-{name}")
                 files = [row["file"] for row in result["rows"]]
                 self.assertLessEqual(result["load_total"], budget)
                 self.assertTrue(files[0].endswith(f"agents/plan-{agent}-standard.md"), files)
-                self.assertTrue(files[1].endswith(f"references/{handoff}-handoff.md"), files)
+                self.assertTrue(files[-1].endswith(f"references/{handoff}-handoff.md"), files)
+                if name == "worker":
+                    self.assertTrue(files[1].endswith("references/managed-worker.md"), files)
+
+    def test_each_standard_role_route_excludes_managed_contracts(self):
+        for role in ("mechanical", "standard", "analytical", "deep"):
+            with self.subTest(role=role):
+                standard = self.measure(f"planning-policy-standard-worker-{role}")
+                managed = self.measure(f"planning-policy-managed-worker-{role}")
+                self.assertEqual(2, len(standard["rows"]))
+                self.assertEqual(3, len(managed["rows"]))
+                self.assertLessEqual(standard["total"], 1300)
+                self.assertLessEqual(managed["total"], 3700)
+                self.assertTrue(standard["rows"][0]["file"].endswith(f"plan-step-{role}.md"))
+                self.assertEqual("standard-assignment-and-return", standard["rows"][1]["anchor"])
+                self.assertEqual(["whole-file", "heading-subtree"],
+                                 [row["resolution"] for row in standard["rows"]])
+                for row in standard["rows"]:
+                    self.assertNotIn("managed-worker", row["file"])
+                    self.assertNotIn("worker-handoff", row["file"])
+                self.assertTrue(managed["rows"][1]["file"].endswith("managed-worker.md"))
 
     def test_series_successor_scenario_is_bounded_and_isolated(self):
         # Only an explicitly selected managed series loads this reference.
@@ -112,7 +132,7 @@ class PlanningPolicyCostTest(unittest.TestCase):
         # Strict approval still transports exact JSON; standard never loads it.
         # The planner-facing read-budget and run-acceptance pointers (plan contract, Codex
         # adapter) tell planners to supply read_set; the worker-side text is charged to "worker".
-        self.assertLessEqual(result["load_total"], 10500)
+        self.assertLessEqual(result["load_total"], 10750)
         self.assertTrue(any(row["file"].endswith("approval-handoff.md") for row in result["rows"]))
         for name in ("planning-policy-lookup", "planning-policy-approved-v5-live-next"):
             self.assertFalse(any(row["file"].endswith("approval-handoff.md") for row in self.measure(name)["rows"]))

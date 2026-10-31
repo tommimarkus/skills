@@ -1,7 +1,7 @@
 """Every prose restatement of bounded-step-return-v1 must agree with the validator.
 
-The return contract is stated once in `planning_ledger.py` and restated in seven
-worker- and parent-facing documents. Nothing used to check the restatements, so
+The return contract is stated once in `planning_ledger.py` and restated in the managed worker
+reference and parent-facing documents. Nothing used to check the restatements, so
 they drifted: blocker evidence was rendered as required when the validator makes
 it optional, and this repo's `extensions/codex.md` adapter named a
 `blocked:oversized` status that the schema has never had. Both reached a real
@@ -28,13 +28,12 @@ ledger = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader
 SPEC.loader.exec_module(ledger)
 
-# The four execution-tier agents are unpaired, so check-runtime-metadata-parity.py
-# never derives or checks their bodies; the two adapters are the only worker-facing
-# contract on their host. All seven restate the same schema.
+# Compact role entrypoints route managed work to this shared restatement.
 AGENTS = tuple(sorted((POLICY / "agents").glob("plan-step-*.md")))
+MANAGED = SKILL / "references/managed-worker.md"
 EXTENSIONS = (SKILL / "extensions/claude-code.md", SKILL / "extensions/codex.md")
 REFERENCE = SKILL / "references/ledger-contract.md"
-RESTATEMENTS = AGENTS + EXTENSIONS + (REFERENCE,)
+RESTATEMENTS = (MANAGED,) + EXTENSIONS + (REFERENCE,)
 
 WORD_FORMS = {8: ("8", "eight"), 32: ("32", "thirty-two"), 240: ("240",), 480: ("480",)}
 
@@ -71,7 +70,8 @@ class ReturnStatusParityTest(unittest.TestCase):
         for path in AGENTS:
             text = normalized(path)
             with self.subTest(document=path.name):
-                self.assertIn("Assignments use v5", text)
+                self.assertIn("references/managed-worker.md", text)
+                self.assertIn("Assignments use v5", normalized(MANAGED))
                 self.assertNotIn("v1–v", text)
                 self.assertNotIn("v4–v5", text)
                 self.assertNotIn("report its raw output", text)

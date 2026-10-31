@@ -127,7 +127,15 @@ behavior do not require redundant approval, and small cohesive work may stay
 inline. Explicit plan-first instructions require approval. Delegate when it helps;
 the parent owns review, integration, and final verification. Routine necessary
 adjacent work stays within the approved outcome; material scope or authority changes
-need a decision. Independent review remains risk-based.
+need a decision. Independent review remains risk-based. Choose the simplest suitable
+`plan-step-mechanical`, `plan-step-standard`, `plan-step-analytical` or
+`plan-step-deep` role independently of standard/strict workflow, with no quotas.
+Give standard workers explicit workflow and a complete bounded brief. Claude
+selects the scoped policy Agent; Codex carries those role instructions to a fresh
+native worker using an available suitable executor. Check capabilities and pins;
+record the role and actual executor/fallback once. An equivalent native fallback
+must preserve required capabilities and settings. Missing/conflicting managed
+input blocks without downgrade; `plan-verify-*` remains managed-only.
 
 Explicit strict execution retains v5 contracts, bound worker/verifier handoffs,
 and immutable approved leaves. Existing runs and explicit model pins retain their

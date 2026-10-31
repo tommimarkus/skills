@@ -7,8 +7,15 @@ its authorized outcome. When approval is required, use native Plan mode when
 active/exposed; otherwise present the readable plan and wait for explicit
 approval without claiming a mode change. Delegate when its benefit earns the
 cost, using `spawn_agent` with a self-contained assignment and
-`fork_turns: "none"`. Use supported host defaults unless the task requires a
-particular capability. Concurrent writers get separate persistent worktrees.
+`fork_turns: "none"`. Follow shared [role selection](../references/core-workflow.md#role-selection):
+include the selected `plan-step-*` role instructions from its source entry and
+explicit `workflow: standard` in the complete bounded brief. Use an available
+suitable executor; these names describe roles, they do not register Codex agent
+profiles. Keep explicit pins and check required capabilities, including the
+role's tool limits, before dispatch. An equivalent native fallback must preserve
+the same instructions, checked capabilities and settings; otherwise report the
+model/capability blocker. Record role and actual executor/fallback once.
+Concurrent writers get separate persistent worktrees.
 A required independent reviewer is a fresh read-only assignment; do not give it
 builder reasoning. Use host notifications instead of busy-polling.
 

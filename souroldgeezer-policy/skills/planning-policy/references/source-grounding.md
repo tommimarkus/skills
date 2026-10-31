@@ -634,3 +634,26 @@ pipeline was later removed for lack of measured throughput benefit; retained
 The synthetic `planning-policy-behavior-precision-*`, `chain-*`, `derived-*`,
 and `generated-*` cases cover that workflow. They test the
 documented behavior, not model reliability. No third-party text is copied.
+
+## 2026-10-31 shared worker roles
+
+Source: repository-owned planning entry, role agents, shared core, both host
+adapters, existing managed contracts and approved role-selection decision.
+Type: local policy design; bundling: original prose and synthetic prompts only.
+No third-party workflow text, model comparison, or provider transcript is copied.
+Host mechanics retain the existing native Agent/spawn interface; the role names
+are not registered Codex profiles. Existing model/tool/effort defaults and
+explicit pins are unchanged. This change adds no host packaging or launch API.
+
+Role selection is independent of standard/strict workflow and has no target mix.
+The four role entrypoints accept explicit standard briefs and route supplied
+managed plans, bindings, packets and ledger identities to `managed-worker.md`.
+Malformed/conflicting input never downgrades. That extraction preserves exact
+v5 binding checks, bounded retries, acceptance runners, return validation and
+schema limits. Standard retains complete bounded briefs, concise returns,
+risk-based independent review and parent integration/final verification.
+
+`planning_policy_role_selection_test.py`, the role-selection synthetic cases,
+updated adapter/return parity regressions and per-role load scenarios establish
+source consistency and declared route cost. They do not establish live host
+behavior, model quality, latency, provider-token savings or legal clearance.

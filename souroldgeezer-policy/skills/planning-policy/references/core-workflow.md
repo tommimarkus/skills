@@ -36,7 +36,7 @@ reinterpret malformed managed input as a lightweight assignment.
 3. Obtain approval for an explicit plan-first request or constraint, a material
    unresolved decision, or an action outside existing authority. Do not insert
    another approval turn for clear authorized work or routine execution choices.
-   When delegating, give native host workers self-contained assignments under
+   When delegating, give the selected workers self-contained assignments under
    the contract below. Keep independent writers
    in separate persistent worktrees; sequence overlapping writes. Start dependents
    from the parent state containing their integrated prerequisites.
@@ -56,16 +56,48 @@ or policy footer. Detailed cost forecasting and tracing remain explicit opt-ins.
 Targeted impact checks remain necessary, including affected call sites, fixtures,
 path-pinning tests, load budgets, generated indexes, and publication surfaces.
 
+## Role selection
+
+Choose the simplest suitable role for each bounded assignment, independent of workflow:
+
+| Role | Assignment needs |
+|---|---|
+| [`plan-step-mechanical`](../../../agents/plan-step-mechanical.md) | Decisions are settled; apply an exact pattern or target. Stop when a new judgment is needed. |
+| [`plan-step-standard`](../../../agents/plan-step-standard.md) | Approach is settled; ordinary implementation judgment remains. |
+| [`plan-step-analytical`](../../../agents/plan-step-analytical.md) | Resolve a real unknown, cause, tradeoff or blast radius from evidence. |
+| [`plan-step-deep`](../../../agents/plan-step-deep.md) | Challenge a correctness claim, conflicting evidence, concurrency or security assumption; a plausible wrong answer is a material risk. |
+
+There is no quota or target mix. Settled work does not need a higher role because
+its workflow is strict; a bounded hard question can use deep under standard.
+Standard work may also stay inline. These roles do not impose the managed model
+map on standard assignments. Keep the existing profile defaults; do not change
+profile tools to satisfy an assignment. In particular, mechanical has no `Skill`.
+
+The selected host adapter owns dispatch syntax. Check the actual executor's
+required capabilities before dispatch, including role tool limits, and honor
+explicit pins for model, effort, tools and behavior. If a profile is unavailable,
+an equivalent native fallback may carry the same role instructions only when
+its checked capabilities and settings satisfy every requirement and explicit
+pin. Otherwise stop with the missing capability/model; never silently weaken a
+requirement. Record the selected role and actual executor (including any fallback)
+once in the assignment or compact progress record. Existing managed runs keep
+their assignment, bindings, retry target and settings; use their managed rules.
+
+`plan-verify-*` agents remain managed-only. Standard independent review uses a
+fresh read-only native assignment under the review rules below.
+
 ## Standard assignment and return
 
-Give a native worker its outcome and label, boundary/write areas, material
-approved decisions and constraints, useful source pointers, prerequisite state,
+Give the worker explicit `workflow: standard` and its selected role, outcome and
+label, boundary/write areas, material approved decisions and constraints, useful source pointers, prerequisite state,
 worktree, acceptance checks, and escalation conditions. Name any required tool,
 skill, service, permission, or runtime; check availability before dispatch and
 refresh that check when host, executor, or requirements change. Never silently
-weaken an explicit capability requirement. Use the host's supported defaults
-unless the assignment requires a particular capability. Do not use the managed
-`plan-step-*` wrappers for lightweight work.
+weaken an explicit capability requirement. Follow [role selection](#role-selection)
+and the selected host adapter for profile/native dispatch and fallback. A missing
+material brief field returns `blocked:missing_input`; a missing required capability
+returns `blocked:capability_unavailable`. Discover routine facts from the named
+source pointers instead of inventing material decisions.
 
 Workers may inspect adjacent code, locate call sites, and establish routine
 facts inside the approved outcome. Necessary adjacent edits and stronger checks

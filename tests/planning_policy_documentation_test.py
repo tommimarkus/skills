@@ -442,17 +442,17 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "`evidence_error`",
             "never a stop on its own",
         ), heading="## Read budget and acceptance")
+        managed = self.text(base + "skills/planning-policy/references/managed-worker.md")
         for tier in ("mechanical", "standard", "analytical", "deep"):
             with self.subTest(agent=tier):
                 assert_phrases(self, self.text(base + f"agents/plan-step-{tier}.md"), (
-                    "`run-acceptance`",
-                    "read budget",
-                    "`extra_read`",
+                    "references/managed-worker.md",
                 ))
-        for tier in ("mechanical", "standard"):
-            assert_phrases(self, self.text(base + f"agents/plan-step-{tier}.md"), (
-                "through `run-acceptance` with its own packet",
-            ))
+        assert_phrases(self, managed, (
+            "`run-acceptance`", "read budget", "`extra_read`",
+            "Only mechanical and standard roles accept batches.",
+            "through `run-acceptance` with its own packet",
+        ))
         ext = base + "skills/planning-policy/extensions/"
         assert_phrases(self, self.text(ext + "codex.md"), ("`run-acceptance`", "read budget"))
         assert_phrases(self, self.text(ext + "claude-code.md"), ("`run-acceptance`",))

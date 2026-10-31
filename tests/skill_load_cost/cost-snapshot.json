@@ -58,5 +58,13 @@
   "review-api-software-composed": 13029,
   "sd-test-code-python": 3157,
   "sd-test-code-typescript": 3133,
-  "tdd-enforce": 5524
+  "tdd-enforce": 5524,
+  "planning-policy-standard-worker-mechanical": 985,
+  "planning-policy-managed-worker-mechanical": 3170,
+  "planning-policy-standard-worker-standard": 1033,
+  "planning-policy-managed-worker-standard": 3218,
+  "planning-policy-standard-worker-analytical": 1095,
+  "planning-policy-managed-worker-analytical": 3280,
+  "planning-policy-standard-worker-deep": 1074,
+  "planning-policy-managed-worker-deep": 3259
 }

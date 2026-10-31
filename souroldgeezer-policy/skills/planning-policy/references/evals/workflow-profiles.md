@@ -65,3 +65,22 @@ protects standard/strict selection and native assignment/review sections. The
 TDD parent-owned suite handoff remains on both standard and managed routes.
 Host tool syntax is checked on each selected adapter's standard section rather
 than requiring host-specific calls in the runtime-neutral shared core.
+
+## Shared roles across workflows (2026-10-31)
+
+`role-selection-cases.jsonl` supplies original synthetic standard briefs for
+all four roles on both hosts, equivalent native fallback, unavailable pins,
+missing required capabilities, missing material decisions, explicit workflow,
+valid managed packets, malformed/conflicting inputs, and public-contract review
+with parent final verification. Source-contract tests check route isolation and
+preserved profile frontmatter. These are rubrics and static checks, not recorded
+host executions or a claim about model quality, speed or tokens.
+
+The former managed-only restriction on `plan-step-*` is intentionally retired.
+The same role instructions now apply to standard briefs, and common managed
+validation/retry/return machinery lives in `managed-worker.md`, loaded only for
+strict or supplied managed identities. The existing four names, tools and model/
+effort defaults remain. Standard workflow still permits inline work and concise
+returns; there is no quota or mandatory managed state. Existing v5 packets need
+no new workflow field. Standard review uses fresh native read-only reviewers;
+`plan-verify-*` remains managed-only.
