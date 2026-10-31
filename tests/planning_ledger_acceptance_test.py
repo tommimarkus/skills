@@ -170,6 +170,72 @@ class RunAcceptanceTest(AcceptanceHarness):
         self.assertEqual(entries | {"acceptance"}, {p.name for p in self.run_dir().iterdir()})
 
 
+class AcceptanceEvidenceLoadingTest(AcceptanceHarness):
+    """Evidence under <run>/acceptance never blocks loading, retention or later commands."""
+
+    def shown(self):
+        return self.call("show", "--run-id", self.run_id)
+
+    def test_the_run_still_loads_and_accepts_a_return_after_worker_evidence(self):
+        self.prepared("echo ok")
+        self.assertEqual(0, self.worker()[0])
+        self.assertEqual(0, self.shown()[0])
+        self.commit_file("src/alpha/a.txt", "one\n")
+        acceptance = {"command": "echo ok", "exit_code": 0, "summary": "ok"}
+        self.returned(self.packet, acceptance=acceptance)
+
+    def test_consecutive_parent_runs_number_their_evidence(self):
+        self.prepared("echo ok")
+        paths = [self.parent()[1]["acceptance"]["evidence_path"] for _ in range(2)]
+        self.assertEqual([f"acceptance/alpha/{self.packet['attempt_id']}/parent-{n}.log"
+                          for n in (1, 2)], paths)
+
+    def test_a_run_holding_evidence_can_still_be_purged(self):
+        self.prepared("echo ok")
+        self.assertEqual(0, self.worker()[0])
+        self.returned(self.packet, "failed", [{"code": "failed:acceptance", "summary": "red"}],
+                      acceptance={"command": "echo ok", "exit_code": 1, "summary": "red"})
+        code, closed = self.call("close", "--actor", "parent", "--run-id", self.run_id,
+                                 "--outcome", "abandoned", "--reason", "test")
+        self.assertEqual(0, code, closed)
+        code, purged = self.call("purge", "--actor", "parent", "--run-id", self.run_id,
+                                 "--before-retention", "--reason", "test cleanup")
+        self.assertEqual(0, code, purged)
+        self.assertFalse(self.run_dir().exists())
+
+    def test_malformed_evidence_trees_refuse_to_load(self):
+        self.prepared("echo ok")
+        self.assertEqual(0, self.worker()[0])
+        root = self.run_dir() / "acceptance"
+        attempt = root / "alpha" / self.packet["attempt_id"]
+        outside = self.scratch / "outside"
+        outside.write_text("x")
+        cases = {
+            "symlink": (attempt / "worker-9.log", lambda p: p.symlink_to(outside)),
+            "not a log": (attempt / "worker-9.txt", lambda p: p.write_text("x")),
+            "zero index": (attempt / "worker-0.log", lambda p: p.write_text("x")),
+            "bad mode": (attempt / "other-1.log", lambda p: p.write_text("x")),
+            "bad index": (attempt / "worker-x.log", lambda p: p.write_text("x")),
+            "file in root": (root / "stray.log", lambda p: p.write_text("x")),
+            "file in step dir": (root / "alpha" / "stray.log", lambda p: p.write_text("x")),
+            "bad step id": (root / "bad id", lambda p: p.mkdir()),
+            "bad attempt id": (root / "alpha" / "nope", lambda p: p.mkdir()),
+            "dir as log": (attempt / "worker-9.log", lambda p: p.mkdir()),
+            "symlinked step": (root / "beta", lambda p: p.symlink_to(root / "alpha")),
+        }
+        for label, (path, damage) in cases.items():
+            with self.subTest(label):
+                damage(path)
+                code, result = self.shown()
+                if path.is_dir() and not path.is_symlink():
+                    path.rmdir()
+                else:
+                    path.unlink()
+                self.assertEqual(3, code, result)
+                self.assertIn("unexpected acceptance contents", result["error"])
+                self.assertEqual(0, self.shown()[0])
+
+
 class PromptAndNoteTypeTest(AcceptanceHarness):
     def test_dispatch_prompt_names_run_acceptance_within_the_fixed_bound(self):
         entry = self.prepared("uv run test")

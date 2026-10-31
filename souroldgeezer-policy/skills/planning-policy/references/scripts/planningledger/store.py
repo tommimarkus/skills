@@ -10,8 +10,10 @@ from pathlib import Path
 from . import core, gitops
 from .core import Error, JsonObject, JsonValue, canon, ident, read_json, uuid4
 from .vocabulary import (
+    ACCEPTANCE_LOG,
     MAX_CHECKPOINT,
     MAX_USAGE,
+    NO_ATTEMPT_ID,
     RAW_USAGE_FIELDS,
     USAGE_FIELDS,
     USAGE_STAGES,
@@ -25,6 +27,7 @@ __all__ = [
     "event",
     "initial_event",
     "safe_run_contents",
+    "safe_acceptance_tree",
     "safe_step_json_tree",
     "validate_usage_dir",
     "valid_usage_summary",
@@ -114,6 +117,7 @@ def safe_run_contents(directory: Path) -> None:
         "verifies",
         "worktree-results",
         "handoffs",
+        "acceptance",
         "usage",
         "series-handoff.json",
     }
@@ -165,9 +169,37 @@ def safe_run_contents(directory: Path) -> None:
                 ):
                     raise Error("unexpected retry-remediations contents")
                 uuid4(remediation.stem, "retry-remediation attempt id")
+    safe_acceptance_tree(directory / "acceptance")
     usage = directory / "usage"
     if usage.exists():
         validate_usage_dir(usage)
+
+
+def safe_acceptance_tree(root: Path) -> None:
+    """Fail closed unless `root` is absent or holds only step/attempt dirs of numbered logs."""
+    if not root.exists() and not root.is_symlink():
+        return
+    if root.is_symlink() or not root.is_dir():
+        raise Error("unexpected acceptance contents")
+    try:
+        for step_dir in root.iterdir():
+            if step_dir.is_symlink() or not step_dir.is_dir():
+                raise Error("unexpected acceptance contents")
+            ident(step_dir.name, "acceptance step id")
+            for attempt_dir in step_dir.iterdir():
+                if attempt_dir.is_symlink() or not attempt_dir.is_dir():
+                    raise Error("unexpected acceptance contents")
+                if attempt_dir.name != NO_ATTEMPT_ID:
+                    uuid4(attempt_dir.name, "acceptance attempt id")
+                for log in attempt_dir.iterdir():
+                    if (
+                        log.is_symlink()
+                        or not log.is_file()
+                        or not ACCEPTANCE_LOG.fullmatch(log.name)
+                    ):
+                        raise Error("unexpected acceptance contents")
+    except Error as exc:
+        raise Error("unexpected acceptance contents") from exc
 
 
 def safe_step_json_tree(

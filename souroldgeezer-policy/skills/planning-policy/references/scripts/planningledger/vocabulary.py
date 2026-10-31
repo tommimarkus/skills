@@ -35,6 +35,7 @@ __all__ = [
     "MAX_ACCEPTANCE_EXCERPT",
     "ACCEPTANCE_TAIL_BYTES",
     "NO_ATTEMPT_ID",
+    "ACCEPTANCE_LOG",
     "MAX_NOTE_MESSAGE",
     "MAX_BLOCKER_SUMMARY",
     "MAX_REMAINDER_ITEM",
@@ -222,6 +223,10 @@ ACCEPTANCE_TAIL_BYTES = MAX_ACCEPTANCE_EXCERPT * 4
 
 # Evidence directory name for a parent run of a step that has no attempt yet.
 NO_ATTEMPT_ID = "no-attempt"
+
+
+# One evidence log written by run-acceptance: <worker|parent>-<n>.log.
+ACCEPTANCE_LOG = re.compile(r"^(worker|parent)-[1-9][0-9]*\.log$")
 
 
 MAX_NOTE_MESSAGE = 480
