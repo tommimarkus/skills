@@ -1,0 +1,10 @@
+{"id": "d1", "type": "doc", "deps": [], "spec": "specs/d1.md", "refs": ["specs/common.md"]}
+{"id": "d2", "type": "doc", "deps": [], "spec": "specs/d2.md", "refs": ["specs/common.md"], "exemplar": true}
+{"id": "u1", "type": "unit", "deps": ["d2"], "spec": "specs/u1.md", "refs": []}
+{"id": "u2", "type": "unit", "deps": [], "spec": "specs/u2.md", "refs": ["specs/common.md"]}
+{"id": "u3", "type": "unit", "deps": ["u1"], "spec": "specs/u3.md", "refs": []}
+{"id": "u4", "type": "unit", "deps": [], "spec": "specs/u4.md", "refs": []}
+{"id": "u5", "type": "unit", "deps": ["d2"], "spec": "specs/u5.md", "refs": []}
+{"id": "d3", "type": "doc", "deps": ["u3"], "spec": "specs/d3.md", "refs": ["docs/style.md", "specs/common.md"]}
+{"id": "u6", "type": "unit", "deps": ["u2"], "spec": "specs/u6.md", "refs": []}
+{"id": "u7", "type": "unit", "deps": ["d3"], "spec": "specs/u7.md", "refs": []}

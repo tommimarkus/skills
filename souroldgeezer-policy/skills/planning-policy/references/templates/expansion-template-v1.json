@@ -1,0 +1,31 @@
+{
+  "schema": "planning-expansion-template-v1",
+  "objective": "",
+  "scope_summary": "",
+  "approved_decisions": [],
+  "precision": "strict",
+  "series": {
+    "series_id": "",
+    "end_verification_commands": [],
+    "max_leaves": 12
+  },
+  "owner_prefix": "",
+  "types": {
+    "example": {
+      "task": "",
+      "boundary": "",
+      "write_set": [],
+      "read_set_extra": [],
+      "acceptance_command": "",
+      "size": "small",
+      "portable_tier": "standard",
+      "max_attempts": 2,
+      "settled_decisions": {},
+      "capability_requirements": {
+        "baseline": "plan-step-base-v1",
+        "additional": []
+      },
+      "batch": false
+    }
+  }
+}

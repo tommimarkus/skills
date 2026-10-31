@@ -1,0 +1,295 @@
+{
+  "approved_decisions": [
+    "Generated pages follow the style guide in docs/style.md."
+  ],
+  "contract_version": 5,
+  "leaves": [
+    {
+      "acceptance_command": "uv run python -m unittest tests.rules_d2_test",
+      "boundary": "Only touch docs/d2.md; leave every other rule page alone.",
+      "capability_requirements": {
+        "additional": [],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [],
+      "id": "d2",
+      "irreducible_unknown_or_risk": "The page layout for doc d2 is not yet fixed; the first page sets it.",
+      "max_attempts": 2,
+      "portable_tier": "analytical",
+      "read_set": [
+        "specs/d2.md",
+        "specs/common.md",
+        "docs/style.md"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "format": "markdown page with a heading and a summary"
+      },
+      "size": "medium",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Write the rule page for d2 (doc) following specs/d2.md",
+      "work_unit_id": "d2",
+      "worktree_owner": "rules/d2",
+      "write_set": [
+        "docs/d2.md"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u1_test",
+      "boundary": "Only touch src/u1.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "d2"
+      ],
+      "id": "u1",
+      "max_attempts": 2,
+      "portable_tier": "standard",
+      "read_set": [
+        "specs/u1.md"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u1 from specs/u1.md",
+      "work_unit_id": "u1",
+      "worktree_owner": "rules/u1",
+      "write_set": [
+        "src/u1.py"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.rules_d1_test",
+      "boundary": "Only touch docs/d1.md; leave every other rule page alone.",
+      "capability_requirements": {
+        "additional": [],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "d2"
+      ],
+      "id": "d1",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/d1.md",
+        "specs/common.md",
+        "docs/style.md",
+        "docs/d2.md"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar d2 landed in docs/d2.md; do not re-derive it",
+        "format": "markdown page with a heading and a summary"
+      },
+      "size": "medium",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Write the rule page for d1 (doc) following specs/d1.md",
+      "work_unit_id": "d1",
+      "worktree_owner": "rules/d1",
+      "write_set": [
+        "docs/d1.md"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u2_test",
+      "batch": "unit-batch-u2",
+      "boundary": "Only touch src/u2.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "u1"
+      ],
+      "id": "u2",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u2.md",
+        "specs/common.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u2 from specs/u2.md",
+      "work_unit_id": "u2",
+      "worktree_owner": "rules/unit-batch-u2",
+      "write_set": [
+        "src/u2.py"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u3_test",
+      "batch": "unit-batch-u2",
+      "boundary": "Only touch src/u3.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "u1"
+      ],
+      "id": "u3",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u3.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u3 from specs/u3.md",
+      "work_unit_id": "u3",
+      "worktree_owner": "rules/unit-batch-u2",
+      "write_set": [
+        "src/u3.py"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u4_test",
+      "batch": "unit-batch-u2",
+      "boundary": "Only touch src/u4.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "u1"
+      ],
+      "id": "u4",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u4.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u4 from specs/u4.md",
+      "work_unit_id": "u4",
+      "worktree_owner": "rules/unit-batch-u2",
+      "write_set": [
+        "src/u4.py"
+      ]
+    }
+  ],
+  "objective": "Land the generated rule pages and units",
+  "precision": "strict",
+  "scope_summary": "Expand the rule index into pages and units, one slice at a time.",
+  "series": {
+    "end_verification_commands": [
+      "uv run python -m unittest tests.rules_test"
+    ],
+    "final": false,
+    "series_id": "rule-series",
+    "slice": 1
+  },
+  "verification": "per-leaf",
+  "work_units": [
+    {
+      "cohesive_outcome": "Land rule d2 (doc)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "d2",
+      "original_size": "medium"
+    },
+    {
+      "cohesive_outcome": "Land rule u1 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u1",
+      "original_size": "small"
+    },
+    {
+      "cohesive_outcome": "Land rule d1 (doc)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "d1",
+      "original_size": "medium"
+    },
+    {
+      "cohesive_outcome": "Land rule u2 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u2",
+      "original_size": "small"
+    },
+    {
+      "cohesive_outcome": "Land rule u3 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u3",
+      "original_size": "small"
+    },
+    {
+      "cohesive_outcome": "Land rule u4 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u4",
+      "original_size": "small"
+    }
+  ]
+}

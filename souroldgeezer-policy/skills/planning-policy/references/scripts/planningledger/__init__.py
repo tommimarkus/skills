@@ -25,6 +25,8 @@ Module map:
 - retention: list, gc, purge and run classification.
 - closeout: init, land, close, reopen, validate and show.
 - tracing: opt-in trace counters.
+- expand: the deterministic plan expander (template plus JSONL rule index to v5 plan slices); like
+  plancontract, its own shim (expand_plan.py), not the ledger shim, re-exports it.
 - cli: argument parsing and main.
 
 Import order, lowest first. A module imports only an earlier group, or a same-group
@@ -32,7 +34,7 @@ module without a cycle; nothing imports cli; a helper several modules use lives 
 lowest module all of them may import (this is why run validation helpers sit in
 checkpoint and the init command in closeout):
 plancontract < vocabulary < core < gitops < {store, contract} < checkpoint < {schedule, series}
-< {returns, dispatch, verify, acceptance, retention, closeout, tracing} < cli.
+< {returns, dispatch, verify, acceptance, retention, closeout, tracing, expand} < cli.
 
 Substitution seams (now in core, git and run_worktree_helper in gitops, plan_validator and
 changed_path_allowed in contract) are called as owner.name() outside their owner and are

@@ -1,0 +1,209 @@
+{
+  "approved_decisions": [
+    "Generated pages follow the style guide in docs/style.md."
+  ],
+  "contract_version": 5,
+  "leaves": [
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u5_test",
+      "boundary": "Only touch src/u5.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [],
+      "id": "u5",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u5.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u5 from specs/u5.md",
+      "work_unit_id": "u5",
+      "worktree_owner": "rules/u5",
+      "write_set": [
+        "src/u5.py"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.rules_d3_test",
+      "boundary": "Only touch docs/d3.md; leave every other rule page alone.",
+      "capability_requirements": {
+        "additional": [],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [],
+      "id": "d3",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/d3.md",
+        "docs/style.md",
+        "specs/common.md",
+        "docs/d2.md"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar d2 landed in docs/d2.md; do not re-derive it",
+        "format": "markdown page with a heading and a summary"
+      },
+      "size": "medium",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Write the rule page for d3 (doc) following specs/d3.md",
+      "work_unit_id": "d3",
+      "worktree_owner": "rules/d3",
+      "write_set": [
+        "docs/d3.md"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u6_test",
+      "batch": "unit-batch-u6",
+      "boundary": "Only touch src/u6.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [],
+      "id": "u6",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u6.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u6 from specs/u6.md",
+      "work_unit_id": "u6",
+      "worktree_owner": "rules/unit-batch-u6",
+      "write_set": [
+        "src/u6.py"
+      ]
+    },
+    {
+      "acceptance_command": "uv run python -m unittest tests.unit_u7_test",
+      "batch": "unit-batch-u6",
+      "boundary": "Only touch src/u7.py.",
+      "capability_requirements": {
+        "additional": [
+          {
+            "kind": "tool",
+            "name": "git",
+            "reason": "Units are committed to their branch."
+          }
+        ],
+        "baseline": "plan-step-base-v1"
+      },
+      "dependencies": [
+        "d3"
+      ],
+      "id": "u7",
+      "max_attempts": 2,
+      "portable_tier": "mechanical",
+      "read_set": [
+        "specs/u7.md",
+        "src/u1.py"
+      ],
+      "return_contract": "bounded-step-return-v1",
+      "settled_decisions": {
+        "exemplar_pattern": "follow the pattern exemplar u1 landed in src/u1.py; do not re-derive it",
+        "language": "python 3.11, stdlib only"
+      },
+      "size": "small",
+      "stop_conditions": [
+        "missing_load_bearing_information"
+      ],
+      "task": "Implement unit u7 from specs/u7.md",
+      "work_unit_id": "u7",
+      "worktree_owner": "rules/unit-batch-u6",
+      "write_set": [
+        "src/u7.py"
+      ]
+    }
+  ],
+  "objective": "Land the generated rule pages and units",
+  "precision": "strict",
+  "scope_summary": "Expand the rule index into pages and units, one slice at a time.",
+  "series": {
+    "end_verification_commands": [
+      "uv run python -m unittest tests.rules_test"
+    ],
+    "final": true,
+    "predecessor": {
+      "handoff_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "outcome": "blocked",
+      "plan_id": "rule-plan-1",
+      "plan_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "run_id": "11111111-1111-4111-8111-111111111111"
+    },
+    "series_id": "rule-series",
+    "slice": 2
+  },
+  "verification": "per-leaf",
+  "work_units": [
+    {
+      "cohesive_outcome": "Land rule u5 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u5",
+      "original_size": "small"
+    },
+    {
+      "cohesive_outcome": "Land rule d3 (doc)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "d3",
+      "original_size": "medium"
+    },
+    {
+      "cohesive_outcome": "Land rule u6 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u6",
+      "original_size": "small"
+    },
+    {
+      "cohesive_outcome": "Land rule u7 (unit)",
+      "decomposition": {
+        "shape": "single"
+      },
+      "id": "u7",
+      "original_size": "small"
+    }
+  ]
+}

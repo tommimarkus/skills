@@ -23,7 +23,7 @@ IMPORT_ORDER = (
     ("store", "contract"),
     ("checkpoint",),
     ("schedule", "series"),
-    ("returns", "dispatch", "verify", "acceptance", "retention", "closeout", "tracing"),
+    ("returns", "dispatch", "verify", "acceptance", "retention", "closeout", "tracing", "expand"),
     ("cli",),
 )
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}
@@ -31,7 +31,7 @@ GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in g
 EXTRACTED = set(GROUP)
 # plancontract is the validator implementation: the validate_plan_contract.py shim re-exports it,
 # so the ledger shim does not (its main and validate would collide with the ledger's).
-NOT_LEDGER_REEXPORTED = {"plancontract"}
+NOT_LEDGER_REEXPORTED = {"plancontract", "expand"}
 # Patched by tests on their owner, so called as owner.name() elsewhere and never re-exported.
 SEAMS = {
     "now": "core",

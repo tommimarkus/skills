@@ -1,0 +1,50 @@
+{
+  "schema": "planning-expansion-template-v1",
+  "objective": "Land the generated rule pages and units",
+  "scope_summary": "Expand the rule index into pages and units, one slice at a time.",
+  "approved_decisions": ["Generated pages follow the style guide in docs/style.md."],
+  "precision": "strict",
+  "verification": "per-leaf",
+  "series": {
+    "series_id": "rule-series",
+    "end_verification_commands": ["uv run python -m unittest tests.rules_test"],
+    "max_leaves": 6
+  },
+  "owner_prefix": "rules/",
+  "types": {
+    "doc": {
+      "task": "Write the rule page for {id} ({type}) following {spec}",
+      "boundary": "Only touch docs/{id}.md; leave every other rule page alone.",
+      "write_set": ["docs/{id}.md"],
+      "read_set_extra": ["docs/style.md"],
+      "acceptance_command": "uv run python -m unittest tests.rules_{id}_test",
+      "size": "medium",
+      "portable_tier": "standard",
+      "max_attempts": 2,
+      "settled_decisions": {"format": "markdown page with a heading and a summary"},
+      "capability_requirements": {"baseline": "plan-step-base-v1", "additional": []},
+      "batch": false,
+      "exemplar": {
+        "portable_tier": "analytical",
+        "irreducible_unknown_or_risk": "The page layout for {type} {id} is not yet fixed; the first page sets it."
+      }
+    },
+    "unit": {
+      "task": "Implement unit {id} from {spec}",
+      "boundary": "Only touch src/{id}.py.",
+      "write_set": ["src/{id}.py"],
+      "read_set_extra": [],
+      "acceptance_command": "uv run python -m unittest tests.unit_{id}_test",
+      "size": "small",
+      "portable_tier": "standard",
+      "max_attempts": 2,
+      "settled_decisions": {"language": "python 3.11, stdlib only"},
+      "capability_requirements": {
+        "baseline": "plan-step-base-v1",
+        "additional": [{"kind": "tool", "name": "git", "reason": "Units are committed to their branch."}]
+      },
+      "batch": true,
+      "exemplar": {"portable_tier": "standard"}
+    }
+  }
+}
