@@ -23,7 +23,7 @@ IMPORT_ORDER = (
     ("store", "contract"),
     ("checkpoint",),
     ("schedule", "series"),
-    ("returns", "dispatch", "verify", "retention", "closeout", "tracing"),
+    ("returns", "dispatch", "verify", "acceptance", "retention", "closeout", "tracing"),
     ("cli",),
 )
 GROUP = {name: number for number, group in enumerate(IMPORT_ORDER) for name in group}

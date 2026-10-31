@@ -18,6 +18,7 @@ Module map:
   mutating_run.
 - schedule: readiness, batches, retry selection, the live next block, primary_next.
 - series: series handoff artifacts and the predecessor cross-check.
+- acceptance: run-acceptance, the bounded acceptance command runner with kept evidence.
 - returns: return validation, retry and remediation, record-return, amend.
 - dispatch: worker handoff packets, dispatch and transitions.
 - verify: changeset gate, verify handoff and record-verify.
@@ -31,7 +32,7 @@ module without a cycle; nothing imports cli; a helper several modules use lives 
 lowest module all of them may import (this is why run validation helpers sit in
 checkpoint and the init command in closeout):
 plancontract < vocabulary < core < gitops < {store, contract} < checkpoint < {schedule, series}
-< {returns, dispatch, verify, retention, closeout, tracing} < cli.
+< {returns, dispatch, verify, acceptance, retention, closeout, tracing} < cli.
 
 Substitution seams (now in core, git and run_worktree_helper in gitops, plan_validator and
 changed_path_allowed in contract) are called as owner.name() outside their owner and are

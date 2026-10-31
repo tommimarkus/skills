@@ -32,6 +32,9 @@ __all__ = [
     "MAX_REMAINDER",
     "MAX_BLOCKER_CODE",
     "MAX_ACCEPTANCE_SUMMARY",
+    "MAX_ACCEPTANCE_EXCERPT",
+    "ACCEPTANCE_TAIL_BYTES",
+    "NO_ATTEMPT_ID",
     "MAX_NOTE_MESSAGE",
     "MAX_BLOCKER_SUMMARY",
     "MAX_REMAINDER_ITEM",
@@ -177,7 +180,14 @@ COMMIT = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 PROXY_TOKEN_RE = re.compile(r"\w+|[^\w\s]")
 
 
-NOTE_TYPES = {"finding", "decision_needed", "residual_risk", "untouched", "verification_limit"}
+NOTE_TYPES = {
+    "finding",
+    "decision_needed",
+    "residual_risk",
+    "untouched",
+    "verification_limit",
+    "extra_read",
+}
 
 
 # Single source for the bounded-step-return-v1 contract. Every prose restatement
@@ -201,6 +211,17 @@ MAX_BLOCKER_CODE = 120
 
 
 MAX_ACCEPTANCE_SUMMARY = 480
+
+
+MAX_ACCEPTANCE_EXCERPT = 4 * 1024
+
+
+# UTF-8 needs at most four bytes per character, so this window always holds the excerpt.
+ACCEPTANCE_TAIL_BYTES = MAX_ACCEPTANCE_EXCERPT * 4
+
+
+# Evidence directory name for a parent run of a step that has no attempt yet.
+NO_ATTEMPT_ID = "no-attempt"
 
 
 MAX_NOTE_MESSAGE = 480

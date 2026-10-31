@@ -346,6 +346,8 @@ def worker_prompt_text(
         f"Work only in the worktree: {packet['worktree']}\n"
         f"Before returning, validate your return read-only by piping it to: "
         f"python3 -B {script} validate-return --handoff-file {packet_path} --return-file -\n"
+        f"Run your acceptance command only through: "
+        f"python3 -B {script} run-acceptance --handoff-file {packet_path}\n"
         + (
             "Your final message is exactly the bounded-step-return-v1 JSON object and nothing else."
             if member is None

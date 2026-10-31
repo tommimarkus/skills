@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from .acceptance import run_acceptance
 from .closeout import close_run, init5, land, reopen_run, show, validate
 from .core import Error, UsageError, out
 from .dispatch import dispatch, handoff, transition_step
@@ -102,6 +103,11 @@ def parse() -> argparse.ArgumentParser:
     check_parser.add_argument("--base")
     check_parser.add_argument("--run-id")
     check_parser.add_argument("--step-id")
+    acceptance_parser = commands.add_parser("run-acceptance")
+    acceptance_parser.add_argument("--handoff-file")
+    acceptance_parser.add_argument("--run-id")
+    acceptance_parser.add_argument("--step-id")
+    acceptance_parser.add_argument("--worktree")
     verify_parser = commands.add_parser("verify-handoff")
     verify_parser.add_argument("--actor", required=True)
     verify_parser.add_argument("--run-id", required=True)
@@ -187,6 +193,9 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "check-changeset":
             value = check_changeset(args)
             return out(value, 0 if value["ok"] else 1)
+        elif args.command == "run-acceptance":
+            value = run_acceptance(args)
+            return out(value, value["exit_code"])
         elif args.command == "list":
             value = list_runs(args)
         elif args.command == "close":

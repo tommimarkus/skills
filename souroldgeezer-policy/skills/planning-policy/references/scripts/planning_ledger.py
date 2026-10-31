@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from planningledger.acceptance import *  # noqa: F403
 from planningledger.checkpoint import *  # noqa: F403
 from planningledger.cli import *  # noqa: F403
 from planningledger.cli import main

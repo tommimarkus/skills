@@ -188,7 +188,7 @@ pair is optional — a safe repository-relative path with its 64-hex digest, or
 neither, as `oversized` and `blocked:missing_input` return. Blocker codes carry
 semantics such as `blocked:missing_input`. `notes` has at most eight `{ "type": string,
 "message": string }` objects; type is exactly `finding`, `decision_needed`,
-`residual_risk`, `untouched`, or `verification_limit`. `unstarted_remainder`
+`residual_risk`, `untouched`, `verification_limit`, or `extra_read`. `unstarted_remainder`
 has at most eight strings of at most 240 characters. `commit_hash` is an empty
 string or a 40- or 64-hex hash. Keep the serialized object at most 8 KiB.
 

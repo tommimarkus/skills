@@ -92,7 +92,7 @@ has code and a <=240-character summary; its relative evidence path and 64-hex
 digest are optional and paired — supply both or neither, and omit both when the
 stop has no evidence artifact, as `oversized` and `blocked:missing_input` do.
 Note types are exactly `finding`, `decision_needed`, `residual_risk`, `untouched`,
-or `verification_limit`; remainder items are <=240 characters. `commit_hash` is
+`verification_limit`, or `extra_read`; remainder items are <=240 characters. `commit_hash` is
 an empty string or 40/64-hex hash. Keep the return <=8 KiB. Use `completed` only
 when acceptance exits `0`; completed changed work needs a commit hash, as does
 any other status whose changed paths are non-empty. Blocked, failed, and

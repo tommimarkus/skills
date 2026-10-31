@@ -320,7 +320,7 @@ contains:
 - `blockers`: at most 8 objects, each with `code`, a `summary` of at most 240
   characters, and the optional paired `evidence_path`/`sha256` evidence fields
   above. `notes`: at most 8 objects whose `type` is exactly one of `finding`,
-  `decision_needed`, `residual_risk`, `untouched`, or `verification_limit`, and
+  `decision_needed`, `residual_risk`, `untouched`, `verification_limit`, or `extra_read`, and
   whose message is at most 480 characters;
   `unstarted_remainder`: at most 8 stable leaf IDs or bounded parent actions,
   each at most 240 characters.
