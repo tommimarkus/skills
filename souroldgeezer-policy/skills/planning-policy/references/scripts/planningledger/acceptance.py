@@ -101,22 +101,22 @@ def summary_line(tail: bytes, code: int) -> str:
 
 def excerpt_of(tail: bytes, skipped: bool) -> tuple[str, bool]:
     """The last MAX_ACCEPTANCE_EXCERPT bytes, starting on a line or character boundary."""
-    if not skipped and len(tail) <= MAX_ACCEPTANCE_EXCERPT:
-        return tail.decode("utf-8", errors="replace"), False
+    truncated = skipped or len(tail) > MAX_ACCEPTANCE_EXCERPT
     chunk = tail[-MAX_ACCEPTANCE_EXCERPT:]
     cut = chunk.find(b"\n")
-    if 0 <= cut < len(chunk) - 1:
+    if truncated and 0 <= cut < len(chunk) - 1:
         chunk = chunk[cut + 1 :]
-    else:
+    elif truncated:
         # Skip UTF-8 continuation bytes so the text starts on a character boundary.
         offset = 0
         while offset < len(chunk) and chunk[offset] & 0xC0 == 0x80:
             offset += 1
         chunk = chunk[offset:]
     text = chunk.decode("utf-8", errors="replace")
+    # Invalid bytes decode to 3-byte replacement characters, so re-check the encoded size.
     while len(text.encode("utf-8")) > MAX_ACCEPTANCE_EXCERPT:
-        text = text[1:]
-    return text, True
+        text, truncated = text[1:], True
+    return text, truncated
 
 
 def evidence_problem(log_dir: Path) -> str:

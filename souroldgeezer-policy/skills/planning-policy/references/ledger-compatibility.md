@@ -38,6 +38,12 @@ integrated-or-cleaned readiness, while a step carrying `provisional_base`,
 `blocked:contract_migration_required` (and `show --next-only` names
 `contract_migration_required`); `show`, `list`, and `gc` keep working.
 
+## Older worker packets
+
+A `planning-worker-handoff-v1` packet issued before the `extra_read` note type
+keeps its stored `return_schema`; `validate-return`, `check-changeset`, and
+`run-acceptance` still accept it, and its returns may carry `extra_read`.
+
 ## Older verify packets
 
 A `planning-verify-handoff-v1` packet issued before packets carried

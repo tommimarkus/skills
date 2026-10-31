@@ -319,6 +319,14 @@ class ExcerptBytesTest(AcceptanceHarness):
         self.assertTrue(excerpt)
         self.assertTrue(result["excerpt_truncated"])
 
+    def test_short_invalid_utf8_output_still_fits_the_byte_cap(self):
+        # 3,000 raw 0xFF bytes fit the cap, but each decodes to a 3-byte replacement character.
+        self.prepared("printf '\\377%.0s' $(seq 1 3000); exit 1")
+        code, result = self.worker()
+        self.assertEqual((1, 3000), (code, result["output_bytes"]), result)
+        self.assertLessEqual(len(result["excerpt"].encode()), ledger.MAX_ACCEPTANCE_EXCERPT)
+        self.assertTrue(result["excerpt_truncated"])
+
 
 class EvidenceDirectorySafetyTest(AcceptanceHarness):
     def test_a_symlinked_acceptance_directory_is_never_written_through(self):
