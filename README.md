@@ -63,6 +63,13 @@ under a value that can actually fail. It hands language idioms to
 test support, setup lifetime, time and locale control, parallel runs, lanes, and
 per-test durations; test adequacy stays with `test-quality-audit`.
 
+`software-design` also helps agents reuse, build, and maintain development tools
+and reference-derived data pipelines through its existing modes. The shared
+[tooling procedure](souroldgeezer-design/docs/design-reference/development-tooling.md)
+distinguishes source fidelity, data coverage, consumer support, and observed
+execution. Other design skills consult it when useful while retaining domain
+ownership; ordinary small edits keep their short paths.
+
 `software-design` owns general [data-efficiency](souroldgeezer-design/docs/design-reference/data-efficiency.md) mechanics; `api-design` applies
 the shared procedure to HTTP-to-storage access paths, including query shaping,
 resource lifetime, and API-owned amplification findings.

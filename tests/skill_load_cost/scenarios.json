@@ -1617,5 +1617,170 @@
         "predicate": "conditional:managed-worker"
       }
     ]
+  },
+  {
+    "id": "sd-build-tooling",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+      "souroldgeezer-design/docs/design-reference/development-tooling.md"
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
+  },
+  {
+    "id": "sd-review-tooling",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/software-reference/software-design.md",
+      "souroldgeezer-design/skills/software-design/references/smell-catalog.md",
+      "souroldgeezer-design/skills/software-design/references/smell-cards.jsonl",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+      "souroldgeezer-design/docs/design-reference/development-tooling.md"
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
+  },
+  {
+    "id": "sd-lookup-reference-data",
+    "skill": "software-design",
+    "files": [
+      "souroldgeezer-design/skills/software-design/SKILL.md",
+      "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+      "souroldgeezer-design/docs/design-reference/development-tooling.md"
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
+  },
+  {
+    "id": "app-build-tooling",
+    "skill": "app-design",
+    "load_routes": [
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#310-responsive-sizing-layout-and-container-behavior",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#315-screen-composition-and-information-order",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/app-reference/app-design.md#316-flow-and-layout-traceability",
+        "predicate": "conditional:build-core"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/skills/app-design/references/procedures/layout-and-flow.md",
+        "predicate": "conditional:material-or-multi-screen-flow"
+      },
+      {
+        "entry": "app-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/development-tooling.md",
+        "predicate": "conditional:tooling-affects-delivery"
+      }
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
+  },
+  {
+    "id": "api-review-tooling",
+    "skill": "api-design",
+    "load_routes": [
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#3-decisions",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/api-reference/api-design.md#7-review-checklist",
+        "predicate": "conditional:review-core"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/preflight.md",
+        "predicate": "conditional:review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/skills/api-design/references/procedures/red-flags.md",
+        "predicate": "conditional:review-final"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/data-efficiency.md",
+        "predicate": "conditional:http-storage-review"
+      },
+      {
+        "entry": "api-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/development-tooling.md",
+        "predicate": "conditional:tooling-affects-delivery"
+      }
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
+  },
+  {
+    "id": "infra-build-tooling",
+    "skill": "infra-design",
+    "load_routes": [
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/SKILL.md",
+        "predicate": "always"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#34-state-ownership",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#35-identity-boundaries",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#39-rollout-rollback-and-migration",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/docs/infra-reference/infra-design.md#7-checklist-with-verification-layers",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/references/procedures/project-assimilation.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/extensions/azure.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design",
+        "target": "souroldgeezer-design/skills/infra-design/extensions/bicep.md",
+        "predicate": "conditional:declared-task"
+      },
+      {
+        "entry": "infra-design-skill",
+        "target": "souroldgeezer-design/docs/design-reference/development-tooling.md",
+        "predicate": "conditional:tooling-affects-delivery"
+      }
+    ],
+    "provenance": "Declared task where tooling materially affects delivery; domain owner retained. Load is a proxy, not observed benefit."
   }
 ]

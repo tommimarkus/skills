@@ -188,6 +188,16 @@ accepted residuals, and assurance limits. Public changes receive proportionate
 source/IP inspection; breaking or additive public-surface work retains in-depth
 [IP hygiene](souroldgeezer-audit/skills/ip-hygiene/SKILL.md) and cosmetic work scoped triage. Never claim legal clearance.
 
+## Development tooling
+
+Software-design owns development tooling and reference-derived data pipelines
+through its existing modes. Design skills conditionally consult the shared
+[tooling procedure](souroldgeezer-design/docs/design-reference/development-tooling.md)
+when it affects delivery; retain domain ownership and short paths for small work.
+Authorized implementation may build useful enabling tools within scope; reviews
+remain read-only. Distinguish source fidelity, data validity/coverage, runtime
+support, and observed behavior before claiming simulation readiness.
+
 ## Documentation and ownership
 
 Keep this file, the other runtime's self-contained guidance, and README current

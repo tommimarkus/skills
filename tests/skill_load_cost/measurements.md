@@ -634,3 +634,18 @@ plus the six test-code files' sections). `tdd-policy` gains a sections-only
 floor (0 codes / 28 sections), because the skill defines no finding codes. It
 protects the invariant, "Writing the test", and footer headings, not codes.
 These are deterministic content proxies, not runtime performance.
+
+## Development tooling (2026-11-02)
+
+Compared with content base `6e812f9`, existing declared design routes grow by
+63–69 estimated tokens for conditional discovery (133 for the composed API and
+software route). The shared procedure adds 865 estimated tokens only on the six
+new tooling routes: Build/Review/Lookup for software, plus representative app,
+API, and infra routes. Existing File Edit and unrelated routes exclude it;
+File Edit's entry still returns before the new load cue. Planning's cue is in
+approach selection, outside the declared standard worker assignment excerpts.
+Snapshots were regenerated using `skill_load_cost.py snapshot`.
+
+These are declared load-set and word/punctuation proxies, not measured host
+context, fidelity, speed, or user benefit. The new synthetic cases and separate
+host probe record supply different kinds of evidence.

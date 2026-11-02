@@ -1,0 +1,25 @@
+[
+  {
+    "id": "PULSE",
+    "source": "reference.md#pulse",
+    "revision": 1,
+    "unit": "sparks",
+    "gain": 2,
+    "cap": 9,
+    "damp_skip": true
+  },
+  {
+    "id": "DRAIN",
+    "source": "reference.md#drain",
+    "revision": 1,
+    "unit": "sparks",
+    "loss": 3
+  },
+  {
+    "id": "RELAY",
+    "source": "reference.md#relay",
+    "revision": 1,
+    "unit": "sparks",
+    "interpretation": "unresolved"
+  }
+]

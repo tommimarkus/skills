@@ -1,7 +1,7 @@
 ---
 name: software-design
 description: >-
-  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, algorithms, data structures, data-access efficiency, ownership, coupling, evolution, library compatibility/versioning, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
+  Use when designing, reviewing, extracting, or looking up code/module boundaries, deps, algorithms, data structures, development tooling, reference-derived data pipelines, data-access efficiency, ownership, coupling, evolution, library compatibility/versioning, non-functional/quality requirements, principle/pattern tradeoffs, or C# / .NET™, Java™, Rust®, JavaScript/TypeScript, shell, Python®, or making bounded non-code text/data edits needing no design decision. Defer UI, API, infra, architecture, security, tests.
 ---
 
 # Software Design
@@ -9,7 +9,8 @@ description: >-
 ## Contract
 
 Own Build/Extract/Review/Lookup for code boundaries, dependencies, ownership,
-semantics, coupling, evolution, principle/pattern tradeoffs, and debt. Inputs:
+semantics, coupling, evolution, development tooling, reference-derived data
+pipelines, principle/pattern tradeoffs, and debt. Inputs:
 files or proposals, intent, and evidence. Continue with safe, task-relevant
 judgment within existing authority. Ask the user for a material missing decision or
 authority; uncertainty that does not affect the next safe step is not a stop.
@@ -67,6 +68,9 @@ For interactive CLI, background-job, or agent-operation design, load the core
 reference's operation-feedback default before judging status ownership, progress
 output, cancellation, or detached-job recovery. UI feedback itself remains with
 `app-design`.
+When development tooling or reference-derived data materially affects delivery,
+load [development tooling](../../docs/design-reference/development-tooling.md).
+Use existing modes; known sufficient operations and File Edit skip this procedure.
 For Build/Review data paths or explicit debt Extract, load
 [data-efficiency](../../docs/design-reference/data-efficiency.md).
 Factual Extract skips it; relevant Lookup reads its matched section; File Edit returns.

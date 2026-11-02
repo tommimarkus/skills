@@ -23,3 +23,16 @@ All smell codes, card wording, prompts, examples, design heuristics, and fragili
   proportionate reading/reporting, project-compatible decisions, and paired
   authority/safety/evidence controls. Case definitions are not claims of executed
   model evaluations or measured speed improvements.
+
+## Development tooling and reference-derived data
+
+Source: approved user plan “Development tooling guidance for marketplace users”
+(2026-11-02), implemented in `docs/design-reference/development-tooling.md`
+within this plugin. Source type: user design decision. Handling: idea-only;
+original repository prose and synthetic fixtures, with no third-party text or
+reference dataset copied. Software-design owns the shared procedure; sibling
+skills retain domain ownership and load it conditionally. The fixture's four
+layers distinguish source fidelity, validity/coverage, runtime support, and
+observed execution. Authored cases alone are not executed behavior evidence;
+see software-design's `references/evals/development-tooling/probe-results.md`
+for actual host attempts and limitations.

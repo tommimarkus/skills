@@ -30,6 +30,11 @@ deployment proposals/PRs/plans; Lookup narrow infra-design tradeoffs.
 
 ## Load Map
 
+When tooling materially affects delivery, consult relevant sections of the shared
+[development tooling](../../docs/design-reference/development-tooling.md) procedure.
+Retain infrastructure/IaC ownership; use software-design for tool internals when needed.
+Known sufficient operations and ordinary small tasks need no tooling assessment.
+
 Read [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md) when existing IaC, state, environments, deployment/drift evidence, or diffs are in scope; that procedure lists the full trigger set.
 Load [extensions/azure.md](extensions/azure.md) for Azure® resource/service/
 subscription/tenant/RG/CLI/PowerShell/pipeline signals;

@@ -49,3 +49,13 @@ safety, protocol validity, and honest evidence remain protected.
   proportionate reading/reporting, project-compatible decisions, and paired
   authority/safety/evidence controls. Case definitions are not claims of executed
   model evaluations or measured speed improvements.
+
+## Conditional development tooling
+
+Source: approved user development-tooling plan (2026-11-02); source type:
+user design decision; handling: idea-only, original repository wording.
+Http work retains its domain ownership when consulting
+`docs/design-reference/development-tooling.md` in this plugin. The synthetic
+`api-design-behavior-tooling-opportunity` case covers discovery without ownership
+transfer; it does not establish observed model adherence. Executed host evidence
+is recorded with the software-design development-tooling fixture.

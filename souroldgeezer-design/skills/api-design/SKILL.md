@@ -35,6 +35,11 @@ the useful route; ask only when a material missing decision affects safe work.
 
 ## Load Map
 
+When tooling materially affects delivery, consult relevant sections of the shared
+[development tooling](../../docs/design-reference/development-tooling.md) procedure.
+Retain HTTP API ownership; use software-design for tool internals when needed.
+Known sufficient operations and ordinary small tasks need no tooling assessment.
+
 Load what applies:
 
 - Before analyzing HTTP-to-storage paths in Build/Review or explicit debt Extract,

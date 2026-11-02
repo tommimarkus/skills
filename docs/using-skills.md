@@ -45,6 +45,14 @@ for the shared gate rules.
 | [infra-design](../souroldgeezer-design/skills/infra-design/SKILL.md) | “Review this Terraform environment's identity boundaries and rollback plan.” | Infrastructure findings and operational handoff guidance grounded in topology, state, deployment, and ownership. |
 | [architecture-design](../souroldgeezer-architecture/skills/architecture-design/SKILL.md) | “Create a maintained UML deployment model for this service in the repository.” | A Dediren package and, for a build, validated/rendered evidence with readiness limits. A review assesses original evidence first. When reproducibility needs a build, it uses one retained isolated copy; successful rebuilding does not clear defects in the originals. |
 
+For development tooling, ask software-design to “Build a focused command that
+turns this reference into usable runtime data” or “Review this importer against
+the source and show what the simulator actually supports.” Its existing modes
+cover suitable reuse, useful first-use tools, and maintenance. Authorized
+implementation can build small enabling tools within scope; a Review stays
+read-only. App, API, and infra work can discover tooling opportunities without
+transferring their domain ownership. A trivial edit needs no tooling assessment.
+
 Use software-design for code/module decisions, app-design for UI, api-design
 for HTTP interfaces and consumers, infra-design for infrastructure, and
 architecture-design for maintained architecture models. They support different

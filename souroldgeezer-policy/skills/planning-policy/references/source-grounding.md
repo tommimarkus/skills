@@ -657,3 +657,12 @@ risk-based independent review and parent integration/final verification.
 updated adapter/return parity regressions and per-role load scenarios establish
 source consistency and declared route cost. They do not establish live host
 behavior, model quality, latency, provider-token savings or legal clearance.
+
+## Enabling development tools
+
+Source: approved user development-tooling plan (2026-11-02). Source type: user
+design decision; handling: idea-only, original wording. Standard planning accounts
+for useful enabling tools when approach or acceptance changes; the owning design
+skill supplies tool design. This does not require assessments for trivial work,
+create authority, or amend immutable strict leaves. Synthetic cases record the
+intended boundary, not observed model adherence.

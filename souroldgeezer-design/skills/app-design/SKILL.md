@@ -36,6 +36,11 @@ code/PRs/proposals/plans; Lookup app tradeoffs.
 
 ## Load Map
 
+When tooling materially affects delivery, consult relevant sections of the shared
+[development tooling](../../docs/design-reference/development-tooling.md) procedure.
+Retain frontend ownership; use software-design for tool internals when needed.
+Known sufficient operations and ordinary small tasks need no tooling assessment.
+
 Read relevant core principles/defaults/checklist sections and these procedures
 when they inform the decision:
 [references/procedures/project-assimilation.md](references/procedures/project-assimilation.md)
