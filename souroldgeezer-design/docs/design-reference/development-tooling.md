@@ -10,7 +10,36 @@ A known sufficient operation or ordinary small edit needs no tooling assessment.
 
 Start with a concrete obstacle: a fragile manual operation, missing capability,
 repeated friction, or a consequential verification gap. Discover plausible
-repository commands and host tools within the task boundary. Choose among using
+repository commands, host tools, and established ecosystem or industry-standard
+solutions within the task boundary. Do not limit candidates to installed tools.
+Recommend a suitable existing tool even when absent: a new need may be the reason
+it has never been installed. Explain its fit, setup/dependency costs, and relevant
+constraints before choosing custom implementation. Availability is a constraint,
+not evidence that a replacement should be written. Keep the recommendation distinct
+from installation; respect existing setup authority and continue independent work.
+
+Pick up task-specific favorites from the current request/conversation and relevant
+existing project guidance, documentation, or configuration found through bounded
+discovery. No preference file, schema, syntax, or workspace location is required.
+Apply each preference to its stated task; a favorite for one task is not a global
+mandate. Respect the current explicit request when preferences conflict. Recommend
+a favored suitable tool even when absent; explain a material task-fit or project
+constraint conflict rather than silently substituting another tool. Ask only when
+a consequential conflict cannot be resolved from the available context.
+
+Respect explicit user or project tool choices. For a narrow, well-solved operation,
+recommend a well-established suitable utility before alternatives or custom code.
+For choices that reshape a user's workflow or toolchain, account for their
+preferences rather than treating industry adoption as a mandate. Keep these
+recommendations tool-neutral; no fixed product list is needed.
+
+Where user/project choices leave alternatives open, prefer the most open, least
+restrictive suitable licence for the intended use. Check the actual licence/version and obligations rather than
+inferring them from popularity, availability, or an open-source label. Explain
+material tradeoffs when compatibility, task fit, or project constraints favor
+a more restrictive option; do not select an unsuitable tool for its licence alone.
+
+Choose among using
 a suitable existing tool, adapting it, executing directly, writing a temporary
 script, and retaining a maintained tool. Prefer suitable reuse, but do not require
 a second use before building something that enables worthwhile work now.

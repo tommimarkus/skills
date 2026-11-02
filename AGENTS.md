@@ -194,6 +194,11 @@ Software-design owns development tooling and reference-derived data pipelines
 through its existing modes. Design skills conditionally consult the shared
 [tooling procedure](souroldgeezer-design/docs/design-reference/development-tooling.md)
 when it affects delivery; retain domain ownership and short paths for small work.
+Recommend suitable established tools even when not installed; prefer the least
+restrictive suitable licence for the intended use and explain material tradeoffs,
+while respecting explicit user/project tool choices. Pick up task-specific favorites
+from conversation and relevant existing guidance/docs/config without a fixed format
+or location; keep recommendations tool-neutral.
 Authorized implementation may build useful enabling tools within scope; reviews
 remain read-only. Distinguish source fidelity, data validity/coverage, runtime
 support, and observed behavior before claiming simulation readiness.

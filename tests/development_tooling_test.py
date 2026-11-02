@@ -44,7 +44,8 @@ class DevelopmentToolingTest(unittest.TestCase):
         cases = {row['id']: row for row in read_jsonl(
             f'{DESIGN}/software-design/references/evals/behavior-cases.jsonl')}
         for suffix in ('reuse', 'first-use', 'importer', 'ambiguous-unsupported',
-                       'source-disagreement', 'trivial', 'read-only'):
+                       'source-disagreement', 'trivial', 'read-only',
+                       'uninstalled', 'licence-choice', 'user-preference', 'task-favorites'):
             case = cases[f'software-design-behavior-tooling-{suffix}']
             self.assertTrue(case['required_checks'])
             self.assertTrue(case['forbidden_behaviors'])

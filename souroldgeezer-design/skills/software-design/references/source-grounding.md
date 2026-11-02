@@ -36,3 +36,26 @@ layers distinguish source fidelity, validity/coverage, runtime support, and
 observed execution. Authored cases alone are not executed behavior evidence;
 see software-design's `references/evals/development-tooling/probe-results.md`
 for actual host attempts and limitations.
+
+The user's integration follow-up explicitly requires recommending suitable
+established tools even when absent from the host: a new need may explain their
+absence. It also prefers the most open licence among suitable candidates.
+Handling: idea-only, original wording; interpret this as the least restrictive
+licence for the intended use, check actual terms, and explain fit/compatibility
+tradeoffs without claiming legal clearance. Recommendation is distinct from
+installation authority. Original synthetic cases exercise absent-tool discovery
+and a choice between supplied terms without importing a real product licence.
+
+The same follow-up retains user/project tool preferences and asks for tool-neutral
+wording. Narrow, well-solved utility needs favor an established suitable solution;
+industry adoption and licence openness do not impose a broader toolchain or
+override an explicit choice. Handling: idea-only, original prose and a synthetic
+user-preference case, with no named-product mandate.
+
+The user further asks that task-specific tool favorites be recognized from
+conversation and existing project materials without mandating a file format or
+workspace location. Handling: idea-only, original wording. Bounded discovery
+uses applicable guidance, notes, docs or configuration; preferences stay scoped
+to their tasks, current explicit instructions prevail, and material conflicts
+are explained. The synthetic task-favorites case covers both initial preference
+and a later per-task override without introducing a configuration system.

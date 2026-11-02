@@ -68,7 +68,11 @@ and reference-derived data pipelines through its existing modes. The shared
 [tooling procedure](souroldgeezer-design/docs/design-reference/development-tooling.md)
 distinguishes source fidelity, data coverage, consumer support, and observed
 execution. Other design skills consult it when useful while retaining domain
-ownership; ordinary small edits keep their short paths.
+ownership; ordinary small edits keep their short paths. Suitable established tools
+are recommended even when not installed, with the least restrictive suitable
+licence preferred for the intended use, while respecting user/project tool choices.
+Task-specific favorites can come from conversation or relevant existing project
+materials, without a required preference file, format, or location.
 
 `software-design` owns general [data-efficiency](souroldgeezer-design/docs/design-reference/data-efficiency.md) mechanics; `api-design` applies
 the shared procedure to HTTP-to-storage access paths, including query shaping,

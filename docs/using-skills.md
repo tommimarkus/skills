@@ -51,7 +51,16 @@ the source and show what the simulator actually supports.” Its existing modes
 cover suitable reuse, useful first-use tools, and maintenance. Authorized
 implementation can build small enabling tools within scope; a Review stays
 read-only. App, API, and infra work can discover tooling opportunities without
-transferring their domain ownership. A trivial edit needs no tooling assessment.
+transferring their domain ownership. Expect suitable ecosystem tools to be
+recommended even when absent from the host; among suitable choices, prefer the
+most open, least restrictive licence for the intended use and explain tradeoffs.
+Respect explicit user/project tool choices; these are tool-neutral recommendations,
+not a mandated toolchain. You can name task-specific favorites in conversation or
+existing relevant project guidance, notes, or configuration; no new file, schema,
+or prescribed workspace location is required. Preferences stay scoped to their
+tasks, and the current explicit request takes precedence.
+Recommendation does not itself install a tool. A trivial edit needs no tooling
+assessment.
 
 Use software-design for code/module decisions, app-design for UI, api-design
 for HTTP interfaces and consumers, infra-design for infrastructure, and

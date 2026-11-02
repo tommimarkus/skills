@@ -108,7 +108,8 @@ The File Edit lane returns before this workflow.
    useful route from the authorized outcome; ask only for a material ambiguity.
 2. Prefer `rg` for repository text; inspect relevant inputs and detect stack.
    Run bounded discovery of repository-configured commands,
-   host-exposed integrations, and plausible task-relevant installed tools;
+   host-exposed integrations, and plausible task-relevant ecosystem tools,
+   including suitable established solutions not installed on the host;
    never perform an exhaustive machine crawl.
 3. Select tools by task fit, repository convention, authoritative data,
    structured output, failure and side-effect behavior, and maintainability.
