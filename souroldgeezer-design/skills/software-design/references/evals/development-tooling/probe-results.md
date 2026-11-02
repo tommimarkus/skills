@@ -13,8 +13,14 @@ defect. The prompt did not supply the planted defect or expected trace.
 
 | Host | Runtime / model evidence | Outcome |
 |---|---|---|
-| Codex | CLI `0.166.0`; host default model, exact model identity not emitted by the captured JSONL and therefore unknown | Exit 0. Loaded the conditional procedure, derived source expectations independently, executed five bounded examples including RELAY failure, and found cap 9 versus source cap 6. |
+| Codex | CLI `0.166.0`; host default model, exact model identity not emitted by the captured JSONL and therefore unknown | Exit 0. Loaded the conditional procedure, checked source clauses and executed five bounded examples including RELAY failure, and confirmed cap 9 versus source cap 6. |
 | Claude Code | CLI `2.1.316`; result JSON reported `claude-opus-5-5` | Exit 0. Loaded the procedure, independently executed five traces plus RELAY failure, found the cap defect and source-body-insensitive importer, and preserved Review authority. |
+
+Codex read the fixture README before execution; that README reveals the planted
+defect and expected traces. Its result supports source checking and execution,
+not an unprimed independent derivation. Claude skipped the README and oracle
+when deriving its expectations. The final independent reviewer caught the earlier
+overbroad Codex wording; this disclosure corrects it without rerunning the probe.
 
 Both hosts recommended upstream repair followed by regeneration, preservation of
 authored overrides, and explicit ambiguous/unsupported RELAY handling. Both
