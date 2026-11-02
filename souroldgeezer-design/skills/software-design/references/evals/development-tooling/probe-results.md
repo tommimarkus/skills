@@ -109,3 +109,48 @@ checks passed; the branch changes no version cells. The failed initial suite,
 corrected suite, architecture, fragmentation, smoke and guard logs remain in the
 same ignored local evidence directory. No landing, stamping, or publication was
 performed or authorized by these verification results.
+
+## Integration follow-up: ecosystem tools and user preferences
+
+The user refined the intended behavior before landing: recommend suitable
+established tools even when absent, prefer the least restrictive suitable
+licence where choices remain open, retain user/project choices, avoid named-tool
+mandates, and recognize task-specific favorites in conversation or relevant
+existing project materials without a required file format or location.
+
+Fresh read-only Lookup probes tested `9452534dd27974413842c59a029fdaaaa177a9ab`
+using the same host commands and 180-second bounds recorded above. Codex CLI
+`0.166.0` completed with exit 0 (exact model still not emitted); Claude Code
+`2.1.316` completed with exit 0 and reported `claude-opus-5-5`. Both read the
+entry and shared procedure, without eval cases or earlier results, and answered
+three original synthetic scenarios:
+
+- Recommend absent Tool A over equally suitable installed Tool B when supplied
+  A terms permit use/modification/redistribution with notice and B adds a
+  commercial-use restriction; explain setup and do not install without authority.
+- Recommend the user's suitable favored B for data queries over more popular,
+  less restrictive C; keep the separate A preference scoped to schema comparison;
+  honor a later explicit request for C for this query. Ordinary prose preferences
+  need no standard file, schema, syntax, or workspace location.
+- Do not override a suitable explicit broader toolchain choice merely for adoption
+  or licence preference. Recommendations are distinct from mandatory tooling.
+
+Parent inspection found both responses consistent with those supplied facts and
+the new guidance. These are three decision scenarios in one new Lookup session
+per host, not actual installation, industry-tool ranking, real licence analysis,
+or a test of autonomous preference discovery across arbitrary on-disk formats.
+The preference facts were supplied by the prompt. No named-product mandate,
+preference schema, or configuration system was added. The preliminary
+`ecosystem-*` host runs tested only absent-tool/licence decisions before the
+later preference refinements; they are not the final-candidate evidence.
+Raw final prompt, outputs and Codex JSONL use the `preferences-final-*` prefix
+in the same ignored local evidence directory. Thirty-five focused tests passed;
+new synthetic-case coverage checks first failed before the cases were added.
+
+Fresh independent implementation review accepted the guidance and identified
+stale load measurements; the figures were refreshed and earlier measurements
+explicitly labelled historical. Separate independent source/IP review inspected
+all ten changed paths in `410a965..9452534` without sampling, found no remediation
+issue, and extended its prior reasonable-hygiene verdict. Hypothetical supplied
+terms are original fixtures, not copied product licences or legal clearance.
+The parent retains final integration verification and the exact local receipts.

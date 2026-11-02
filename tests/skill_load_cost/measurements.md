@@ -637,9 +637,10 @@ These are deterministic content proxies, not runtime performance.
 
 ## Development tooling (2026-11-02)
 
-Compared with content base `6e812f9`, existing declared design routes grow by
+At initial content revision `410a965`, compared with base `6e812f9`, existing
+declared design routes grew by
 63–69 estimated tokens for conditional discovery (133 for the composed API and
-software route). The shared procedure adds 865 estimated tokens only on the six
+software route). The shared procedure added 865 estimated tokens only on the six
 new tooling routes: Build/Review/Lookup for software, plus representative app,
 API, and infra routes. Existing File Edit and unrelated routes exclude it;
 File Edit's entry still returns before the new load cue. Planning's cue is in
@@ -654,3 +655,15 @@ The compact planning approach cue adds 16 proxy tokens to the standard parent
 route. Its existing 3,650-token ceilings remain unchanged: Claude measures 3,640,
 Codex 3,648. The first candidate's longer cue exceeded those ceilings and was
 replaced; the failed measurements are retained in the behavior-evidence record.
+
+### Tool preferences follow-up
+
+At `9452534`, the shared procedure measures 1,205 proxy tokens (+340 over the
+initial candidate); those tokens remain conditional on tooling relevance. The
+software entry adds 10 proxy tokens for discovery beyond installed tools. Against
+base `6e812f9`, existing software routes now grow by 79 tokens, other single-domain
+design routes by 63–65, and the composed API/software route by 143. Preferences
+come from existing relevant materials without any new file or configuration
+system. Snapshot regeneration includes these changes; the preceding figures
+are explicitly historical, not claims about this later candidate. Load proxies
+remain distinct from observed behavior or user benefit.
