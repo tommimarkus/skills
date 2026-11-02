@@ -49,7 +49,8 @@ retries above completed; the Codex child retained its read-only sandbox and Clau
 retained plan permissions. No contributor configuration or model pin was changed.
 The Claude result reported no permission denials and no spawned subagents.
 Raw local prompt, stdout/stderr, Codex JSONL, and Claude result JSON are retained
-under the task worktree's ignored `.cache/development-tooling-evidence/`; they are
+beside the task worktrees in the primary checkout's ignored
+`.worktrees/development-tooling-evidence/` (moved there for integration cleanup); they are
 author evidence, not required installed consumer inputs. Exact Codex model identity
 is unavailable evidence, separate from both observed behavior and structural checks.
 
