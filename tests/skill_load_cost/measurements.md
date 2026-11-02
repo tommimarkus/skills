@@ -649,3 +649,8 @@ Snapshots were regenerated using `skill_load_cost.py snapshot`.
 These are declared load-set and word/punctuation proxies, not measured host
 context, fidelity, speed, or user benefit. The new synthetic cases and separate
 host probe record supply different kinds of evidence.
+
+The compact planning approach cue adds 16 proxy tokens to the standard parent
+route. Its existing 3,650-token ceilings remain unchanged: Claude measures 3,640,
+Codex 3,648. The first candidate's longer cue exceeded those ceilings and was
+replaced; the failed measurements are retained in the behavior-evidence record.

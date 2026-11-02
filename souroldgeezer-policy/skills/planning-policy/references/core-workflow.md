@@ -31,10 +31,8 @@ reinterpret malformed managed input as a lightweight assignment.
    integration cost; decomposability alone does not require workers. The parent
    prepares shared facts once and retains integration and final verification.
    Keep code and its tests together.
-   Account for worthwhile enabling tools when they change the approach or
-   acceptance; consult software-design's development-tooling procedure when
-   relevant. Known sufficient operations need no tooling assessment. This cue
-   does not expand authority or amend immutable strict approved leaves.
+   Consider useful enabling tools via software-design when they affect the
+   approach or acceptance.
    Select an owning audit only for a bounded unresolved inspection question
    that can change approach or acceptance; otherwise use the owning design skill.
 3. Obtain approval for an explicit plan-first request or constraint, a material
