@@ -33,10 +33,25 @@ this **before** downloading anything and again before exec, and names the exact
 cause — no runtime found, an unreadable version, or a too-old major — so a
 pre-21 `java` reports itself instead of killing the launcher without a message.
 
+### Java4Shell mitigation
+
+Dediren 2026.11.0's packaged CLI/MCP launcher disables Base64 intrinsics with
+`-XX:-UseBASE64Intrinsics` to mitigate Java4Shell (CVE-2026-114938). Update the
+architecture plugin and restart the host to use the new default. Also update
+host-managed Java to a vendor-patched runtime and restart Java processes; the
+bundle does not install a patched JRE.
+
+Explicit runtime overrides, `PATH` installs, and the legacy cache can still
+select an older bundle under the existing support floor. Update those selections
+to 2026.11.0 or newer. For an older bundle awaiting an update, upstream documents
+`JAVA_OPTS=-XX:-UseBASE64Intrinsics` as a startup mitigation. Direct Java or
+embedded-library use must supply the option itself until Java is patched.
+See the [upstream release notes](https://github.com/tommimarkus/dediren/releases/tag/v2026.11.0).
+
 ## What the first run does
 
 Provisioning runs once per host, on the first `tools/list`, and installs the
-pinned release **2026.10.0**. The supported floor is **2026.07.28**: from that
+pinned release **2026.11.0**. The supported floor is **2026.07.28**: from that
 release the render lane takes each view's accessible name from its own
 `presentation`, which the skill's post-render step requires.
 

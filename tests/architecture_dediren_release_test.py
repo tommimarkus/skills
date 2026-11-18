@@ -509,6 +509,21 @@ class ArchitectureDedirenReleaseTest(unittest.TestCase):
         self.assertFalse((bundle / "plugins").exists())
         self.assertEqual(sorted(path.name for path in (bundle / "bin").iterdir()), ["dediren"])
 
+    def test_release_launcher_disables_base64_intrinsics_in_the_running_jvm(self) -> None:
+        env = os.environ.copy()
+        # Inspect the effective JVM setting, including precedence over JAVA_OPTS,
+        # rather than inferring mitigation from text in the launcher script.
+        env["JAVA_OPTS"] = "-XX:+UseBASE64Intrinsics -XX:+PrintFlagsFinal"
+        result = subprocess.run(
+            [dediren_executable(), "--version"],
+            cwd=REPO_ROOT, env=env, text=True, capture_output=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertRegex(
+            result.stdout,
+            r"(?m)^\s*bool\s+UseBASE64Intrinsics\s*=\s*false\s+.*\{command line\}",
+        )
+
     def test_release_bundle_contains_java_runtime_engines_schemas_and_guide(self) -> None:
         bundle = runtime_bundle()
         runtime_version = json.loads((bundle / "bundle.json").read_text(encoding="utf-8"))["version"]

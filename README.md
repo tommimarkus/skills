@@ -184,7 +184,12 @@ For local checkout registration without copying, add an `entries` item in `~/.ge
 
 ### Dediren runtime (architecture plugin only)
 
-`architecture-design` provisions its pinned, checksum-verified Dediren bundle when the host first lists its tools. The pin is Dediren **2026.10.0**. Since 2026.09.0, generated layouts use `layout-result.schema.v3` with typed edge routes; regenerate stored layouts and migrate consumers of edge `points`. Authored models and render policies remain compatible. Java™ 21+ is the normal prerequisite. The [Dediren runtime guide](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md) covers air-gapped hosts, overrides, and failures.
+`architecture-design` provisions its pinned, checksum-verified Dediren bundle when the host first lists its tools. The pin is Dediren **2026.11.0**. Since 2026.09.0, generated layouts use `layout-result.schema.v3` with typed edge routes; regenerate stored layouts and migrate consumers of edge `points`. Authored models and render policies remain compatible. Java™ 21+ is the normal prerequisite. The [Dediren runtime guide](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md) covers air-gapped hosts, overrides, and failures.
+
+Dediren 2026.11.0 adds a launcher mitigation for Java4Shell (CVE-2026-114938).
+Update the architecture plugin and restart the host; also update host-managed
+Java to a vendor-patched runtime. Older runtime overrides need their own update
+or startup mitigation; see the [runtime guide](souroldgeezer-architecture/skills/architecture-design/references/procedures/dediren-install.md#java4shell-mitigation).
 
 Architecture Review preserves original source and artifacts as review evidence. When a build is needed, it uses one retained isolated copy; a successful rebuild does not clear stale or missing originals.
 
