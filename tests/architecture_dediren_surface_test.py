@@ -1322,7 +1322,7 @@ class ArchitectureDedirenSurfaceTest(unittest.TestCase):
         ))
 
     def test_current_dediren_pin_is_synchronized_across_runtime_guidance(self) -> None:
-        pin = "2026.11.0"
+        pin = "2026.11.1"
         expectations = {
             ARCH_PLUGIN / "docs" / "architecture-reference" / "architecture.md": f"(`{pin}`)",
             ARCH_PLUGIN

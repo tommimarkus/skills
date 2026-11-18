@@ -48,10 +48,16 @@ to 2026.11.0 or newer. For an older bundle awaiting an update, upstream document
 embedded-library use must supply the option itself until Java is patched.
 See the [upstream release notes](https://github.com/tommimarkus/dediren/releases/tag/v2026.11.0).
 
+The adopted 2026.11.1 bundle retains that option. Upstream reports building it
+with a patched Temurin 25 runtime; this does not update the Java runtime on the
+user's host. Its [release notes](https://github.com/tommimarkus/dediren/releases/tag/v2026.11.1)
+identify patched Temurin builds 25.0.5.1 and 21.0.13.1. Use your vendor's patched
+build and restart processes; Java 21 remains the compatibility minimum.
+
 ## What the first run does
 
 Provisioning runs once per host, on the first `tools/list`, and installs the
-pinned release **2026.11.0**. The supported floor is **2026.07.28**: from that
+pinned release **2026.11.1**. The supported floor is **2026.07.28**: from that
 release the render lane takes each view's accessible name from its own
 `presentation`, which the skill's post-render step requires.
 
