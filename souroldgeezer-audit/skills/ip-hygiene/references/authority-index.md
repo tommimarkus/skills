@@ -81,6 +81,10 @@ These links classify licence text as an operative licence term only after the
 review establishes the exact version, covered material, holder, and applicable
 file-level notices.
 
+Use the [SPDX License List](https://spdx.org/licenses/) to look up other standard
+licence texts and exceptions by identifier. Confirm the terms against the
+licence and notices shipped with the exact release or commit.
+
 - **MIT License:** <https://opensource.org/license/mit>
 - **Apache License 2.0:** <https://www.apache.org/licenses/LICENSE-2.0>
 - **BSD 2-Clause License:** <https://opensource.org/license/bsd-2-clause>
@@ -90,6 +94,18 @@ file-level notices.
 - **GNU Affero General Public License 3.0:** <https://www.gnu.org/licenses/agpl-3.0.html>
 - **GNU licence FAQ — holder/licensor guidance, not an operative term:**
   <https://www.gnu.org/licenses/gpl-faq.html>
+- **Eclipse Public License:** [2.0 (EPL-2.0)](https://www.eclipse.org/legal/epl/epl-v20.html),
+  [1.0 (EPL-1.0)](https://www.eclipse.org/legal/epl/epl-v10.html). For 2.0,
+  check whether the initial Contributor included the Exhibit A notice.
+- **Mozilla Public License:** [2.0 (MPL-2.0)](https://www.mozilla.org/en-US/MPL/2.0/),
+  [1.1 (MPL-1.1)](https://www.mozilla.org/en-US/MPL/1.1/). For 2.0, check
+  the covered files and whether the Exhibit B notice applies.
+- **European Union Public Licence:** [1.2 (EUPL-1.2), official language versions](https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12),
+  [1.1 (EUPL-1.1)](https://interoperable-europe.ec.europa.eu/licence/european-union-public-licence-version-11-eupl).
+  Check Article 5 and the compatibility appendix in the applicable version.
+- **CeCILL (France):** [2.1 (CECILL-2.1)](https://www.cecill.info/licences/Licence_CeCILL_V2.1-en.html).
+  The [CeCILL licence index](https://www.cecill.info/licences.en.html) links to
+  earlier versions and the distinct CeCILL-B and CeCILL-C variants.
 - **Creative Commons 4.0 legal code selector:**
   <https://creativecommons.org/share-your-work/cclicenses/>
 - **Creative Commons Attribution 4.0 legal code:**
@@ -99,6 +115,14 @@ file-level notices.
 - **SIL Open Font License 1.1:** <https://openfontlicense.org/open-font-license-official-text/>
 - **OFL FAQ — holder/licensor guidance, not an operative term:**
   <https://openfontlicense.org/ofl-faq/>
+
+### European Public-Sector Data Licences
+
+- **France, Etalab Licence Ouverte / Open Licence 2.0:**
+  <https://www.data.gouv.fr/pages/legal/licences/etalab-2-0>
+- **Germany, Datenlizenz Deutschland 2.0:**
+  [Namensnennung (attribution)](https://www.govdata.de/dl-de/by-2-0),
+  [Zero](https://www.govdata.de/dl-de/zero-2-0).
 
 ## Holder Policies And Publication Terms
 
