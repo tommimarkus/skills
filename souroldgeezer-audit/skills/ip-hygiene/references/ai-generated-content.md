@@ -41,6 +41,12 @@ want to distribute the material, offer others reuse rights, or make a copyright
 claim. Check their authority for each act they choose. A publisher can omit a
 copyright claim where the publication decision does not depend on one.
 
+In a prospective draft, record routine actions such as carrying the required
+credit in the decision controls. Record a finding for a conflict in the proposal
+or a material evidence gap. If operative terms prohibit the proposed act, cite
+the controlling term once and explain why any other grant the publisher relies
+on fails to cover that act in the same finding.
+
 - **`LICENSE` and scope.** Preserve the full standard licence text. State which
   files or directories it covers in an adjacent scope note or the README. Use an
   asset-specific entry if its terms differ. Check whether the provider's terms
