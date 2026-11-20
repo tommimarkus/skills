@@ -5,6 +5,9 @@ images, audio/video, logos, SDKs, samples, or other bundled material. Licence
 analysis is source-, file-, version-, act-, and distribution-specific. Read the
 actual operative text through [authority-index.md](authority-index.md).
 
+For AI-generated or AI-assisted content, check the [applicable provider and input terms](ai-generated-content.md)
+before relying on permission to publish the output or granting downstream rights.
+
 ## Establish The Permission Chain
 
 - **`IP-LIC-1 Identity and coverage`:** record source/repository, version or

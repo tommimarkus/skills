@@ -21,6 +21,11 @@ external docs.
 - Source: `souroldgeezer-audit/skills/ip-hygiene/references/authority-index.md`.
   Handling: URL-level source notes only; eval prompts do not copy legal source
   language or vendor policy text.
+- Source: [`ai-generated-content.md`](ai-generated-content.md) links to CJEU
+  originality case law, a Commission explanation about translations, UK
+  legislation, and US Copyright Office guidance for their respective scopes.
+  Handling: original decision guidance with source links. Apply the actual
+  terms for the provider, plan, and use under review.
 - Source: `souroldgeezer-audit/docs/audit-reference/audit-craft.md` and
   `souroldgeezer-audit/docs/audit-reference/materiality.md`.
   Handling: local bundled references owned by this repo; eval cases exercise

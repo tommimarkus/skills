@@ -41,7 +41,7 @@ Route those questions to qualified counsel or the owning review path.
 Load only the references selected by the evidence:
 
 - source/provenance or an authority dispute: [authority-index.md](references/authority-index.md)
-- copied text, code, examples, interfaces, tables, or datasets: [copyright.md](references/copyright.md)
+- copied text, code, examples, interfaces, tables, or datasets: [copyright.md](references/copyright.md). For AI-generated or AI-assisted work, use [ai-generated-content.md](references/ai-generated-content.md) when authorship, permission, or notice scope matters.
 - public marks, names, symbols, logos, affiliation, or branding: [trademark.md](references/trademark.md)
 - licences, notices, third-party code, schemas, data, fonts, or media: [licence-assets.md](references/licence-assets.md)
 - source, configuration, or build files, their comments, doc comments, and generated banners: [source-code.md](references/source-code.md)

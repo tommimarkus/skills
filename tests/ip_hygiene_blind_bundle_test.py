@@ -60,6 +60,7 @@ class IpHygieneBlindBundleTest(unittest.TestCase):
             self.assertFalse(any(path.endswith("/cases.jsonl") for path in paths))
             self.assertFalse(any(path.endswith("/validate_ip_hygiene_actual.py") for path in paths))
             self.assertIn("souroldgeezer-audit/skills/ip-hygiene/SKILL.md", paths)
+            self.assertIn("souroldgeezer-audit/skills/ip-hygiene/references/ai-generated-content.md", paths)
             self.assertIn("souroldgeezer-audit/docs/audit-reference/audit-craft.md", paths)
             self.assertIn("souroldgeezer-audit/docs/audit-reference/materiality.md", paths)
             self.assertFalse(any("expected.jsonl" in path for path in paths))

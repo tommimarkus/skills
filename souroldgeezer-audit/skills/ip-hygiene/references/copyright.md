@@ -5,6 +5,9 @@ figures, tables, fixtures, or datasets. Use [authority-index.md](authority-index
 for the primary sources. Apply national law when a directive leaves an option
 or implementation question.
 
+For AI-generated or AI-assisted content, use [these additional checks](ai-generated-content.md)
+when generation affects authorship, permission, or the proposed licence.
+
 ## Criteria
 
 - **`IP-SRC-1 Source and provenance`:** identify the source, author/holder where

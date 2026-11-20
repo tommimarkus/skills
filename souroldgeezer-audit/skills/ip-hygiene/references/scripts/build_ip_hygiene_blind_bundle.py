@@ -14,6 +14,7 @@ ALLOWLIST = (
     "souroldgeezer-audit/docs/audit-reference/audit-craft.md",
     "souroldgeezer-audit/docs/audit-reference/materiality.md",
     "souroldgeezer-audit/skills/ip-hygiene/SKILL.md",
+    "souroldgeezer-audit/skills/ip-hygiene/references/ai-generated-content.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/authority-index.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/copyright.md",
     "souroldgeezer-audit/skills/ip-hygiene/references/drive-by.md",
