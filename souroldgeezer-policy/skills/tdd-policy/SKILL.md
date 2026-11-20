@@ -21,8 +21,8 @@ and material limits or exceptions. Preserve meaningful structure-coupled,
 scaffold, and retirement records; omit routine policy inventories.
 
 Read [references/core-workflow.md](references/core-workflow.md) before real
-enforcement, guidance edits, or adoption. When editing triggers, behavior, source
-grounding, or evals, also read `references/evals` and
+enforcement, guidance edits, adoption, or [TDD preflight](references/core-workflow.md#tdd-preflight).
+When editing triggers, behavior, source grounding, or evals, also read `references/evals` and
 [references/source-grounding.md](references/source-grounding.md).
 
 Modes: default `enforce-initialized` when loaded repo guidance initializes this
@@ -55,7 +55,7 @@ per-task override logged, scope/exception globs, `test-after` downgrade) —
 apply reasoned procedural exceptions under the shared posture. `test-after` relaxes the invariant and is an
 opt-out, never a variant. Delegate test adequacy and similarity/history retirement to
 `test-quality-audit`, code/module design and test-code idioms to
-`software-design`, commit/branch preflight to `git-workflow-policy`, PR/MR to
+`software-design`, Git readiness to `git-workflow-policy`, PR/MR to
 `pr-ops`, issues to `issue-ops`.
 
 Ask vs continue: discover routine scope, seam, and test-command facts first;
@@ -63,9 +63,9 @@ record justified procedural exceptions once. Ask the user when a material bounda
 unresolved or essential verification cannot run and no substitute exists. Malformed
 or ambiguous adopting guidance → stop-and-ask or no-op; never mass-generate.
 
-Enforcement honesty follows the posture core's limits rule (enforced-by-default
-posture, no mechanical guarantee; the only mechanical path is the optional
-`enforcement: model+gate` PreToolUse hook, deferred to phase 2).
+`enforcement: model` is the supported setting. Mechanical enforcement is
+deferred. If loaded guidance requires `model+gate`, surface the unmet
+requirement before taking a governed action, and preserve it during adoption.
 
 Stop before letting new or changed behavior at the seam land with no failing test
 first unless an explicit, logged exception applies; a behavior-preserving

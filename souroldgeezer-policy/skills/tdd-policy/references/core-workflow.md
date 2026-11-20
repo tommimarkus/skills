@@ -40,18 +40,22 @@ standing-line rule — the invariant inline, never a bare pointer. Template:
 > RED→GREEN→REFACTOR, and REFACTOR retires or consolidates superseded coverage and resolves scaffold
 > tests before GREEN lands, rewriting each at the seam or deleting it; removing a behavior removes
 > its tests; shipped behavior stays covered by at least one test that fails on regression. Tests
-> reuse the suite's shared fixtures and helpers, share only immutable setup, and never depend on
-> real sleeps, clocks, or the machine's locale or timezone. Seam <rule|public API of each module>.
-> Scope <globs>. Budget <lane: value|inherited|none>. Exceptions <list> (logged).
-> Enforcement <model|model+gate>.`
+> reuse the suite's shared fixtures and helpers, share only immutable or safely resettable
+> infrastructure, keep mutable data, users, and sessions per test, and clean up even on failure.
+> Tests never depend on real sleeps, clocks, or the machine's locale or timezone.
+> Seam <rule|public API of each module>. Scope <globs|default, including behavior-bearing
+> configuration and migrations>. Budget <lane: value|inherited|none>. Exceptions <list> (logged).
+> Enforcement model.`
 
 ## Default profile
 
 Bare `tdd-policy` (no options) resolves to: variant `test-first`; seam = the
-public API of each module or package (see `seam`); scope = production source
-(excludes tests, generated, migrations, config); exceptions =
-spikes/prototypes/throwaway/generated (logged); `feedback-budget` none (observe
-and report); enforcement `model`.
+public API of each module or package (see `seam`); scope = production source,
+including behavior-bearing configuration and migrations (excludes tests and
+generated files); exceptions = spikes/prototypes/throwaway/generated (logged);
+`feedback-budget` none (observe and report); enforcement `model`. Classify
+production inputs by their effect at the seam. Explicit scope and exceptions
+take precedence over the default.
 
 ## Variants (both preserve the invariant)
 
@@ -235,6 +239,18 @@ order:
 Inputs therefore distinguish the focused test command from the full command
 when the runner supports it; the normal check summary records which scope ran.
 
+## TDD preflight
+
+Check the change's classification and any declared exceptions. If RED was
+required, use available original RED and GREEN evidence to assess test-first
+order. If that order cannot be established, report test-first order as unknown.
+For those changes, when useful and within scope, run the focused test against
+the pre-change and changed implementations in isolation. A replay can show the
+test detects the regression but cannot establish when the test was written or
+first run. Use existing evidence where possible. Preflight adds no receipt
+requirement. Apply any explicit repository landing rule to the evidence actually
+available.
+
 ## REFACTOR includes the suite
 
 After GREEN, or once a behavior-preserving refactor is complete, review the
@@ -287,7 +303,7 @@ suite. The parent names the shared test-support paths in each worker's reads.
 ## Config options
 
 - `variant` — which discipline satisfies the invariant (`test-first` | `test-alongside`; see Variants).
-- `scope` — globs the policy governs (default: production source).
+- `scope` — globs the policy governs (see Default profile).
 - `seam` — the surface observable behavior is measured at: globs or a rule
   (e.g. "public exports of each package"). Bare initialization resolves it to
   the public API of each module or package (its exported or public symbols),
@@ -308,7 +324,7 @@ suite. The parent names the shared test-support paths in each worker's reads.
   budget step above, the check summary, and `test-quality-audit`, which reads the same
   declared budget. No numeric mandate, no test-count quota, no new enforcement
   machinery.
-- `enforcement` — `model` (behavioral default) or `model+gate` (adds the phase-2 PreToolUse backstop).
+- `enforcement` — `model` (see Enforcement below).
 - `coverage-floor` — optional numeric minimum for the `test-after` downgrade.
 
 ## Opt-out ladder (must stay low-friction — this is where choice lives)
@@ -329,11 +345,11 @@ ask or no-op — never mass-generate output. Narrow scope keeps any failure loca
 
 ## Enforcement — honest limits
 
-Phase 1 is model-behavioral: an enforced-by-default posture, NOT a mechanical
-guarantee. Standing instructions decay over long sessions and the
-"about-to-write-code" moment is fuzzy, so a model can drift past it. The only
-mechanical enforcement is the optional `enforcement: model+gate` PreToolUse hook
-(phase 2). State this limit; do not oversell.
+`model` is the only supported setting. It relies on the model following
+the standing instructions. A mechanical gate is deferred. If loaded guidance
+requires `model+gate`, report that the requirement is unmet. Resolve that
+requirement before taking an action it governs. During adoption, offer `model`
+and preserve any explicit gate requirement until the user resolves it.
 
 ## Delegation
 
@@ -343,7 +359,7 @@ mechanical enforcement is the optional `enforcement: model+gate` PreToolUse hook
 - Code/module design, including splitting code that is both complex and highly
   connected → `software-design`.
 - Language-specific test-code idioms → `software-design`.
-- Commit/branch preflight → `git-workflow-policy`. PR/MR → `pr-ops`. Issues → `issue-ops`.
+- Git readiness → `git-workflow-policy`. PR/MR → `pr-ops`. Issues → `issue-ops`.
 
 ## Output
 

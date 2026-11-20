@@ -48,20 +48,21 @@ other sibling-owned decision. It validates the named content operation directly
 and returns before loading normal design guidance.
 
 `tdd-policy` measures observable behavior at a declared seam, by default each
-module's public API. An internal refactor or trivial wiring therefore adds no
-test, a scaffold test below the seam is rewritten at the seam or deleted before
-GREEN lands, and removing a behavior removes its tests in the same change. Tests
-that a behavior-preserving refactor had to edit are listed as
+module's public API. A covered internal refactor or trivial wiring needs no
+new test. A scaffold test below the seam is rewritten at the seam or deleted
+before GREEN lands, and removing a behavior removes its tests in the same
+change. Tests that a behavior-preserving refactor had to edit are listed as
 `structure-coupled`, which `test-quality-audit` reads as `verify-then-retire`
 evidence, never as grounds for deletion on its own.
 
-`tdd-policy` stays stack-neutral about how a test is written: tests reuse the
-suite's shared helpers, share only immutable setup, avoid fixed sleeps and real
-clocks, give the same result under any machine locale or timezone, and run RED
-under a value that can actually fail. It hands language idioms to
-`software-design` by skill name, whose per-stack test-code lane covers shared
-test support, setup lifetime, time and locale control, parallel runs, lanes, and
-per-test durations; test adequacy stays with `test-quality-audit`.
+`tdd-policy` stays stack-neutral about how a test is written. Tests reuse the
+suite's shared helpers and share only immutable or safely resettable infrastructure.
+Mutable data, users, and sessions stay per test with cleanup even on failure.
+Tests avoid fixed sleeps and real clocks, give the same result under any machine
+locale or timezone, and run RED under a value that can actually fail. The policy
+hands language idioms to `software-design` by skill name. Its per-stack test-code
+lane covers shared test support, setup lifetime, time and locale control, parallel
+runs, lanes, and per-test durations. Test adequacy stays with `test-quality-audit`.
 
 `software-design` also helps agents reuse, build, and maintain development tools
 and reference-derived data pipelines through its existing modes. The shared

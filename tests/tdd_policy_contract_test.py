@@ -21,6 +21,9 @@ NEW_BEHAVIOR_CASES = {
     "tdd-policy-behavior-pin-reviewed-identity": "artifact identity",
     "tdd-policy-behavior-pin-wording-and-coupling": "incidental coupling",
     "tdd-policy-behavior-pin-unknown-source": "evidence limit",
+    "tdd-policy-behavior-default-config-scope": "explicit scope",
+    "tdd-policy-behavior-unavailable-enforcement-gate": "model+gate",
+    "tdd-policy-behavior-preflight-squashed-change": "test-first order is unknown",
     "tdd-policy-behavior-covered-refactor-no-red": "existing passing tests",
     "tdd-policy-behavior-characterize-before-refactor": "characterization",
     "tdd-policy-behavior-requirement-change-updates-expectation": "rationale",
@@ -34,7 +37,7 @@ NEW_BEHAVIOR_CASES = {
     "tdd-policy-behavior-retirement-evidence-insufficient": "retain",
     "tdd-policy-behavior-delegated-parent-consolidation": "integration",
     "tdd-policy-behavior-reuse-shared-helper": "shared",
-    "tdd-policy-behavior-setup-lifetime-immutable-only": "immutable",
+    "tdd-policy-behavior-setup-lifetime": "safely resettable",
     "tdd-policy-behavior-no-fixed-sleep": "condition",
     "tdd-policy-behavior-machine-format-hostile-locale": "locale",
     "tdd-policy-behavior-human-format-explicit-locale": "explicit",
@@ -42,7 +45,7 @@ NEW_BEHAVIOR_CASES = {
     "tdd-policy-behavior-minimal-input": "smallest",
     "tdd-policy-behavior-lane-marker": "lane",
     "tdd-policy-behavior-green-duration-slow-tail": "duration",
-    "tdd-policy-behavior-stack-idioms-fallback": "software-design",
+    "tdd-policy-behavior-stack-idioms-fallback": "only when it affects the result",
     "tdd-policy-behavior-seam-internal-change-is-refactor": "seam",
     "tdd-policy-behavior-structure-coupled-test-rewritten-at-seam": "at the seam",
     "tdd-policy-behavior-scaffold-resolved-before-green": "before green",
@@ -202,15 +205,22 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn(phrase, core)
 
     def test_standing_block_carries_test_authoring_without_routine_inventory(self) -> None:
-        core = flat(re.sub(r"(?m)^> ", "", self.core()))  # the template wraps as a blockquote
+        block = self.standing_block()
         for phrase in (
-            "Tests reuse the suite's shared fixtures and helpers, share only immutable setup, "
-            "and never depend on real sleeps, clocks, or the machine's locale or timezone.",
+            "reuse the suite's shared fixtures and helpers",
+            "share only immutable or safely resettable infrastructure",
+            "keep mutable data, users, and sessions per test",
+            "clean up even on failure",
+            "never depend on real sleeps, clocks, or the machine's locale or timezone",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, block)
+        for phrase in (
             "relevant cost or mutation evidence",
             "omit routine policy inventories",
         ):
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, core)
+                self.assertIn(phrase, flat(self.core()))
         skill = flat(self.skill())
         for phrase in ("Writing the test", "test-code idioms", "material limits or exceptions"):
             with self.subTest(phrase=phrase):
@@ -240,6 +250,23 @@ class TddPolicyContractTest(unittest.TestCase):
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, block)
+
+    def test_adoption_offers_only_shipped_enforcement(self) -> None:
+        block = self.standing_block()
+        self.assertIn("Enforcement model.", block)
+        self.assertNotIn("model+gate", block)
+        assert_phrases(self, self.core(), (
+            "`model` is the only supported setting",
+            "If loaded guidance requires `model+gate`, report that the requirement is unmet",
+        ), heading="## Enforcement — honest limits")
+
+    def test_preflight_preserves_the_limits_of_retrospective_evidence(self) -> None:
+        self.assertIn("core-workflow.md#tdd-preflight", self.skill())
+        assert_phrases(self, self.core(), (
+            "original RED and GREEN evidence",
+            "report test-first order as unknown",
+            "A replay can show the test detects the regression",
+        ), heading="## TDD preflight")
 
     def test_feedback_budget_option_has_both_loop_ends(self) -> None:
         core = flat(self.core())
@@ -386,6 +413,10 @@ class TddPolicyContractTest(unittest.TestCase):
                 self.assertIn(phrase, invariant)
 
     def test_core_classifies_trivial_code_and_behavior_removal(self) -> None:
+        assert_phrases(self, self.core(), (
+            "behavior-bearing configuration and migrations",
+            "Explicit scope and exceptions take precedence",
+        ), heading="## Default profile")
         assert_phrases(self, self.core(), (
             "**Trivial code**",
             "no RED of its own",

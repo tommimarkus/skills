@@ -5,9 +5,8 @@ repositories initialize with local options and exceptions, plus an on-demand
 enforce path. Plugin installation alone does not enforce it; the standing repo
 guidance line — which must embed the invariant — is the enforcement authority.
 `adopt-guidance` consolidates existing test-first prose into that standing block.
-Enforcement is honest: a default posture in phase 1, mechanically guaranteed only
-by the optional phase-2 gate. Keep guidance original; link external material only
-when needed.
+Enforcement relies on the model following standing instructions. A mechanical
+gate is deferred. Keep guidance original and link external material only when needed.
 
 ## RED Test Selection Rationale
 
@@ -55,8 +54,9 @@ rationale per rule:
 
 - Reuse before define: a helper defined twice drifts twice; a defaulted
   parameter on the shared builder keeps one definition serving every caller.
-- Setup lifetime: sharing only immutable setup keeps tests isolated, and
-  cleanup that survives failure stops one broken test from poisoning the next.
+- Setup lifetime: sharing immutable or safely resettable infrastructure saves
+  setup work while per-test mutable state and cleanup that survives failure
+  keep tests isolated.
 - Time and waiting: fixed sleeps are either too short, which makes the test
   flaky, or too long, which makes the suite slow; a controlled clock or a
   bounded wait on an observable condition is neither.
@@ -200,11 +200,12 @@ installed, so a shared support module stood in for `conftest.py`.
   `structure-coupled` records feed its `verify-then-retire` and never retire a
   test by themselves.
 - Code/module design and coupling: `software-design`.
-- Commit/branch preflight: `git-workflow-policy`. PR/MR: `pr-ops`. Issues: `issue-ops`.
+- Test-first evidence at preflight: `tdd-policy`. Git readiness:
+  `git-workflow-policy`. PR/MR: `pr-ops`. Issues: `issue-ops`.
 - Cross-plugin handoffs go by skill name, never a path: plugins install
   independently, so a relative link into another plugin cannot resolve. When
-  the named skill is absent the neutral rules still stand on their own, and the
-  footer records the gap as `stack idioms: n/a`.
+  the named skill is absent, use neutral rules, project conventions, and runner
+  documentation. Disclose the gap only when it affects the result.
 
 ## Pin-maintenance clarification (2026-10-29)
 
