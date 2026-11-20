@@ -11,6 +11,9 @@ routine implementation when the observable behavior, test scope, and applicable
 options are settled. Installation alone is passive under the shared
 [policy posture](../../docs/policy-reference/policy-posture-core.md).
 
+Inputs are the requested change, repository rules, existing tests, and the
+commands and options that govern verification.
+
 ## Routine implementation
 
 1. Inspect existing tests. For new or changed observable behavior, reuse or
@@ -23,9 +26,11 @@ options are settled. Installation alone is passive under the shared
    behavior. Consolidate surviving coverage when a successor catches the same
    regression.
 
-Use `enforce-initialized` for this path and `lookup` for questions. Report the
-actual checks, material limits, and meaningful exceptions in the normal result.
-If essential verification is unavailable, land only with a documented or
+Use `enforce-initialized` for this path and `lookup` for questions. Report
+evidence from the checks that ran, material limits, and meaningful exceptions
+in the normal result. Discover routine facts and continue when they settle the
+decision. Ask the user when a material decision remains unresolved. Stop if
+essential verification fails. If it cannot run, land only with a documented or
 explicitly authorized substitute.
 
 ## When to read more
