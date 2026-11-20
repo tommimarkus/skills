@@ -536,6 +536,39 @@ class PlanningPolicyDocumentationTest(unittest.TestCase):
             "no third-party text",
         ), heading="## 2026-10-31 rule-index plan expansion")
 
+    def test_long_runs_bound_progress_cost_and_residue(self) -> None:
+        # A multi-day run reported activity while its finish line stood still,
+        # rebuilt a removed gate as review rules, grew every brief, and re-cut
+        # the same residue into ever smaller outcomes.
+        core = self.text("souroldgeezer-policy/skills/planning-policy/references/core-workflow.md")
+        assert_phrases(self, core, (
+            "more than a few assignments or spans sessions",
+            "one measurable finish metric, its start value, and the expected rate",
+            "progress record carries the current value",
+            "stop dispatching, replan, and tell the user unasked",
+            "only when it does not raise cost per assignment; otherwise it is a replan item",
+            "adding a rule removes one",
+            "a time box per assignment and one named parking place",
+            "one backlog line",
+            "never re-dispatched as a fresh outcome",
+            "does not shrink below the planned unit without a replan",
+        ), heading="## Long runs")
+        assert_phrases(self, core, (
+            "Work reducible to a script is scripted, not handed to workers item by item",
+            "hard stop for new work and a reserved window for final verification",
+            "adds no acceptance or review criterion beyond the approved plan when it raises cost per assignment",
+            "never rebuilds a check the user removed",
+        ), heading="## Enforcement")
+        assert_phrases(self, core, (
+            "Rewrite the record in place at each update",
+            "history stays in Git and logs",
+            "only a pointer to it and open user decisions",
+        ), heading="## Approval and output")
+        # The re-cut allowance must not reopen the residue loophole.
+        assert_phrases(self, core, ("[long run](#long-runs)",), heading="## Orchestrator readability")
+        # Workers do not pay for parent-only run rules.
+        self.assertNotIn("finish metric", section(core, "## Standard assignment and return"))
+
 
 if __name__ == "__main__":
     unittest.main()

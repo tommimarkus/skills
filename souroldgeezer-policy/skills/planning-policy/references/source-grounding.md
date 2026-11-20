@@ -666,3 +666,15 @@ for useful enabling tools when approach or acceptance changes; the owning design
 skill supplies tool design. This does not require assessments for trivial work,
 create authority, or amend immutable strict leaves. Synthetic cases record the
 intended boundary, not observed model adherence.
+
+## 2026-11-20 long-run rules
+
+Source: owner-supplied retrospective of one multi-day standard run (2026-11-20).
+Source type: user design decision from a single observed run; handling:
+idea-only, original wording. Standard planning gains a finish metric with a
+stall response, a fixed cost per assignment (no parent-added criteria, no
+lesson-grown briefs), parked residue with a time box and planned unit size,
+script-before-delegate, deadline as a plan input, and an in-place progress
+record. Strict managed execution is unchanged. A documentation regression and
+one synthetic behavior case record the intended rules, not observed model
+adherence; the thresholds ("more than a few", "well short") are judgment calls.

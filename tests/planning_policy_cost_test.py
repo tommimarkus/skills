@@ -42,7 +42,9 @@ class PlanningPolicyCostTest(unittest.TestCase):
             "lookup": 1180, "claude-agent-lookup": 1190,
             "active-claude": 9650, "active-codex": 9600,
             "approved-v5-live-next": 2800, "ledger-diagnostic-fallback": 3300,
-            "standard-claude": 3650, "standard-codex": 3650,
+            # Long-run rules (finish metric, fixed cost per assignment, parked
+            # residue) add about 0.35k to the parent standard routes only.
+            "standard-claude": 4000, "standard-codex": 4000,
             "standard-worker": 1100, "standard-reviewer": 200,
         }
         for name, budget in budgets.items():

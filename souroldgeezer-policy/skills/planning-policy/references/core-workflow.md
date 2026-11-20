@@ -28,7 +28,10 @@ reinterpret malformed managed input as a lightweight assignment.
    authority to proceed within its stated outcome; briefly state the approach
    and work inline when that is sufficient. Delegate when parallelism,
    isolation, independent analysis, or reusable expertise earns the setup and
-   integration cost; decomposability alone does not require workers. The parent
+   integration cost; decomposability alone does not require workers. Work
+   reducible to a script is scripted, not handed to workers item by item. A user
+   deadline is a plan input: work backwards from it to a hard stop for new work
+   and a reserved window for final verification. The parent
    prepares shared facts once and retains integration and final verification.
    Keep code and its tests together.
    Consider useful enabling tools via software-design when they affect the
@@ -45,6 +48,10 @@ reinterpret malformed managed input as a lightweight assignment.
 4. Review each returned diff against its outcome, decisions, named targets,
    scope, and actual acceptance coverage. Apply the independent-review triggers
    below before integration. Parent review and appropriate tests apply always.
+   The parent adds no acceptance or review criterion beyond the approved plan
+   when it raises cost per assignment, and never rebuilds a check the user
+   removed in another form; either is a material change needing approval, the
+   same as weakened acceptance.
 5. Integrate under the repository's Git policy and run the required final
    verification once at closeout. Do not repeat the full suite per integration;
    rerun affected scoped acceptance when integration changes the tested tree.
@@ -139,13 +146,31 @@ violated requirement; style preferences do not block. Resolve substantive
 findings and inconclusive required checks before integration. Review does not
 replace parent responsibility or final verification.
 
+## Long runs
+
+Apply when a plan has more than a few assignments or spans sessions.
+
+- **Finish metric.** The plan names one measurable finish metric, its start
+  value, and the expected rate over a stated window; the progress record carries
+  the current value. Activity is not progress: when the metric falls well short
+  of that rate, stop dispatching, replan, and tell the user unasked.
+- **Cost per assignment.** A lesson from a returned assignment may change later
+  briefs only when it does not raise cost per assignment; otherwise it is a
+  replan item. Briefs keep their planned size: adding a rule removes one.
+- **Residue.** Before dispatch the plan states a time box per assignment and one
+  named parking place. Work that does not fit, or fails its corrective
+  redispatch, is parked there with one backlog line; it leaves the run and is
+  never re-dispatched as a fresh outcome. Assignment size does not shrink below
+  the planned unit without a replan.
+
 ## Orchestrator readability
 
 A fresh parent must understand decisions, sequencing, allowed judgment,
 verification evidence, blockers, and next action without reconstructing the
 conversation. Keep cohesive outcomes and named references, not repeated
 workflows. Size assignments by bounded reads, acceptance, and judgment rather
-than predicted diff length. Re-cut when the actual task cannot be managed safely.
+than predicted diff length. Re-cut when the actual task cannot be managed safely;
+in a [long run](#long-runs) that is a replan, not a way to retry residue.
 
 ## Approval and output
 
@@ -160,6 +185,8 @@ itself never grants new authority.
 Keep a compact progress record with the approved plan/approval reference,
 material decisions, completed and pending outcomes, actual attempts, evidence
 pointers, blockers, and next action, at most 8 KiB excluding linked artifacts.
+Rewrite the record in place at each update, never append: history stays in Git
+and logs, and host memory holds only a pointer to it and open user decisions.
 Use authorized persistent task storage when available. Otherwise carry a
 self-contained checkpoint in the host conversation and disclose that durable
 recovery is unavailable. After interruption, recover this record; ask for the
