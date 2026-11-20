@@ -1455,8 +1455,17 @@
     ]
   },
   {
+    "id": "tdd-enforce-routine",
+    "skill": "tdd-policy",
+    "provenance": "Settled repository guidance is already in context. Charges the skill entry when invoked for routine work.",
+    "files": [
+      "souroldgeezer-policy/skills/tdd-policy/SKILL.md"
+    ]
+  },
+  {
     "id": "tdd-enforce",
     "skill": "tdd-policy",
+    "provenance": "Charges the complete core reference for a decision that requires detailed guidance.",
     "files": [
       "souroldgeezer-policy/skills/tdd-policy/SKILL.md",
       "souroldgeezer-policy/skills/tdd-policy/references/core-workflow.md"

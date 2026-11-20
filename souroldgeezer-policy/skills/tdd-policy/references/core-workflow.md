@@ -6,6 +6,10 @@ the on-demand "enforce TDD now" path. Enforcement posture per
 once initialized, the standing line is authority before implementation-code
 changes.
 
+Use a complete standing rule directly for routine work. Consult this reference
+for adoption, preflight, a bare rule, or a decision the project guidance leaves
+open. Apply the sections relevant to that decision.
+
 ## Invariant
 
 New or changed observable behavior is preceded by a focused failing test that
@@ -33,7 +37,8 @@ behavior.
 standing-line rule — the invariant inline, never a bare pointer. Template:
 
 > `tdd-policy: <variant> — new or changed behavior at the seam gets a focused failing test first,
-> at the cheapest level that proves it through the seam; a change with no effect at the seam is a
+> at the cheapest level that proves it through the seam. Inspect existing tests and extend a
+> cohesive scenario where it preserves distinct coverage. A change with no effect at the seam is a
 > refactor and runs under existing passing tests; trivial wiring, delegation, accessors, and
 > declarative config get no RED of their own unless they change an observable outcome at the
 > seam. A scaffold test below the seam may drive a design step only while the seam RED fails.
@@ -43,6 +48,8 @@ standing-line rule — the invariant inline, never a bare pointer. Template:
 > reuse the suite's shared fixtures and helpers, share only immutable or safely resettable
 > infrastructure, keep mutable data, users, and sessions per test, and clean up even on failure.
 > Tests never depend on real sleeps, clocks, or the machine's locale or timezone.
+> Run the focused scenario for RED and GREEN, affected checks after convergence,
+> and broader checks at the project's declared cadence.
 > Seam <rule|public API of each module>. Scope <globs|default, including behavior-bearing
 > configuration and migrations>. Budget <lane: value|inherited|none>. Exceptions <list> (logged).
 > Enforcement model.`

@@ -94,13 +94,18 @@ checkouts do not contaminate enumeration.
 
 ## Implementation and evidence
 
-Inspect existing tests and classify changes at the observable seam. Changed
-behavior gets a focused failing test first at the cheapest sufficient level;
-refactors use existing passing tests, and trivial wiring/config gets no invented
-RED. Keep cohesive scenarios and reuse `tests/surface_test_lib.py`. Run focused
-checks during development. Remove obsolete tests when behavior is removed, naming
-successors where coverage is replaced; retain meaningful regression protection.
-Avoid fixed sleeps, real clocks, and machine locale/timezone assumptions.
+Use this rule directly for routine work. Inspect existing tests and classify the
+change at the observable seam. For changed behavior, reuse or extend a cohesive
+test or add a focused case at the cheapest sufficient level. Observe it fail for
+the intended reason before implementation. Use existing passing checks for
+covered refactors and trivial wiring or config without observable changes.
+Run focused checks during development and scale verification as described below.
+Use `tests/surface_test_lib.py` for shared
+test helpers. Remove tests for retired behavior and name a verified successor
+when consolidating surviving coverage. Resolve temporary scaffold tests before
+landing. Avoid fixed sleeps, real clocks, and machine locale/timezone assumptions.
+Consult [TDD policy](souroldgeezer-policy/skills/tdd-policy/SKILL.md) when a
+testing decision needs more detail. Pin exact wording only when it is contractual.
 
 Use evidence-backed findings beyond scanner nominations without misattributing
 them to tools. Inventory differences and load-cost proxies are advisory evidence,

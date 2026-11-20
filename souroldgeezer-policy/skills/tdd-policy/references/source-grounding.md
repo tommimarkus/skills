@@ -233,3 +233,15 @@ describe generated evaluations and shrinking; Lighthouse variability guidance
 (https://github.com/GoogleChrome/lighthouse/blob/main/docs/variability.md)
 recommends controlled local measurement when stability matters. Links ground
 facts; this repository owns the policy choices.
+
+## Routine enforcement route
+
+The marketplace's version-stamp regression reproduced an incorrect stamp on
+the historical base of `74afe83` and passed on the fix. This showed regression
+sensitivity. The original test-first order was unknown. A wording-only rephrase
+in the test-selection guidance failed a text assertion in the marketplace's
+TDD contract tests. The routine route now uses a complete standing rule, and
+the synthetic cases carry behavioral expectations while structural tests cover
+the declared routes and integration contracts. These checks do not measure
+agent adherence or net workflow savings. The new guidance and synthetic cases
+are original to this repository.

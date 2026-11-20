@@ -5,79 +5,45 @@ description: "Use when loaded repo guidance initializes tdd-policy, or when aske
 
 # TDD Policy
 
-Own standing test-first discipline for repositories that explicitly initialize
-this policy, and answer explicit "enforce TDD now" requests. The shared
-enforcement posture — passive install, opt-in through the consumer's own
-guidance, the standing line (which carries the invariant itself) as enforcement
-authority, low-friction opt-out — is canonical in
-[`../../docs/policy-reference/policy-posture-core.md`](../../docs/policy-reference/policy-posture-core.md);
-this skill supplies procedure, config, variants, and opt-out handling on demand.
+Apply TDD when a repository initializes it or the user explicitly asks for it.
+The repository's standing rule carries the invariant and is sufficient for
+routine implementation when the observable behavior, test scope, and applicable
+options are settled. Installation alone is passive under the shared
+[policy posture](../../docs/policy-reference/policy-posture-core.md).
 
-Inputs: request, repo guidance, initialized options/exceptions, the code about to
-change, the focused and full test commands, the lane's budget and current run
-time when readable, existing tests.
-Evidence: actual checks and their results, the relevant seam/classification,
-and material limits or exceptions. Preserve meaningful structure-coupled,
-scaffold, and retirement records; omit routine policy inventories.
+## Routine implementation
 
-Read [references/core-workflow.md](references/core-workflow.md) before real
-enforcement, guidance edits, adoption, or [TDD preflight](references/core-workflow.md#tdd-preflight).
-When editing triggers, behavior, source grounding, or evals, also read `references/evals` and
-[references/source-grounding.md](references/source-grounding.md).
+1. Inspect existing tests. For new or changed observable behavior, reuse or
+   extend a cohesive test where possible. Observe it fail for the intended
+   reason at the cheapest level that proves the change. Use existing passing
+   tests for covered refactors and trivial wiring with no observable change.
+2. Implement and rerun the focused test. Run affected checks after convergence
+   and broader gates at the repository's declared cadence.
+3. Resolve temporary scaffold tests before landing. Remove coverage for retired
+   behavior. Consolidate surviving coverage when a successor catches the same
+   regression.
 
-Modes: default `enforce-initialized` when loaded repo guidance initializes this
-policy and the model is about to write/modify implementation code, or on an
-explicit enforce request; otherwise default `lookup`. Narrower modes: `inspect`,
-`adopt-guidance` (writes the standing block — MUST embed the invariant per the
-reference template), `preflight` (check a change's TDD compliance before
-commit/PR). Modes scope work; the standing line and repo guidance remain
-authoritative.
+Use `enforce-initialized` for this path and `lookup` for questions. Report the
+actual checks, material limits, and meaningful exceptions in the normal result.
+If essential verification is unavailable, land only with a documented or
+explicitly authorized substitute.
 
-Rules: do not enforce just because the plugin is installed. Enforce when loaded
-repo guidance initializes `tdd-policy`, or the user explicitly asks to enforce
-TDD. Treat an initialization line as current-task authority before implementation
-changes; the invariant is "new or changed behavior at the seam gets a focused
-failing test first, at the cheapest level that proves it through the seam; a
-change with no effect at the seam is a refactor and runs under existing passing
-tests; trivial wiring, delegation, accessors, and declarative config get no RED
-of their own unless they change an observable outcome at the seam;
-RED→GREEN→REFACTOR, and REFACTOR retires or consolidates superseded coverage and
-resolves scaffold tests before GREEN lands; removing a behavior removes its
-tests; shipped behavior stays covered by at least one test that fails on
-regression." Classify the change, select RED, scope execution, and maintain the
-suite per the reference; write each test per "Writing the test" there. Apply
-initialized options; bare initialization uses the default profile in
-`references/core-workflow.md`. When implementation is delegated, each worker
-selects RED and resolves its own scaffold tests inside its own write set, and
-the parent runs the suite step once across all workers' tests at integration,
-before final verification. Keep opt-out low-friction (disable line, one-phrase
-per-task override logged, scope/exception globs, `test-after` downgrade) —
-apply reasoned procedural exceptions under the shared posture. `test-after` relaxes the invariant and is an
-opt-out, never a variant. Delegate test adequacy and similarity/history retirement to
-`test-quality-audit`, code/module design and test-code idioms to
-`software-design`, Git readiness to `git-workflow-policy`, PR/MR to
-`pr-ops`, issues to `issue-ops`.
+## When to read more
 
-Ask vs continue: discover routine scope, seam, and test-command facts first;
-record justified procedural exceptions once. Ask the user when a material boundary is
-unresolved or essential verification cannot run and no substitute exists. Malformed
-or ambiguous adopting guidance → stop-and-ask or no-op; never mass-generate.
-
-`enforcement: model` is the supported setting. Mechanical enforcement is
-deferred. If loaded guidance requires `model+gate`, surface the unmet
-requirement before taking a governed action, and preserve it during adoption.
-
-Stop before letting new or changed behavior at the seam land with no failing test
-first unless an explicit, logged exception applies; a behavior-preserving
-refactor under existing passing tests is not a breach, and neither is trivial
-code that changes no observable outcome at the seam. A historical suite-budget
-overrun is disclosed, not a demand for unrelated recovery; address material new
-cost and honor explicit hard ceilings. Unique mutant kills support judgment,
-and configured mutation tooling follows project cadence rather than every GREEN.
-Stop before GREEN lands with an unresolved scaffold
-test. Stop if the required test run cannot happen and no documented substitute
-exists.
-
-After guidance edits, rerun structured-file checks, `git diff --check`, and the
-repo's documented skill-architecture validation. Use the compact output from
-[references/core-workflow.md](references/core-workflow.md).
+- Use [the core workflow](references/core-workflow.md) for bare initialization,
+  an explicit enforce request without a standing rule, or a decision the local
+  rule leaves open. Open the relevant section for seam or scope ambiguity,
+  missing protection, pinned expectations, retirement, feedback budgets,
+  delegated work, or exceptions. Existing suite debt alone does not block a
+  focused change. Honor explicit hard ceilings and landing requirements.
+- For `adopt-guidance`, use the [standing block template](references/core-workflow.md#standing-block-template).
+  For `preflight`, use [TDD preflight](references/core-workflow.md#tdd-preflight).
+  `model` is the supported enforcement setting. Surface and resolve any
+  explicit `model+gate` requirement before taking a governed action.
+- For suite-wide adequacy or retirement based on similarity or history, use
+  `test-quality-audit`. Use `software-design` for language-specific test idioms
+  when they matter to the change.
+- Before editing guidance, read the core workflow. For trigger, behavior,
+  grounding, or eval edits, also read `references/evals` and
+  [source grounding](references/source-grounding.md). After editing, run
+  structured-file checks, `git diff --check`, and the repo's skill validation.

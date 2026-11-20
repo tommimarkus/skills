@@ -94,7 +94,7 @@ owns this boundary.
 |---|---|---|
 | [git-workflow-policy](../souroldgeezer-policy/skills/git-workflow-policy/SKILL.md) | “Adopt feature branches and persistent task worktrees for this repository.” | Standing Git rules and preflight guidance; PR/MR execution belongs to pr-ops. |
 | [release-policy](../souroldgeezer-policy/skills/release-policy/SKILL.md) | “Establish CalVer release, verification, and rollback rules here.” | Release/version policy and authorized preparation guidance; publication needs its own authority. |
-| [tdd-policy](../souroldgeezer-policy/skills/tdd-policy/SKILL.md) | “Enforce test-first implementation for this feature.” | A RED→GREEN→REFACTOR workflow with the applicable coverage and exception rules. Inspect existing tests before selecting the RED test. |
+| [tdd-policy](../souroldgeezer-policy/skills/tdd-policy/SKILL.md) | “Enforce test-first implementation for this feature.” | Follow the standing rule for routine work. Use the detailed workflow for decisions it leaves open, adoption, and preflight. |
 | [planning-policy](../souroldgeezer-policy/skills/planning-policy/SKILL.md) | “Plan this refactor for approval before implementation.” | An approval-ready approach and, when executable delegation is needed, a decision-complete plan and handoff. |
 | [scope-policy](../souroldgeezer-policy/skills/scope-policy/SKILL.md) | “Keep this change at targeted scope and record unrelated findings.” | A declared boundary, recorded out-of-scope findings, and the applicable escalation decision. |
 
